@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>uDAY — Onchain Days</title>
+<meta name="description" content="Some days are just dates. Some become part of your story. uDAY turns the days that matter into onchain pixel art, permanently crafted on Robinhood Chain.">
+<meta property="og:title" content="uDAY — Onchain Days">
+<meta property="og:description" content="Some days are just dates. Some become part of your story. Now they can live onchain.">
+<meta property="og:url" content="https://uday.gift/">
+<meta property="og:image" content="https://uday.gift/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://uday.gift/assets/og.png">
+<link rel="icon" href="assets/uday-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ─── tokens ────────────────────────────────────────────────────────── */
+:root{
+  --ink:#08060f;
+  --night:#100d20;
+  --night-2:#181430;
+  --vellum:#f3e7cd;
+  --gold:#e8b93f;
+  --gold-deep:#a8781f;
+  --gold-glow:rgba(232,185,63,.28);
+  --lilac:#b79ae8;
+  --violet:#7d5fc0;
+  --crimson:#c04455;
+  --gem:#3f74d8;
+  --teal:#4fc9c0;
+  --muted:#9b8fb5;
+  --rule:rgba(232,185,63,.22);
+
+  /* Chrome text sizes. Latin keeps the small bitmap scale; zh floors every one
+     of them at 16px (owner rule). Latin floors at 14px. */
+  --fs-micro:14px;   /* caps micro-labels, legends, keys — 14px is the Latin floor */
+  --fs-tiny:14px;    /* kickers, chips, footer links */
+  --fs-small:15px;   /* buttons */
+  --fs-sub:15px;     /* sub-lines and hints */
+  --ls-wide:.22em; --ls-mid:.16em; --ls-narrow:.1em;
+
+  --display:'Silkscreen', ui-monospace, monospace;
+  --body:'Nunito Sans', -apple-system, sans-serif;
+
+  --shell:min(1180px, 92vw);
+}
+html[lang="zh"]{
+  --body:'Noto Sans TC','Nunito Sans', sans-serif;
+  --display:'Silkscreen','Noto Sans TC', ui-monospace, monospace;
+  /* 16px floor for every chrome size. The wide tracking below was drawn for a
+     Latin bitmap face — at 16px CJK it reads as scattered, so pull it in too. */
+  --fs-micro:16px; --fs-tiny:16px; --fs-small:16px; --fs-sub:16px;
+  --ls-wide:.10em; --ls-mid:.08em; --ls-narrow:.04em;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+
+body{
+  margin:0;
+  background:var(--ink);
+  color:var(--vellum);
+  font-family:var(--body);
+  font-size:clamp(16px,1.1vw,18px);
+  line-height:1.7;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* atmosphere: stained-glass light pooling out of the dark */
+body::before{
+  content:'';
+  position:fixed; inset:0; z-index:-2; pointer-events:none;
+  background:
+    radial-gradient(900px 700px at 78% -8%,  rgba(125,95,192,.30), transparent 62%),
+    radial-gradient(760px 620px at 8% 22%,   rgba(63,116,216,.18), transparent 60%),
+    radial-gradient(900px 900px at 52% 108%, rgba(232,185,63,.13), transparent 62%),
+    linear-gradient(180deg, var(--night) 0%, var(--ink) 55%, #0b0916 100%);
+}
+/* hand-made grain — keeps the flat dark from reading as digital emptiness */
+body::after{
+  content:'';
+  position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.055;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+img,canvas{ image-rendering:pixelated; image-rendering:crisp-edges; }
+
+/* ─── type ──────────────────────────────────────────────────────────── */
+.kicker{
+  font-family:var(--display); font-size:var(--fs-tiny); letter-spacing:var(--ls-wide);
+  text-transform:uppercase; color:var(--gold); opacity:.85;
+}
+h1,h2,h3{ font-family:var(--display); font-weight:400; line-height:1.08; margin:0; }
+h2{ font-size:clamp(26px,3.6vw,44px); letter-spacing:-.01em; }
+h3{ font-size:clamp(16px,1.5vw,18px); letter-spacing:.02em; color:var(--vellum); }
+p{ margin:0 0 1.1em; color:#dbcfb4; }
+a{ color:var(--gold); text-underline-offset:4px; text-decoration-thickness:1px; }
+
+/* ─── chrome ────────────────────────────────────────────────────────── */
+.topbar{
+  position:fixed; top:0; left:0; right:0; z-index:60;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:14px max(20px,4vw);
+  backdrop-filter:blur(14px);
+  background:linear-gradient(180deg, rgba(8,6,15,.86), rgba(8,6,15,.30) 70%, transparent);
+}
+.brand{ display:flex; align-items:center; text-decoration:none; padding:4px 0; }
+.brand span{ font-family:var(--display); font-size:18px; letter-spacing:var(--ls-mid); color:var(--vellum); }
+.brand:hover span{ color:var(--gold); }
+
+.langs{ display:flex; gap:2px; padding:3px; border:1px solid var(--rule); border-radius:999px; background:rgba(16,13,32,.6); }
+.langs button{
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  padding:6px 12px; border:0; border-radius:999px; cursor:pointer;
+  background:transparent; color:var(--muted); transition:color .2s, background .2s;
+}
+.langs button[aria-pressed="true"]{ background:var(--gold); color:#1a1206; }
+.langs button:hover{ color:var(--vellum); }
+.langs button[aria-pressed="true"]:hover{ color:#1a1206; }
+
+/* ─── layout ────────────────────────────────────────────────────────── */
+section{ position:relative; }
+.shell{ width:var(--shell); margin:0 auto; }
+
+.rule{
+  height:1px; border:0; margin:0;
+  background:linear-gradient(90deg, transparent, var(--rule) 12%, var(--rule) 88%, transparent);
+}
+.rule--gem{ position:relative; }
+.rule--gem::after{
+  content:''; position:absolute; left:50%; top:-3px; width:7px; height:7px;
+  transform:translateX(-50%) rotate(45deg);
+  background:var(--gold); box-shadow:0 0 12px var(--gold-glow);
+}
+
+/* ─── hero ──────────────────────────────────────────────────────────── */
+.hero{
+  min-height:100svh;
+  display:grid; align-items:center;
+  padding:120px 0 72px;
+}
+.hero__grid{
+  display:grid; gap:clamp(32px,5vw,72px);
+  grid-template-columns:minmax(0,1fr) minmax(0,.86fr);
+  align-items:center;
+}
+@media (max-width:880px){
+  .hero__grid{ grid-template-columns:1fr; }
+  .hero{ min-height:auto; padding-top:104px; }
+}
+
+.hero__title{
+  font-family:var(--display);
+  font-size:clamp(58px,11vw,132px);
+  line-height:.86; letter-spacing:-.02em;
+  margin:14px 0 0;
+  color:var(--vellum);
+  text-shadow:0 0 40px rgba(232,185,63,.22), 0 6px 0 rgba(0,0,0,.5);
+}
+.hero__title em{
+  font-style:normal;
+  color:var(--gold);
+  display:inline-block;
+}
+.hero__lede{
+  font-size:clamp(18px,1.45vw,21px); line-height:1.55;
+  color:#e6dbc2; max-width:30ch; margin-top:22px;
+}
+.hero__meta{
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:26px;
+}
+.tag{
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid);
+  padding:7px 11px; border:1px solid var(--rule); border-radius:3px;
+  color:var(--gold); background:rgba(232,185,63,.05);
+}
+.hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:34px; }
+
+.btn{
+  display:inline-flex; align-items:center; gap:9px;
+  font-family:var(--display); font-size:var(--fs-small); letter-spacing:var(--ls-narrow);
+  padding:14px 22px; border-radius:4px; text-decoration:none;
+  border:1px solid var(--gold-deep); cursor:pointer;
+  transition:transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s, background .18s;
+}
+.btn--gold{ background:linear-gradient(180deg,#f2c855,var(--gold) 55%,#c9992c); color:#1a1206; box-shadow:0 4px 0 #7d5713, 0 10px 26px rgba(0,0,0,.45); }
+.btn--gold:hover{ transform:translateY(-2px); box-shadow:0 6px 0 #7d5713, 0 16px 34px rgba(0,0,0,.5); }
+.btn--gold:active{ transform:translateY(2px); box-shadow:0 2px 0 #7d5713; }
+.btn--ghost{ background:rgba(243,231,205,.03); color:var(--vellum); border-color:var(--rule); }
+.btn--ghost:hover{ background:rgba(243,231,205,.08); transform:translateY(-2px); }
+
+/* medallion stage */
+.stage{ position:relative; display:grid; place-items:center; }
+.stage::before{
+  content:''; position:absolute; width:100%; aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(circle, rgba(183,154,232,.26), rgba(63,116,216,.12) 52%, transparent 76%);
+  filter:blur(8px);
+}
+.medallion{
+  position:relative; width:min(430px, 82vw); aspect-ratio:1;
+  filter:drop-shadow(0 26px 46px rgba(0,0,0,.6));
+}
+.medallion canvas{ width:100%; height:100%; display:block; }
+.medallion__spin{
+  position:absolute; inset:-4%; border-radius:50%;
+  border:1px dashed rgba(232,185,63,.20);
+  animation:spin 64s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.medallion__cap{
+  margin-top:18px; text-align:center;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid); color:var(--muted);
+}
+
+/* ─── generic section ───────────────────────────────────────────────── */
+.band{ padding:clamp(58px,6.4vw,104px) 0; }
+.band__head{ max-width:64ch; margin-bottom:clamp(34px,4vw,56px); }
+.band__head h2{ margin:12px 0 0; }
+.band__head p{ margin-top:18px; color:#c6bba3; }
+
+/* ─── story ─────────────────────────────────────────────────────────── */
+.story{
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:clamp(30px,5vw,80px); align-items:start;
+}
+@media (max-width:840px){ .story{ grid-template-columns:1fr; } }
+.story__quote{
+  font-size:clamp(23px,3.0vw,36px); line-height:1.34;
+  font-family:var(--body); font-style:italic; font-weight:400; color:var(--vellum);
+  margin:0; padding-left:22px; border-left:2px solid var(--gold);
+}
+html[lang="zh"] .story__quote{ font-style:normal; font-weight:500; }
+.story__body p:last-child{ margin-bottom:0; }
+.story__body .drop::first-letter{
+  font-family:var(--display); font-size:2.9em; line-height:.82;
+  float:left; padding:6px 12px 0 0; color:var(--gold);
+}
+html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2px; }
+
+/* ─── forge (composer) ──────────────────────────────────────────────── */
+.forge{
+  display:grid; grid-template-columns:minmax(0,.92fr) minmax(0,1fr);
+  gap:clamp(28px,4vw,60px); align-items:start;
+}
+@media (max-width:900px){ .forge{ grid-template-columns:1fr; } }
+
+.forge__viewer{
+  position:sticky; top:88px;
+  border:1px solid var(--rule); border-radius:6px;
+  background:linear-gradient(165deg, rgba(24,20,48,.92), rgba(10,8,20,.92));
+  padding:clamp(20px,2.6vw,32px);
+  box-shadow:inset 0 1px 0 rgba(243,231,205,.06), 0 24px 60px rgba(0,0,0,.5);
+}
+@media (max-width:900px){ .forge__viewer{ position:static; } }
+.forge__canvas-wrap{ position:relative; display:grid; place-items:center; }
+#forge-canvas{ width:100%; max-width:360px; aspect-ratio:1; display:block; }
+.forge__legend{
+  margin-top:18px; padding-top:16px; border-top:1px solid var(--rule);
+  display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px 12px; align-items:baseline;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid); color:var(--muted);
+}
+.forge__legend b{ color:var(--gold); font-weight:400; }
+
+.field{ margin-bottom:24px; }
+.field__label{
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid);
+  text-transform:uppercase; color:var(--muted); margin-bottom:10px;
+}
+.field__label b{ color:var(--gold); font-weight:400; }
+
+.chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.chip{
+  font-family:var(--display); font-size:var(--fs-tiny); letter-spacing:var(--ls-narrow);
+  padding:8px 11px; border-radius:3px; cursor:pointer;
+  border:1px solid rgba(243,231,205,.14);
+  background:rgba(243,231,205,.03); color:#bcb09a;
+  transition:border-color .16s, color .16s, background .16s, transform .16s;
+}
+.chip:hover{ color:var(--vellum); border-color:rgba(232,185,63,.5); transform:translateY(-1px); }
+.chip[aria-pressed="true"]{
+  background:linear-gradient(180deg, rgba(232,185,63,.24), rgba(232,185,63,.10));
+  border-color:var(--gold); color:var(--vellum);
+  box-shadow:0 0 16px rgba(232,185,63,.16);
+}
+.chips--num .chip{ min-width:38px; text-align:center; padding:7px 6px; }
+
+.forge__actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:30px; }
+.note{ font-size:var(--fs-sub); color:var(--muted); margin-top:16px; }
+
+/* ─── styles gallery ────────────────────────────────────────────────── */
+.gallery{
+  display:grid; gap:clamp(14px,1.8vw,22px);
+  grid-template-columns:repeat(auto-fit, minmax(138px,1fr));
+}
+.plaque{
+  border:1px solid var(--rule); border-radius:6px; overflow:hidden;
+  background:linear-gradient(170deg, rgba(24,20,48,.9), rgba(10,8,20,.9));
+  transition:transform .3s cubic-bezier(.22,1,.36,1), border-color .3s, box-shadow .3s;
+}
+.plaque:hover{ transform:translateY(-5px); border-color:rgba(232,185,63,.55); box-shadow:0 20px 40px rgba(0,0,0,.5); }
+.plaque__art{ position:relative; aspect-ratio:1; display:grid; place-items:center; padding:12px; }
+.plaque__art img{ position:absolute; inset:12px; width:calc(100% - 24px); height:calc(100% - 24px); }
+.plaque__art img.frame{ opacity:0; transform:scale(.94); transition:opacity .35s, transform .35s cubic-bezier(.22,1,.36,1); }
+.plaque:hover .plaque__art img.frame{ opacity:1; transform:scale(1); }
+.plaque__name{
+  padding:11px 13px; border-top:1px solid var(--rule);
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid);
+  text-transform:uppercase; color:var(--gold);
+  text-align:center; line-height:1.35;
+}
+
+/* ─── onchain facts ─────────────────────────────────────────────────── */
+.facts{ display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
+.fact{
+  display:grid; grid-template-columns:minmax(140px,.36fr) 1fr; gap:16px;
+  padding:18px clamp(16px,2vw,26px); background:rgba(16,13,32,.92);
+  align-items:baseline;
+}
+@media (max-width:620px){ .fact{ grid-template-columns:1fr; gap:4px; } }
+.fact__k{ font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid); text-transform:uppercase; color:var(--muted); }
+.fact__v{ color:var(--vellum); word-break:break-all; }
+.fact__v small{ display:block; color:var(--muted); font-size:var(--fs-sub); margin-top:3px; word-break:normal; }
+
+.copy{
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  margin-left:10px; padding:5px 9px; cursor:pointer; vertical-align:middle;
+  border:1px solid var(--rule); border-radius:3px;
+  background:rgba(232,185,63,.06); color:var(--gold);
+  transition:background .16s, color .16s;
+}
+.copy:hover{ background:var(--gold); color:#1a1206; }
+
+/* ─── footer ────────────────────────────────────────────────────────── */
+footer{ padding:64px 0 80px; }
+.foot{ display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between; align-items:center; }
+.foot__links{ display:flex; flex-wrap:wrap; gap:20px; }
+.foot__links a{ font-family:var(--display); font-size:var(--fs-tiny); letter-spacing:var(--ls-narrow); text-decoration:none; color:var(--muted); transition:color .18s; }
+.foot__links a:hover{ color:var(--gold); }
+.foot__sig{ font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid); color:#5d5473; }
+
+/* ─── reveal ────────────────────────────────────────────────────────── */
+/* The hidden state is applied ONLY once JS has armed the observer (html.reveal-on),
+   so a visitor without JS — or a JS failure before boot — still sees the whole page. */
+html.reveal-on .rise{ opacity:0; transform:translateY(22px); transition:opacity .9s cubic-bezier(.22,1,.36,1), transform .9s cubic-bezier(.22,1,.36,1); }
+html.reveal-on .rise.in{ opacity:1; transform:none; }
+@media (prefers-reduced-motion:reduce){ html.reveal-on .rise{opacity:1; transform:none; transition:none} .medallion__spin{animation:none} }
+
+[hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top"><span>uDAY</span></a>
+  <div class="langs" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ── hero ─────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="shell hero__grid">
+      <div>
+        <p class="kicker" data-i18n="hero.kicker">Onchain art on Robinhood Chain</p>
+        <h1 class="hero__title">u<em>DAY</em></h1>
+        <p class="hero__lede" data-i18n="hero.lede">Some days are just dates. Some become part of your story.</p>
+        <div class="hero__meta">
+          <span class="tag" data-i18n="tag.layers">4 LAYERS</span>
+          <span class="tag" data-i18n="tag.styles">7 STYLES</span>
+          <span class="tag" data-i18n="tag.days">365 DAYS</span>
+          <span class="tag" data-i18n="tag.combos">95,232 COMBINATIONS</span>
+        </div>
+        <div class="hero__cta">
+          <a class="btn btn--gold" href="https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146" target="_blank" rel="noopener" data-i18n="cta.buy">FIND YOUR DAY</a>
+          <a class="btn btn--ghost" href="#forge" data-i18n="cta.forge">TRY THE COMPOSER</a>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="medallion">
+          <div class="medallion__spin" aria-hidden="true"></div>
+          <canvas id="hero-canvas" width="96" height="96" role="img" aria-label="A uDAY medallion"></canvas>
+        </div>
+        <p class="medallion__cap" id="hero-cap">TODAY</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── story ────────────────────────────────────────────────────── -->
+  <section class="band" id="story">
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="story.kicker">The idea</p>
+        <h2 data-i18n="story.title">Which days mean something to you?</h2>
+      </div>
+      <div class="story rise">
+        <blockquote class="story__quote" data-i18n="story.quote">A birthday. An anniversary. Or a day that changed who you are.</blockquote>
+        <div class="story__body">
+          <p class="drop" data-i18n="story.p1">Now they can live onchain. uDAY turns your days — and the days of people you care about — into onchain art assets, each one permanently crafted with its own provenance.</p>
+          <p data-i18n="story.p2">And they are not static. Their appearance can be dynamically regenerated through token trades.</p>
+          <p data-i18n="story.p3">Keep one for yourself. Send one to someone who matters. Each uDAY represents a specific day.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── forge ────────────────────────────────────────────────────── -->
+  <section class="band" id="forge">
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="forge.kicker">The composer</p>
+        <h2 data-i18n="forge.title">Four layers, two of them optional</h2>
+        <p data-i18n="forge.blurb">Every uDAY is a plate, a frame, a month and a date, painted one on top of the next. Pick a day and watch it assemble — the same order the contract uses.</p>
+      </div>
+
+      <div class="forge rise">
+        <div class="forge__viewer">
+          <div class="forge__canvas-wrap">
+            <canvas id="forge-canvas" width="96" height="96" role="img" aria-label="Composed uDAY preview"></canvas>
+          </div>
+          <div class="forge__legend">
+            <span data-i18n="forge.legend">PLATE / FRAME / MONTH / DATE</span>
+            <b id="forge-readout">AUG 21</b>
+          </div>
+        </div>
+
+        <div>
+          <div class="field">
+            <div class="field__label"><span data-i18n="field.plate">Plate</span><b id="out-plate">unicorn</b></div>
+            <div class="chips" id="pick-plate"></div>
+          </div>
+          <div class="field">
+            <div class="field__label"><span data-i18n="field.frame">Frame</span><b id="out-frame">classic</b></div>
+            <div class="chips" id="pick-frame"></div>
+          </div>
+          <div class="field">
+            <div class="field__label"><span data-i18n="field.month">Month</span><b id="out-month">AUG</b></div>
+            <div class="chips chips--num" id="pick-month"></div>
+          </div>
+          <div class="field">
+            <div class="field__label"><span data-i18n="field.date">Date</span><b id="out-date">21</b></div>
+            <div class="chips chips--num" id="pick-date"></div>
+          </div>
+          <div class="field">
+            <div class="field__label"><span data-i18n="field.mplace">Month placement</span></div>
+            <div class="chips" id="pick-mplace"></div>
+          </div>
+          <div class="field">
+            <div class="field__label"><span data-i18n="field.dplace">Date placement</span></div>
+            <div class="chips" id="pick-dplace"></div>
+          </div>
+          <div class="field">
+            <div class="field__label"><span data-i18n="field.res">Resolution</span><b id="out-res">PNG 1200x1200</b></div>
+            <div class="chips" id="pick-res"></div>
+          </div>
+
+          <div class="forge__actions">
+            <button class="btn btn--gold" id="btn-download" data-i18n="forge.download">DOWNLOAD PNG</button>
+            <button class="btn btn--ghost" id="btn-random" data-i18n="forge.random">SURPRISE ME</button>
+          </div>
+          <p class="note" data-i18n="forge.note">Exports at 768x768, pixel-perfect. This composer previews the art system — the piece you actually own is minted and rendered onchain.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── styles ───────────────────────────────────────────────────── -->
+  <section class="band" id="styles">
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="styles.kicker">The seven</p>
+        <h2 data-i18n="styles.title">Seven ways to hold a day</h2>
+        <p data-i18n="styles.blurb">Each style carries its own plate and its own frame. Hover a plate to bring its frame down over it.</p>
+      </div>
+      <div class="gallery rise" id="gallery"></div>
+    </div>
+  </section>
+
+  <!-- ── onchain ──────────────────────────────────────────────────── -->
+  <section class="band" id="chain">
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="chain.kicker">Onchain</p>
+        <h2 data-i18n="chain.title">Where it lives</h2>
+      </div>
+      <div class="facts rise">
+        <div class="fact">
+          <div class="fact__k" data-i18n="fact.contract">Contract</div>
+          <div class="fact__v">
+            <span id="addr">0x359211bb6b8cabce02dcbec1c55b50f2ec884146</span>
+            <button class="copy" id="btn-copy" data-i18n="fact.copy">COPY</button>
+          </div>
+        </div>
+        <div class="fact">
+          <div class="fact__k" data-i18n="fact.chain">Chain</div>
+          <div class="fact__v">Robinhood Chain <small>chain id 4663</small></div>
+        </div>
+        <div class="fact">
+          <div class="fact__k" data-i18n="fact.supply">Supply</div>
+          <div class="fact__v">10,000 <small data-i18n="fact.supply.sub">maximum assets, one minted per whole token bought on the curve</small></div>
+        </div>
+        <div class="fact">
+          <div class="fact__k" data-i18n="fact.market">Market</div>
+          <div class="fact__v" data-i18n="fact.market.v">Graduated to Uniswap v4<small>Liquidity moved into the pool and the LP key was burned, locking it permanently.</small></div>
+        </div>
+        <div class="fact">
+          <div class="fact__k" data-i18n="fact.art">Art</div>
+          <div class="fact__v" data-i18n="fact.art.v">Stored fully onchain<small>The layer set is written into contract storage at creation and is immutable afterwards.</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="shell">
+    <hr class="rule">
+    <div class="foot" style="margin-top:34px">
+      <div class="foot__links">
+        <a href="https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146" target="_blank" rel="noopener">UTOKEN</a>
+        <a href="https://x.com/h2crypto_eth" target="_blank" rel="noopener">X</a>
+        <a href="https://utoken.so/docs" target="_blank" rel="noopener" data-i18n="foot.docs">HOW IT WORKS</a>
+      </div>
+      <p class="foot__sig" data-i18n="foot.sig">FIND THE DAY THAT BELONGS TO YOU</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+'use strict';
+
+/* ─────────────────────────────────────────────────────────────────────
+   i18n
+   ───────────────────────────────────────────────────────────────────── */
+const I18N = {
+  en: {
+    'hero.kicker':'Onchain art on Robinhood Chain',
+    'hero.lede':'Some days are just dates. Some become part of your story.',
+    'tag.layers':'4 LAYERS','tag.styles':'7 STYLES','tag.days':'365 DAYS','tag.combos':'95,232 COMBINATIONS',
+    'cta.buy':'FIND YOUR DAY','cta.forge':'TRY THE COMPOSER',
+    'story.kicker':'The idea',
+    'story.title':'Which days mean something to you?',
+    'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
+    'story.p1':'Now they can live onchain. uDAY turns your days — and the days of people you care about — into onchain art assets, each one permanently crafted with its own provenance.',
+    'story.p2':'And they are not static. Their appearance can be dynamically regenerated through token trades.',
+    'story.p3':'Keep one for yourself. Send one to someone who matters. Each uDAY represents a specific day.',
+    'forge.kicker':'The composer',
+    'forge.title':'Four layers, two of them optional',
+    'forge.blurb':'Every uDAY is a plate, a frame, a month and a date, painted one on top of the next. The month and the date are always drawn. The plate and the frame are not: a plate appears on 80% of pieces, a frame on only 20%. Eight states each, by twenty-four month tiles, by sixty-two date tiles — 95,232 ways for a day to look.',
+    'forge.legend':'PLATE / FRAME / MONTH / DATE',
+    'field.plate':'Plate (80% of pieces)','field.frame':'Frame (20% of pieces)','style.none':'NONE','field.month':'Month','field.date':'Date',
+    'field.mplace':'Month placement','field.dplace':'Date placement',
+    'forge.download':'DOWNLOAD PNG','forge.random':'SURPRISE ME',
+    'forge.note':'ON-CHAIN 96 is exactly what the contract renders, exported at 768x768. HD 300 is the same four layers redrawn at higher density, exported at 1200x1200. Both are pixel-exact integer scales.',
+    'place.corner':'CORNER','place.center':'CENTER',
+    'field.res':'Resolution','res.onchain':'ON-CHAIN 96','res.hd':'HD 300',
+    'styles.kicker':'The seven',
+    'styles.title':'Seven ways to hold a day',
+    'styles.blurb':'Each style carries its own plate and its own frame. Hover a plate to bring its frame down over it.',
+    'chain.kicker':'Onchain','chain.title':'Where it lives',
+    'fact.contract':'Contract','fact.copy':'COPY','fact.copied':'COPIED','fact.chain':'Chain','fact.supply':'Supply',
+    'fact.supply.sub':'maximum assets, one minted per whole token bought on the curve',
+    'fact.market':'Market','fact.market.v':'Graduated to Uniswap v4',
+    'fact.market.sub':'Liquidity moved into the pool and the LP key was burned, locking it permanently.',
+    'fact.art':'Art','fact.art.v':'Stored fully onchain',
+    'fact.art.sub':'The layer set is written into contract storage at creation and is immutable afterwards.',
+    'foot.docs':'HOW IT WORKS','foot.sig':'FIND THE DAY THAT BELONGS TO YOU',
+    'hero.cap':'TODAY'
+  },
+  zh: {
+    'hero.kicker':'Robinhood Chain 上的鏈上藝術',
+    'hero.lede':'有些日子只是日期。有些日子成為你的一部分。',
+    'tag.layers':'4 個圖層','tag.styles':'7 種畫風','tag.days':'365 天','tag.combos':'95,232 種組合',
+    'cta.buy':'找到你的那一天','cta.forge':'試試合成器',
+    'story.kicker':'緣起',
+    'story.title':'哪些日子對你有意義？',
+    'story.quote':'一個生日。一個紀念日。或是那個改變了你的日子。',
+    'story.p1':'現在它們可以活在鏈上。uDAY 把你的日子，以及你在乎的人的日子，變成鏈上藝術資產——每一件都帶著自己的來歷，永久鑄刻於鏈。',
+    'story.p2':'而且它們不是靜止的。外觀會隨著代幣交易動態重新生成。',
+    'story.p3':'留一個給自己。送一個給重要的人。每一枚 uDAY 都代表著特定的一天。',
+    'forge.kicker':'合成器',
+    'forge.title':'四個圖層，其中兩層可有可無',
+    'forge.blurb':'每一枚 uDAY 都由背板、外框、月份與日期四層依序繪成。月份與日期一定會畫上；背板與外框不一定——背板出現在 80% 的作品上，外框只有 20%。兩者各 8 種狀態（7 樣式 + 無）× 24 個月份磚 × 62 個日期磚——一個日子有 95,232 種長相。',
+    'forge.legend':'背板 / 外框 / 月份 / 日期',
+    'field.plate':'背板（80% 的作品有）','field.frame':'外框（20% 的作品有）','style.none':'無','field.month':'月份','field.date':'日期',
+    'field.mplace':'月份位置','field.dplace':'日期位置',
+    'forge.download':'下載 PNG','forge.random':'隨機一天',
+    'forge.note':'「鏈上原版 96」就是合約實際繪製的內容，輸出 768x768。「高清 300」是同樣四層以更高密度重繪，輸出 1200x1200。兩者都是整數倍放大，像素精準。',
+    'place.corner':'角落','place.center':'置中',
+    'field.res':'解析度','res.onchain':'鏈上原版 96','res.hd':'高清 300',
+    'styles.kicker':'七種畫風',
+    'styles.title':'收藏一天的七種方式',
+    'styles.blurb':'每種畫風都有自己的背板與外框。把游標移到背板上，外框會落下來罩住它。',
+    'chain.kicker':'鏈上','chain.title':'它住在哪裡',
+    'fact.contract':'合約地址','fact.copy':'複製','fact.copied':'已複製','fact.chain':'區塊鏈','fact.supply':'發行量',
+    'fact.supply.sub':'最多 10,000 件，曲線上每買進一整枚代幣即鑄造一件',
+    'fact.market':'市場','fact.market.v':'已畢業至 Uniswap v4',
+    'fact.market.sub':'流動性已進入池中，LP key 已燒毀，永久鎖倉。',
+    'fact.art':'藝術','fact.art.v':'完整儲存於鏈上',
+    'fact.art.sub':'圖層資料在創建時寫入合約儲存空間，此後不可更改。',
+    'foot.docs':'運作方式','foot.sig':'找到屬於你的那一天',
+    'hero.cap':'今天'
+  }
+};
+
+const MONTHS_EN = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const MONTHS_ZH = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+const STYLES = ['unicorn','classic','traditional','cyberpunk','global','cartoon','country-road'];
+// How often each optional layer is drawn on-chain. month and date are always present.
+const PRESENCE = { plate: 0.80, frame: 0.20 };
+const STYLE_LABEL = {
+  en:{ unicorn:'UNICORN', classic:'CLASSIC', traditional:'TRADITIONAL', cyberpunk:'CYBERPUNK',
+       global:'GLOBAL', cartoon:'CARTOON', 'country-road':'COUNTRY ROAD' },
+  zh:{ unicorn:'獨角獸', classic:'古典', traditional:'水墨', cyberpunk:'賽博',
+       global:'地球', cartoon:'卡通', 'country-road':'鄉間' }
+};
+
+let lang = 'en';
+
+function t(key){ return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key; }
+
+function applyLang(next){
+  lang = next;
+  document.documentElement.lang = next;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  // sub-lines inside fact values are separate nodes
+  setSub('fact.market.v','fact.market.sub');
+  setSub('fact.art.v','fact.art.sub');
+  document.querySelector('[data-i18n="fact.supply.sub"]').textContent = t('fact.supply.sub');
+  document.querySelectorAll('.langs button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.lang === next)));
+  document.getElementById('hero-cap').textContent = t('hero.cap');
+  try{ localStorage.setItem('uday.lang', next); }catch(e){}
+  renderChips();
+  renderGallery();
+  syncReadout();
+}
+
+function setSub(valKey, subKey){
+  const host = document.querySelector('[data-i18n="' + valKey + '"]');
+  if(!host) return;
+  host.textContent = t(valKey);
+  const small = document.createElement('small');
+  small.textContent = t(subKey);
+  host.appendChild(small);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   art layers
+   ───────────────────────────────────────────────────────────────────── */
+// The 96px set is literally what the contract renders. The 300px set is a
+// higher-density redraw of the same four layers, generated by tools/mkglyphs.py
+// (which reproduces the 96px layers byte-for-byte, so the two cannot drift).
+const SRC = {
+  onchain: { dir:'assets/layers', size: 96,  scale: 8 },   //  96 * 8 = 768
+  hd:      { dir:'assets/hd',     size: 300, scale: 4 }    // 300 * 4 = 1200
+};
+const pad2 = n => String(n).padStart(2,'0');
+const cache = new Map();
+
+function load(src){
+  if(cache.has(src)) return cache.get(src);
+  const p = new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => res(null);
+    img.src = src;
+  });
+  cache.set(src, p);
+  return p;
+}
+
+// The contract's paint order. Do not reorder.
+// plate and frame can be ABSENT on-chain (present on 80% / 20% of pieces).
+// month and date are always drawn. A null slot contributes no layer at all.
+function layerPaths({ plate, frame, month, date, monthPlace, datePlace, res }){
+  const d = SRC[res || 'hd'].dir;
+  return [
+    plate ? d + '/plate/' + plate + '.png' : null,
+    frame ? d + '/frame/' + frame + '.png' : null,
+    d + '/month/' + pad2(month) + '_' + monthPlace + '.png',
+    d + '/date/'  + pad2(date)  + '_' + datePlace  + '.png'
+  ].filter(Boolean);
+}
+
+async function paint(canvas, spec, { stagger = 0 } = {}){
+  const S = SRC[spec.res || 'hd'].size;
+  if(canvas.width !== S){ canvas.width = canvas.height = S; }
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const imgs = await Promise.all(layerPaths(spec).map(load));
+  ctx.clearRect(0,0,S,S);
+  if(!stagger){
+    imgs.forEach(im => im && ctx.drawImage(im,0,0,S,S));
+    return;
+  }
+  for(let i=0;i<imgs.length;i++){
+    if(imgs[i]) ctx.drawImage(imgs[i],0,0,S,S);
+    if(i < imgs.length-1) await new Promise(r => setTimeout(r, stagger));
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   hero — today's day, assembled layer by layer
+   ───────────────────────────────────────────────────────────────────── */
+const today = new Date();
+const heroSpec = {
+  plate:'unicorn', frame:'classic',
+  month: today.getMonth()+1,
+  date: today.getDate(),
+  monthPlace:'corner',
+  datePlace:'corner',
+  res:'hd'
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+paint(document.getElementById('hero-canvas'), heroSpec, { stagger: reduced ? 0 : 260 });
+
+/* ─────────────────────────────────────────────────────────────────────
+   composer
+   ───────────────────────────────────────────────────────────────────── */
+const spec = {
+  plate:'unicorn', frame:'classic',
+  month: today.getMonth()+1,
+  date: today.getDate(),
+  monthPlace:'corner',
+  datePlace:'corner',
+  res:'hd'
+};
+const forgeCanvas = document.getElementById('forge-canvas');
+
+function monthLabel(m){ return lang === 'zh' ? MONTHS_ZH[m-1] : MONTHS_EN[m-1]; }
+
+function syncReadout(){
+  const styleName = v => v ? STYLE_LABEL[lang][v] : t('style.none');
+  document.getElementById('out-plate').textContent = styleName(spec.plate);
+  document.getElementById('out-frame').textContent = styleName(spec.frame);
+  const px = SRC[spec.res].size * SRC[spec.res].scale;
+  document.getElementById('out-res').textContent = 'PNG ' + px + 'x' + px;
+  document.getElementById('out-month').textContent = monthLabel(spec.month);
+  document.getElementById('out-date').textContent  = pad2(spec.date);
+  document.getElementById('forge-readout').textContent = monthLabel(spec.month) + ' ' + pad2(spec.date);
+}
+
+function chip(label, active, onClick){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'chip';
+  b.textContent = label;
+  b.setAttribute('aria-pressed', String(active));
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function renderChips(){
+  ['plate','frame'].forEach(slot => {
+    const host = document.getElementById('pick-' + slot);
+    host.textContent = '';
+    host.appendChild(chip(t('style.none'), spec[slot] === null, () => { spec[slot] = null; update(); }));
+    STYLES.forEach(s => host.appendChild(chip(STYLE_LABEL[lang][s], spec[slot] === s, () => {
+      spec[slot] = s; update();
+    })));
+  });
+
+  const M = document.getElementById('pick-month');
+  M.textContent = '';
+  for(let m=1;m<=12;m++){
+    M.appendChild(chip(lang === 'zh' ? String(m) : MONTHS_EN[m-1], spec.month === m, () => {
+      spec.month = m;
+      const max = daysInMonth(m);
+      if(spec.date > max) spec.date = max;
+      update();
+    }));
+  }
+
+  const D = document.getElementById('pick-date');
+  D.textContent = '';
+  for(let d=1;d<=daysInMonth(spec.month);d++){
+    D.appendChild(chip(String(d), spec.date === d, () => { spec.date = d; update(); }));
+  }
+
+  const R = document.getElementById('pick-res');
+  R.textContent = '';
+  ['onchain','hd'].forEach(r => {
+    R.appendChild(chip(t('res.' + r), spec.res === r, () => { spec.res = r; update(); }));
+  });
+
+  [['mplace','monthPlace'], ['dplace','datePlace']].forEach(([id, key]) => {
+    const host = document.getElementById('pick-' + id);
+    host.textContent = '';
+    ['corner','center'].forEach(pl => {
+      host.appendChild(chip(t('place.' + pl), spec[key] === pl, () => { spec[key] = pl; update(); }));
+    });
+  });
+}
+
+// February gets 29 so leap-year birthdays are not excluded.
+function daysInMonth(m){
+  return [31,29,31,30,31,30,31,31,30,31,30,31][m-1];
+}
+
+function update(){
+  renderChips();
+  syncReadout();
+  paint(forgeCanvas, spec);
+}
+
+document.getElementById('btn-random').addEventListener('click', () => {
+  const pickStyle = presence =>
+    Math.random() < presence ? STYLES[Math.floor(Math.random()*STYLES.length)] : null;
+  spec.plate = pickStyle(PRESENCE.plate);
+  spec.frame = pickStyle(PRESENCE.frame);
+  spec.month = 1 + Math.floor(Math.random()*12);
+  spec.date  = 1 + Math.floor(Math.random()*daysInMonth(spec.month));
+  const flip = () => Math.random() < .5 ? 'corner' : 'center';
+  spec.monthPlace = flip(); spec.datePlace = flip();
+  update();
+});
+
+document.getElementById('btn-download').addEventListener('click', async () => {
+  const src = SRC[spec.res];               // integer scale keeps the pixels exact
+  const out = document.createElement('canvas');
+  out.width = out.height = src.size * src.scale;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const imgs = await Promise.all(layerPaths(spec).map(load));
+  imgs.forEach(im => im && ctx.drawImage(im, 0, 0, out.width, out.height));
+  const a = document.createElement('a');
+  a.download = 'uDAY-' + (spec.plate || 'bare') + '-' + (spec.frame || 'bare') + '-' + pad2(spec.month) + pad2(spec.date) + '-' + spec.res + '.png';
+  a.href = out.toDataURL('image/png');
+  a.click();
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   gallery — the HD plates, with their frames on hover
+   ───────────────────────────────────────────────────────────────────── */
+function renderGallery(){
+  const g = document.getElementById('gallery');
+  g.textContent = '';
+  STYLES.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'plaque';
+    card.innerHTML =
+      '<div class="plaque__art">' +
+        '<img src="assets/hd/plate/' + s + '.png" alt="" loading="lazy">' +
+        '<img class="frame" src="assets/hd/frame/' + s + '.png" alt="" loading="lazy">' +
+      '</div>' +
+      '<div class="plaque__name">' + STYLE_LABEL[lang][s] + '</div>';
+    g.appendChild(card);
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   chrome
+   ───────────────────────────────────────────────────────────────────── */
+document.querySelectorAll('.langs button').forEach(b =>
+  b.addEventListener('click', () => applyLang(b.dataset.lang)));
+
+document.getElementById('btn-copy').addEventListener('click', async (e) => {
+  try{
+    await navigator.clipboard.writeText(document.getElementById('addr').textContent.trim());
+    e.target.textContent = t('fact.copied');
+    setTimeout(() => { e.target.textContent = t('fact.copy'); }, 1600);
+  }catch(err){ /* clipboard blocked — the address is selectable on the page */ }
+});
+
+const revealAll = () =>
+  document.querySelectorAll('.rise').forEach(el => el.classList.add('in'));
+
+if('IntersectionObserver' in window){
+  document.documentElement.classList.add('reveal-on');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => { if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, { rootMargin:'0px 0px -12% 0px' });
+  document.querySelectorAll('.rise').forEach(el => io.observe(el));
+  // Deadline: whatever the observer has not released by now is shown anyway.
+  // Content must never be able to stay invisible because one mechanism did not run.
+  setTimeout(revealAll, 2500);
+}
+
+/* boot */
+let saved = 'en';
+const urlLang = new URLSearchParams(location.search).get('lang');
+try{
+  saved = urlLang
+       || localStorage.getItem('uday.lang')
+       || ((navigator.language||'').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+}catch(e){ saved = urlLang || 'en'; }
+if(!I18N[saved]) saved = 'en';
+applyLang(saved);
+paint(forgeCanvas, spec);
+</script>
+</body>
+</html>

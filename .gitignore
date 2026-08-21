@@ -1,0 +1,7 @@
+.DS_Store
+.vercel/
+# throwaway screenshot / measurement harnesses
+_shot.html
+_frame.html
+_og.html
+_fonts.html
