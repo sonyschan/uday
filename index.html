@@ -971,16 +971,28 @@ function fillHeroPicker(){
     if(heroSpec.month === i + 1) o.selected = true;
     selMonth.appendChild(o);
   });
+  selDay.textContent = '';          // force a rebuild (locale labels changed)
+  syncDayOptions();
+}
+
+/* Adjusts the day select IN PLACE, rebuilding its options only when the
+   month's length actually changed. iOS Safari fires `change` continuously
+   while its wheel picker is still open \u2014 rebuilding a select's options
+   mid-interaction detaches the wheel and the picker stops responding, so
+   a change handler must never wipe options it does not have to. */
+function syncDayOptions(){
   const max = daysInMonth(heroSpec.month);
   if(heroSpec.date > max) heroSpec.date = max;
-  selDay.textContent = '';
-  for(let d = 1; d <= max; d++){
-    const o = document.createElement('option');
-    o.value = d;
-    o.textContent = lang === 'zh' ? d + '\u65e5' : pad2(d);
-    if(heroSpec.date === d) o.selected = true;
-    selDay.appendChild(o);
+  if(selDay.options.length !== max){
+    selDay.textContent = '';
+    for(let d = 1; d <= max; d++){
+      const o = document.createElement('option');
+      o.value = d;
+      o.textContent = lang === 'zh' ? d + '\u65e5' : pad2(d);
+      selDay.appendChild(o);
+    }
   }
+  selDay.value = String(heroSpec.date);
 }
 
 function heroCap(){
@@ -992,7 +1004,7 @@ function heroCap(){
 function heroPick(){
   heroSpec.month = Number(selMonth.value);
   heroSpec.date  = Number(selDay.value);
-  fillHeroPicker();          // day list follows the month
+  syncDayOptions();          // day list follows the month — no full rebuild
   heroCap();
   heroPaint(heroDaySpec());
   renderDayStatus();
