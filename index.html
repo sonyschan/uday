@@ -302,6 +302,13 @@ section{ position:relative; }
   transition:transform .12s, box-shadow .12s;
 }
 .yearcell--lit:hover{ transform:scale(1.35); box-shadow:0 0 10px var(--gold-glow); z-index:1; position:relative; }
+/* An impossible date (FEB 30, JUN 31…) minted onchain: it lives in the cell
+   the calendar does not have. Crimson, not gold — a day outside the year. */
+.yearcell--glitch{
+  cursor:pointer; background:rgba(192,68,85,.55); border-color:rgba(192,68,85,.8);
+  transition:transform .12s, box-shadow .12s;
+}
+.yearcell--glitch:hover{ transform:scale(1.35); box-shadow:0 0 12px rgba(192,68,85,.7); z-index:1; position:relative; }
 .yearwall__note{
   margin-top:14px; font-family:var(--display); font-size:var(--fs-micro);
   letter-spacing:var(--ls-narrow); color:var(--muted);
@@ -682,10 +689,12 @@ const I18N = {
     'status.taken.one':'{date} has been born. #{id} lives in {owner}\u2019s wallet.',
     'status.free':'{date} has not been born yet. Every mint could be the one.',
     'status.btn.offer':'BRING IT HOME','status.btn.mint':'MINT A DAY',
-    'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} PIECES ALIVE','live.burned':'{n} BURNED FOREVER',
+    'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} DAYS BORN','live.sealed':'{n} STILL SEALED','live.owners':'{n} COLLECTORS',
     'year.kicker':'The year','year.title':'A year, lighting up',
     'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.',
     'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
+    'year.glitch.cell':'A DAY THAT DOES NOT EXIST',
+    'year.glitch.note':'{n} pieces carry dates that do not exist \u2014 the crimson cells',
     'story.kicker':'The idea',
     'story.title':'Which days mean something to you?',
     'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
@@ -725,10 +734,12 @@ const I18N = {
     'status.taken.one':'{date}已經誕生。#{id} 在 {owner} 的錢包裡。',
     'status.free':'{date}還沒誕生。每一次鑄造，都可能是它。',
     'status.btn.offer':'把它帶回家','status.btn.mint':'鑄造一天',
-    'live.lit':'全年點亮 {lit}/366 天','live.alive':'存世 {n} 枚','live.burned':'已燒毀 {n} 枚',
+    'live.lit':'全年點亮 {lit}/366 天','live.alive':'已誕生 {n} 枚','live.sealed':'{n} 枚待揭曉','live.owners':'收藏者 {n} 位',
     'year.kicker':'一整年','year.title':'一年，正在點亮',
     'year.blurb':'每一格是一天。亮起代表這一天已在鏈上誕生，越亮代表這一天的 uDAY 越多。點一格，去看那一天最早的一枚。',
     'year.note':'366 天已點亮 {lit} 天 · 每小時從 Robinhood Chain 更新',
+    'year.glitch.cell':'不存在的日子',
+    'year.glitch.note':'有 {n} 枚鑄在不存在的日子上——緋紅色的格子',
     'story.kicker':'緣起',
     'story.title':'哪些日子對你有意義？',
     'story.quote':'一個生日。一個紀念日。或是那個改變了你的日子。',
@@ -1104,7 +1115,16 @@ function renderLiveTags(){
   const mk = txt => { const el = document.createElement('span'); el.className = 'tag'; el.textContent = txt; host.appendChild(el); };
   mk(t('live.lit', { lit }));
   mk(t('live.alive', { n: alive.toLocaleString() }));
-  if(INDEX_META.burned > 0) mk(t('live.burned', { n: INDEX_META.burned.toLocaleString() }));
+  // 5,290 sealed pieces = most holders have never seen their day. The mystery
+  // is real, on-chain, and better copy than anything we could invent.
+  if(INDEX_META.unrevealed) mk(t('live.sealed', { n: INDEX_META.unrevealed.toLocaleString() }));
+  // burned is deliberately NOT shown: buys mint and sells burn, so the burn
+  // counter is cumulative churn, not scarcity — displaying it implies a
+  // deflation that does not exist (owner call, 2026-08-22). The real scarcity
+  // signal is lit-days, which can go DARK when a day's last piece burns.
+  const owners = new Set();
+  for(const k in DAYS) DAYS[k].forEach(e => owners.add(e.owner));
+  if(owners.size) mk(t('live.owners', { n: owners.size.toLocaleString() }));
 }
 
 function renderYear(){
@@ -1123,7 +1143,22 @@ function renderYear(){
     grid.appendChild(lab);
     for(let d = 1; d <= 31; d++){
       if(d > DIM[m-1]){
-        const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
+        const gkey = pad2(m) + '-' + pad2(d);
+        const gn = (DAYS[gkey] || []).length;
+        if(gn){                                   // an impossible date, minted anyway
+          const g = document.createElement('button');
+          g.className = 'yearcell yearcell--glitch';
+          g.title = (lang === 'zh' ? m + '\u6708' + d + '\u65e5' : MONTHS_EN[m-1] + ' ' + pad2(d))
+                    + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gn;
+          const gf = DAYS[gkey].slice().sort((a,b) => a.id - b.id)[0];
+          g.addEventListener('click', () => {
+            va('event', { name: 'calendar_click', data: { day: gkey, glitch: 1 } });
+            window.open(UTOKEN_ITEM(gf.id), '_blank', 'noopener');
+          });
+          grid.appendChild(g);
+        }else{
+          const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
+        }
         continue;
       }
       const key = pad2(m) + '-' + pad2(d);
@@ -1143,7 +1178,10 @@ function renderYear(){
       grid.appendChild(cell);
     }
   }
-  document.getElementById('year-note').textContent = t('year.note', { lit });
+  const glitchDays = Object.keys(DAYS).filter(k => !isRealDate(k));
+  const glitchPieces = glitchDays.reduce((n, k) => n + DAYS[k].length, 0);
+  document.getElementById('year-note').textContent =
+    t('year.note', { lit }) + (glitchPieces ? ' \u00b7 ' + t('year.glitch.note', { n: glitchPieces }) : '');
   sec.hidden = false;
   if(io) io.observe(sec.querySelectorAll('.rise')[0]);
 }
@@ -1154,7 +1192,7 @@ async function loadIndex(){
     if(!r.ok) return;
     const j = await r.json();
     DAYS = j.days || {};
-    INDEX_META = { items: j.items || 0, burned: j.burned || 0 };
+    INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0 };
     renderLiveTags();
     renderDayStatus();
     renderYear();

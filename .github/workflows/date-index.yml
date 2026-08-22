@@ -25,6 +25,8 @@ jobs:
           python-version: '3.12'
       - run: pip install pillow
       - name: Build index
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
         run: python3 tools/build_date_index.py build
       - name: Commit if changed
         run: |

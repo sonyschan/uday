@@ -3,36 +3,37 @@
 
 uToken's own metadata cannot tell AUG 22 from JAN 01 (its trait names for the
 month/date layers are just "Center"/"Corner"), so the date identity lives ONLY
-in the on-chain element indices. This script reads them and publishes
-data/date-index.json, which the site serves statically — visitors never touch
-the RPC.
+in the art. This script reads each asset's art STRAIGHT FROM THE CHAIN and
+decodes the glyphs, then publishes data/date-index.json for the site to serve
+statically — visitors never touch the RPC.
 
-Contracts (Robinhood Chain, id 4663):
-  token          0x359211bb6b8cabce02dcbec1c55b50f2ec884146
-  reveal/render  0x9815c074cba26707e0baa29efdf13f31ee8d27d8
-                 (found via the launch-tx receipt; generateLayerElement /
-                  generateAppearanceSeed / generateSvg(seed) live here)
+Pipeline (assumption-free — the art IS the ground truth):
+  token.layerReveal() -> the reveal sidecar (0x7317...34f1 at time of writing)
+  sidecar.generateSvgForAsset(id) -> the EXACT svg uToken renders (verified
+    byte-identical for #24), a pure <rect> grid
+  raster 96x96 in-process -> pixel-match the date glyph (painted last, exact),
+    then the month glyph (excluding the date's opaque region), against our own
+    layer PNGs in assets/layers/** — byte-identical to what was uploaded.
 
-Usage:
-  python3 tools/build_date_index.py calibrate   # once; writes tools/element_map.json
-  python3 tools/build_date_index.py build       # writes data/date-index.json
+Two dead ends this replaced, kept here so nobody walks them again:
+  - element-order formulas ("descending, corner-first") fit month but not date;
+  - generateAppearanceSeed(id) on the launch-tx helper 0x9815...27d8 is a
+    PREVIEW SAMPLER, not the asset's stored appearance — calibrating art
+    against it scattered 11 different labels over one element value. The
+    built-in sanity anchors (#23=MAR21, #24=MAY25, verified against uToken's
+    own client render) are what caught both.
 
-Calibration maps raw element indices -> (month, day, placement) by rendering
-generateSvg(seed) for exemplar assets and pixel-matching the pure-<rect> SVG
-against our own 96px layer PNGs (assets/layers/** — byte-identical to what was
-uploaded on-chain). No guessing: an element order hypothesis died twice before
-this approach (desc-order fit month but not date), so labels come only from
-rendered pixels. The build refuses to publish if spot checks fail.
+Usage:  python3 tools/build_date_index.py build
 
-Stdlib + PIL only. Selectors are hardcoded (no keccak in stdlib):
-  generateLayerElement(uint256,uint8)  0x3979c4c3
-  generateAppearanceSeed(uint256)      0xd38d9dd3
-  generateSvg(uint256)                 0xbc921dc2
+Decoded art is cached in data/art-cache.json (committed): an asset's art is
+immutable once its reveal settles (owner-confirmed), so each id is decoded
+once; the youngest ids are re-decoded every run to absorb pending reveals.
+Stdlib + PIL. Selectors hardcoded (no keccak in stdlib):
+  layerReveal()                 0xb509d6c4
+  generateSvgForAsset(uint256)  0xeb3fbd83
 """
 import json, os, re, ssl, sys, time, urllib.request
 
-# python.org macOS builds ship without system CA certs; try certifi, then the
-# OS bundle. CI (ubuntu) never hits this.
 def _ssl_ctx():
     try:
         import certifi
@@ -44,30 +45,44 @@ def _ssl_ctx():
     return ssl.create_default_context()
 
 _CTX = _ssl_ctx()
-
 UA = {"User-Agent": "Mozilla/5.0 (uday.gift index builder)"}
 
 def urlopen(req, timeout=45):
-    # utoken's WAF 403s the default Python-urllib UA
     if isinstance(req, str):
         req = urllib.request.Request(req, headers=UA)
     return urllib.request.urlopen(req, timeout=timeout, context=_CTX)
 
 ROOT     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RPCS     = ["https://rpc.mainnet.chain.robinhood.com",
-            "https://rpc.mainnet.chain.robinhood.com/rpc"]   # same node, both shapes
+
+def _rpcs():
+    """ROBINHOOD_RPC_URL (env, or a local .env line) first — a dedicated
+    endpoint (Alchemy) does ~0.65s/svg with 10 workers where the public node
+    serializes to ~4s — then the public node as fallback."""
+    urls = []
+    env = os.environ.get("ROBINHOOD_RPC_URL")
+    if not env:
+        try:
+            for line in open(os.path.join(ROOT, ".env")):
+                if line.startswith("ROBINHOOD_RPC_URL="):
+                    env = line.split("=", 1)[1].strip()
+        except FileNotFoundError:
+            pass
+    if env:
+        urls.append(env)
+    urls += ["https://rpc.mainnet.chain.robinhood.com",
+             "https://rpc.mainnet.chain.robinhood.com/rpc"]
+    return urls
+
+RPCS = _rpcs()
 TOKEN    = "0x359211bb6b8cabce02dcbec1c55b50f2ec884146"
-RENDERER = "0x9815c074cba26707e0baa29efdf13f31ee8d27d8"
-API      = f"https://utoken.so/api/tokens/{TOKEN}"
-SEL_ELEM = "0x3979c4c3"
-SEL_SEED = "0xd38d9dd3"
-SEL_SVG  = "0xbc921dc2"
-L_MONTH, L_DATE = 3, 4          # getLayerNames() = ["", Plate, Frame, Month, Date]
-MAP_PATH   = os.path.join(ROOT, "tools", "element_map.json")
-CACHE_PATH = os.path.join(ROOT, "data", "element-cache.json")
+MULTICALL = "0xcA11bde05977b3631167028862bE2a173976CA11"
+SEL_AGG3  = "82ad56cb"
+SEL_SIDECAR = "0xb509d6c4"      # layerReveal()
+SEL_SVG_ASSET = "0xeb3fbd83"    # generateSvgForAsset(uint256)
+API       = f"https://utoken.so/api/tokens/{TOKEN}"
+CACHE_PATH = os.path.join(ROOT, "data", "art-cache.json")
 INDEX_PATH = os.path.join(ROOT, "data", "date-index.json")
 LAYER_DIR  = os.path.join(ROOT, "assets", "layers")
-
 
 # ── JSON-RPC with retries (the public RPC flaps; a builder just retries) ──────
 def rpc(payload, tries=10):
@@ -98,38 +113,46 @@ def eth_call(to, data):
 
 
 def eth_call_batch(calls):
-    """calls: [(to, data)] -> [result_hex|None]. Falls back to singles if the
-    node rejects batches."""
-    payload = [{"jsonrpc": "2.0", "id": i, "method": "eth_call",
-                "params": [{"to": t, "data": d}, "latest"]}
-               for i, (t, d) in enumerate(calls)]
-    out = rpc(payload)
-    if isinstance(out, list):
-        res = [None] * len(calls)
-        for o in out:
-            if "result" in o:
-                res[o["id"]] = o["result"]
-        return res
-    return [eth_call(t, d) for t, d in calls]        # batch unsupported
+    """calls: [(to, data)] -> [result_hex|None], packed through ONE Multicall3
+    aggregate3 eth_call — the public node rate-limits per REQUEST, so N reads
+    must cost one request, not N. (JSON-RPC batching counted per sub-call and
+    ground the sweep to ~19 ids/min.)"""
+    n = len(calls)
+    # ── encode aggregate3: dynamic array of (address,bool,bytes) tuples ──
+    tuples = []
+    for to, data in calls:
+        cd = bytes.fromhex(data[2:])
+        t = (u256(int(to, 16))                     # address
+             + u256(1)                             # allowFailure = true
+             + u256(0x60)                          # offset of bytes within tuple
+             + u256(len(cd))
+             + cd.hex().ljust(((len(cd) + 31) // 32) * 64, "0"))
+        tuples.append(t)
+    offs, pos = [], 32 * n
+    for t in tuples:
+        offs.append(u256(pos)); pos += len(t) // 2
+    payload = SEL_AGG3 + u256(0x20) + u256(n) + "".join(offs) + "".join(tuples)
+    raw = eth_call(MULTICALL, "0x" + payload)
+    blob = bytes.fromhex(raw[2:])
+    # ── decode (bool success, bytes returnData)[] ──
+    arr = int.from_bytes(blob[0:32], "big")            # offset of array
+    cnt = int.from_bytes(blob[arr:arr + 32], "big")
+    base = arr + 32
+    res = []
+    for i in range(cnt):
+        toff = int.from_bytes(blob[base + 32 * i: base + 32 * i + 32], "big")
+        tp = base + toff
+        ok = int.from_bytes(blob[tp:tp + 32], "big")
+        doff = int.from_bytes(blob[tp + 32:tp + 64], "big")
+        dp = tp + doff
+        dlen = int.from_bytes(blob[dp:dp + 32], "big")
+        data = blob[dp + 32:dp + 32 + dlen]
+        res.append("0x" + data.hex() if ok and dlen else None)
+    return res
 
 
 def u256(n):
     return format(n, "064x")
-
-
-def call_elem(asset, layer):
-    return int(eth_call(RENDERER, SEL_ELEM + u256(asset) + u256(layer)), 16)
-
-
-def call_seed(asset):
-    return int(eth_call(RENDERER, SEL_SEED + u256(asset)), 16)
-
-
-def call_svg(seed):
-    raw = eth_call(RENDERER, SEL_SVG + u256(seed))
-    b = bytes.fromhex(raw[2:])
-    ln = int.from_bytes(b[32:64], "big")
-    return b[64:64 + ln].decode()
 
 
 # ── rect-SVG rasterizer (the chain art is a pure <rect> grid; no browser) ─────
@@ -161,25 +184,38 @@ def layer_pngs(sub):
     return out
 
 
+_OPAQUE = {}          # id(candidates dict) -> {name: [(x, y, rgb), ...]}
+
+
+def _opaque_list(candidates):
+    key = id(candidates)
+    if key not in _OPAQUE:
+        table = {}
+        for name, im in candidates.items():
+            cp = im.load()
+            table[name] = [(x, y, cp[x, y][:3])
+                           for y in range(96) for x in range(96)
+                           if cp[x, y][3] >= 250]
+        _OPAQUE[key] = table
+    return _OPAQUE[key]
+
+
 def match_glyph(composite, candidates, exclude=None):
     """Which candidate PNG's opaque pixels appear verbatim in the composite?
-    `exclude`: opaque region painted AFTER this layer (the date layer overdraws
-    the month layer), skipped during comparison."""
+    `exclude`: opaque coordinate set painted AFTER this layer (the date layer
+    overdraws the month layer), skipped during comparison. Iterates only each
+    candidate's precomputed opaque pixels — the naive 96x96xN scan was the
+    sweep's bottleneck once the RPC went parallel."""
     px = composite.load()
     best = None
-    for name, im in candidates.items():
-        cp = im.load()
+    for name, pixels in _opaque_list(candidates).items():
         ok = checked = 0
-        for y in range(96):
-            for x in range(96):
-                c = cp[x, y]
-                if c[3] < 250:
-                    continue
-                if exclude and exclude[x, y][3] >= 250:
-                    continue
-                checked += 1
-                if px[x, y] == c[:3]:
-                    ok += 1
+        for x, y, rgb in pixels:
+            if exclude and (x, y) in exclude:
+                continue
+            checked += 1
+            if px[x, y] == rgb:
+                ok += 1
         if checked and ok / checked > 0.995:
             if best is not None:
                 raise RuntimeError(f"ambiguous match: {best} vs {name}")
@@ -213,7 +249,16 @@ def elements_for(ids):
     only ids never seen before hit the RPC. Burned ids simply stop being asked
     about; the cache keeps their rows harmlessly."""
     cache = load_cache()
-    todo = [a for a in ids if a not in cache]
+    # Assets still inside their reveal window carry PROVISIONAL values (owner-
+    # confirmed: traits fix only once reveal completes). Re-read the youngest
+    # ids every run so a value cached mid-reveal heals itself.
+    young = set(a for a in ids if a > max(ids) - 1500) if ids else set()
+    unrevealed = sorted(a for a in ids
+                        if isinstance(cache.get(a), dict) and cache[a].get("u")
+                        and a not in young)
+    slot = int(time.time() // 3600) % 24
+    recheck = set(unrevealed[slot::24])      # ~1/24 of them per hourly run
+    todo = [a for a in ids if a not in cache or a in young or a in recheck]
     if not todo:
         return cache
 
@@ -226,7 +271,7 @@ def elements_for(ids):
 
     # 2 reads per id, batched; the cache is CHECKPOINTED as it grows so a
     # flaky-RPC death mid-sweep costs one chunk, not the whole run.
-    CH = 30          # ids per chunk = 60 calls; bigger batches earn 429s
+    CH = 250         # ids per chunk = 500 sub-calls in ONE aggregate3 request
     for i in range(0, len(todo), CH):
         part = todo[i:i + CH]
         calls = [(RENDERER, SEL_ELEM + u256(a) + u256(L)) for a in part for L in (L_MONTH, L_DATE)]
@@ -237,91 +282,149 @@ def elements_for(ids):
                 cache[a] = [int(me, 16), int(de, 16)]
         flush()
         time.sleep(0.6)
-        if (i // CH) % 5 == 0:
+        if True:
             print(f"  ids {min(i+CH,len(todo))}/{len(todo)}")
     return cache
 
 
-# ── calibrate ────────────────────────────────────────────────────────────────
-def calibrate():
-    assets = fetch_assets()
-    ids = [a for a, _ in assets]
-    print(f"{len(ids)} live assets")
 
-    cache = elements_for(ids)
-    elems = {a: {L_MONTH: v[0], L_DATE: v[1]} for a, v in cache.items()}
-
-    months = layer_pngs("month")
-    dates = layer_pngs("date")
-    mmap, dmap = {}, {}
-    # one exemplar asset per distinct element value; label it from rendered art
-    for a in ids:
-        me, de = elems[a][L_MONTH], elems[a][L_DATE]
-        if me is None or de is None or (str(me) in mmap and str(de) in dmap):
-            continue
-        svg = call_svg(call_seed(a))
-        comp = raster(svg)
-        dhit = match_glyph(comp, dates)                 # date paints last: exact
-        if dhit is None:
-            continue
-        mhit = match_glyph(comp, months, exclude=dates[dhit].load())
-        if str(de) not in dmap and dhit:
-            dmap[str(de)] = dhit
-            print(f"  date elem {de:>3} = {dhit}   (asset {a})")
-        if str(me) not in mmap and mhit:
-            mmap[str(me)] = mhit
-            print(f"  month elem {me:>3} = {mhit}  (asset {a})")
-        if len(mmap) >= 24 and len(dmap) >= 62:
-            break
-
-    os.makedirs(os.path.dirname(MAP_PATH), exist_ok=True)
-    json.dump({"month": mmap, "date": dmap}, open(MAP_PATH, "w"), indent=1, sort_keys=True)
-    print(f"wrote {MAP_PATH}: {len(mmap)} month elems, {len(dmap)} date elems")
+def u256(n):
+    return format(n, "064x")
 
 
-# ── build ────────────────────────────────────────────────────────────────────
+def sidecar():
+    return "0x" + eth_call(TOKEN, SEL_SIDECAR)[-40:]
+
+
+def load_cache():
+    try:
+        return {int(k): v for k, v in json.load(open(CACHE_PATH)).items()}
+    except FileNotFoundError:
+        return {}
+
+
+def flush_cache(cache):
+    os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+    tmp = CACHE_PATH + ".tmp"
+    json.dump({str(k): v for k, v in sorted(cache.items())}, open(tmp, "w"),
+              separators=(",", ":"))
+    os.replace(tmp, CACHE_PATH)
+
+
+def decode_svg(raw, months, dates, frames, plates):
+    """ABI-encoded string result -> full recipe dict, or None (unrevealed).
+    Match order is reverse paint order — each layer's pixels are exact except
+    where a LATER layer overdrew them: date (last, exact) -> month -> frame ->
+    plate. plate/frame may be absent (80%/20% presence): no match = absent.
+    The full recipe is captured now because the holder-HD feature needs it —
+    re-sweeping 6k heavy renders later to recover two skipped fields would
+    cost hours."""
+    b = bytes.fromhex(raw[2:])
+    ln = int.from_bytes(b[32:64], "big")
+    svg = b[64:64 + ln].decode()
+    comp = raster(svg)
+    d = match_glyph(comp, dates)                       # date paints last: exact
+    if d is None:
+        return None
+    excl = set((x, y) for x, y, _ in _opaque_list(dates)[d])
+    mo = match_glyph(comp, months, exclude=excl)
+    if mo is None:
+        return None
+    excl |= set((x, y) for x, y, _ in _opaque_list(months)[mo])
+    fr = match_glyph(comp, frames, exclude=excl)
+    if fr:
+        excl |= set((x, y) for x, y, _ in _opaque_list(frames)[fr])
+    pl = match_glyph(comp, plates, exclude=excl)
+    mm, mp = mo.split("_"); dd, dp = d.split("_")
+    P = {"corner": "r", "center": "c"}       # both words start with "c" — [0] was ambiguous
+    return {"d": mm + "-" + dd, "mp": P[mp], "dp": P[dp],
+            "f": fr or "", "p": pl or ""}
+
+
 def build():
-    emap = json.load(open(MAP_PATH))
+    months = layer_pngs("month"); dates = layer_pngs("date")
+    frames = layer_pngs("frame"); plates = layer_pngs("plate")
+    sc = sidecar()
+    print("sidecar", sc)
     assets = fetch_assets()
     ids = [a for a, _ in assets]
     owner = dict(assets)
     print(f"{len(ids)} live assets")
 
-    cache = elements_for(ids)
+    cache = load_cache()
+    # Art is immutable once the reveal settles; only pending reveals can still
+    # move, so the youngest ids are re-decoded every run.
+    young = set(a for a in ids if a > max(ids) - 1500) if ids else set()
+    unrevealed = sorted(a for a in ids
+                        if isinstance(cache.get(a), dict) and cache[a].get("u")
+                        and a not in young)
+    slot = int(time.time() // 3600) % 24
+    recheck = set(unrevealed[slot::24])      # ~1/24 of them per hourly run
+    todo = [a for a in ids if a not in cache or a in young or a in recheck]
+    import concurrent.futures as cf
 
-    index, unmapped = {}, set()
+    def fetch_one(a):
+        """SVG generation is compute-heavy on the node (~seconds each); the
+        win is CONCURRENCY, not batching — a multicall of generations blows
+        the eth_call gas cap anyway.
+
+        A failure and an empty result must never share a shape (the repo's
+        oldest lesson): only an EXECUTION REVERT means "nothing to render".
+        Capacity/throughput errors (Alchemy -32005 etc. arrive as JSON-RPC
+        errors, not HTTP 429) are retried here — the first sweep silently
+        recorded 5k rate-limited assets as unrevealed."""
+        for attempt in range(6):
+            try:
+                return a, eth_call(sc, SEL_SVG_ASSET + u256(a))
+            except RuntimeError as e:
+                msg = str(e)
+                if "revert" in msg:
+                    return a, "REVERT"
+                time.sleep(8 * (attempt + 1))     # capacity error: back off, retry
+        return a, None                            # transport dead: leave for next run
+
+    LANES, CH = 8, 100
+    with cf.ThreadPoolExecutor(LANES) as ex:
+        for i in range(0, len(todo), CH):
+            part = todo[i:i + CH]
+            for a, raw in ex.map(fetch_one, part):
+                if raw is None:
+                    continue                       # transient failure: retry next run
+                if raw == "REVERT":
+                    cache[a] = {"u": 1}            # renderer reverts: nothing to render
+                    continue
+                v = decode_svg(raw, months, dates, frames, plates)
+                # v None = svg exists but carries no date glyph (mid-reveal):
+                # also marked unrevealed; re-checked on the rotating slice below
+                cache[a] = v if v is not None else {"u": 1}
+            flush_cache(cache)                # checkpoint per chunk
+            print(f"  decoded {min(i+CH,len(todo))}/{len(todo)}")
+
+    index = {}
     for a in ids:
-        if a not in cache:
+        v = cache.get(a)
+        if not v or v.get("u"):
             continue
-        me, de = cache[a]
-        mn = emap["month"].get(str(me))
-        dn = emap["date"].get(str(de))
-        if not mn or not dn:
-            unmapped.add((me, de))
-            continue
-        mm, mplace = mn.split("_")          # "08_corner"
-        dd, dplace = dn.split("_")
-        key = f"{mm}-{dd}"
-        index.setdefault(key, []).append(
-            {"id": a, "owner": owner[a], "mp": mplace[0], "dp": dplace[0]})
-    if unmapped:
-        print(f"NOTE {len(unmapped)} element values missing from element_map.json "
-              f"(new values need a re-calibrate): {sorted(unmapped)[:6]}")
+        index.setdefault(v["d"], []).append(
+            {"id": a, "owner": owner[a], "mp": v["mp"], "dp": v["dp"],
+             "p": v["p"], "f": v["f"]})
 
-    # spot checks: refuse to publish an index that contradicts known pieces
-    KNOWN = {23: "03-21", 24: "05-25"}      # MAR 21, MAY 25 — verified from chain SVG
+    # sanity anchors — verified against uToken's own client render; refuse to
+    # publish an index that contradicts them
+    KNOWN = {23: "03-21", 24: "05-25"}
     for aid, want in KNOWN.items():
-        got = next((k for k, v in index.items() for e in v if e["id"] == aid), None)
-        if got != want and aid in owner:
-            raise SystemExit(f"sanity FAILED: asset {aid} indexed as {got}, expected {want}")
+        if aid in owner:
+            got = (cache.get(aid) or {}).get("d")
+            if got != want:
+                raise SystemExit(f"sanity FAILED: asset {aid} decoded as {got}, expected {want}")
 
-    # assetIds are a sequential mint counter (dense runs like 28476..28487 and
-    # low ids 21..24 both exist), so lifetime mints ~= max live id and
-    # burned = lifetime - alive. Sells burn newest-first, so the newest mint is
-    # always in the live set and maxId is never understated.
     max_id = max(ids) if ids else 0
+    dated = sum(len(v) for v in index.values())
     out = {"generated": int(time.time()), "token": TOKEN,
-           "items": sum(len(v) for v in index.values()),
+           "items": dated,
+           "alive": len(ids),
+           "unrevealed": sum(1 for a in ids
+                             if isinstance(cache.get(a), dict) and cache[a].get("u")),
            "burned": max(0, max_id - len(ids)),
            "days": index}
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
@@ -330,5 +433,6 @@ def build():
 
 
 if __name__ == "__main__":
-    {"calibrate": calibrate, "build": build}.get(
-        sys.argv[1] if len(sys.argv) > 1 else "", lambda: sys.exit(__doc__))()
+    if (sys.argv[1:] or [""])[0] != "build":
+        sys.exit(__doc__)
+    build()
