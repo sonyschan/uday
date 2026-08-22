@@ -177,9 +177,6 @@ section{ position:relative; }
   font-size:clamp(18px,1.45vw,21px); line-height:1.55;
   color:#e6dbc2; max-width:30ch; margin-top:22px;
 }
-.hero__meta{
-  display:flex; flex-wrap:wrap; gap:8px; margin-top:26px;
-}
 .tag{
   font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid);
   padding:7px 11px; border:1px solid var(--rule); border-radius:3px;
@@ -266,7 +263,6 @@ section{ position:relative; }
   .hero__lede{ margin-top:14px; }
   .hero__title{ margin-top:8px; }
   .daypick{ margin-top:0; }
-  .hero__meta{ margin-top:18px; }
   .hero__cta{ margin-top:18px; }
 }
 
@@ -287,7 +283,11 @@ section{ position:relative; }
 .yearwall__grid{
   display:grid; grid-template-columns:auto repeat(31, 1fr);
   gap:3px; min-width:680px;
+  /* room for the 1.35x hover scale: without it a scaled edge cell adds
+     scrollable overflow and the container's scrollbar pops in and out */
+  padding:6px 6px 6px 0;
 }
+.yearwall__stats{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:26px; }
 .yearwall__mon{
   font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
   color:var(--muted); align-self:center; padding-right:10px; white-space:nowrap;
@@ -526,14 +526,11 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
             </div>
           </div>
         </div>
-        <div class="hero__meta" id="hero-meta">
-          <span class="tag" data-i18n="tag.days">365 DAYS</span>
-          <span class="tag" data-i18n="tag.styles">7 STYLES</span>
-          <span class="tag" data-i18n="tag.combos">95,232 COMBINATIONS</span>
-        </div>
+        <!-- One question, one interaction, one payoff. The collection's live
+             numbers live with the year wall; the mint/offer CTA is the day
+             status's answer. This single quiet link is the bridge down. -->
         <div class="hero__cta">
-          <a class="btn btn--gold" href="https://utoken.so/collection/0x359211bb6b8cabce02dcbec1c55b50f2ec884146?tab=items" target="_blank" rel="noopener" data-i18n="cta.browse">BROWSE EVERY DAY</a>
-          <a class="btn btn--ghost" href="https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146" target="_blank" rel="noopener" data-i18n="cta.mint">MINT A DAY</a>
+          <a class="btn btn--ghost" href="#year" data-i18n="cta.year">SEE WHICH DAYS ARE LIT</a>
         </div>
       </div>
       <div class="stage">
@@ -565,6 +562,26 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <p data-i18n="story.p2">And they are not static. Their appearance can be dynamically regenerated through token trades.</p>
           <p data-i18n="story.p3">Keep one for yourself. Send one to someone who matters. Each uDAY represents a specific day.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── the year (escalation: from your one day to all of them) ──── -->
+  <section class="band" id="year" hidden>
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="year.kicker">The year</p>
+        <h2 id="year-title" data-i18n="year.title">A year, lighting up</h2>
+        <p data-i18n="year.blurb">Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.</p>
+      </div>
+      <div class="yearwall__stats rise" id="year-stats"></div>
+      <div class="yearwall rise">
+        <div class="yearwall__scroll">
+          <div class="yearwall__grid" id="year-grid"></div>
+        </div>
+        <p class="yearwall__glitchline" id="year-glitch" hidden></p>
+        <p class="yearwall__note" id="year-note"></p>
       </div>
     </div>
   </section>
@@ -631,24 +648,6 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
   </section>
 
   <!-- ── the year ─────────────────────────────────────────────────── -->
-  <section class="band" id="year" hidden>
-    <div class="shell">
-      <hr class="rule rule--gem">
-      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
-        <p class="kicker" data-i18n="year.kicker">The year</p>
-        <h2 id="year-title" data-i18n="year.title">A year, lighting up</h2>
-        <p data-i18n="year.blurb">Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.</p>
-      </div>
-      <div class="yearwall rise">
-        <div class="yearwall__scroll">
-          <div class="yearwall__grid" id="year-grid"></div>
-        </div>
-        <p class="yearwall__glitchline" id="year-glitch" hidden></p>
-        <p class="yearwall__note" id="year-note"></p>
-      </div>
-    </div>
-  </section>
-
   <!-- ── styles ───────────────────────────────────────────────────── -->
   <section class="band" id="styles">
     <div class="shell">
@@ -724,8 +723,7 @@ const I18N = {
   en: {
     'hero.kicker':'Onchain art on Robinhood Chain',
     'hero.lede':'Some days are just dates. Some become part of your story.',
-    'tag.layers':'4 LAYERS','tag.styles':'7 STYLES','tag.days':'365 DAYS','tag.combos':'95,232 COMBINATIONS',
-    'cta.browse':'BROWSE EVERY DAY','cta.mint':'MINT A DAY',
+    'cta.year':'SEE WHICH DAYS ARE LIT',
     'pick.q':'Which day is yours?',
     'status.taken':'{date} has been born — {n} of them exist. The earliest, #{id}, lives in {owner}\u2019s wallet.',
     'status.taken.one':'{date} has been born. #{id} lives in {owner}\u2019s wallet.',
@@ -771,8 +769,7 @@ const I18N = {
   zh: {
     'hero.kicker':'Robinhood Chain 上的鏈上藝術',
     'hero.lede':'有些日子只是日期。有些日子成為你的一部分。',
-    'tag.layers':'4 個圖層','tag.styles':'7 種畫風','tag.days':'365 天','tag.combos':'95,232 種組合',
-    'cta.browse':'看看每一天','cta.mint':'鑄造一天',
+    'cta.year':'看看哪些日子亮了',
     'pick.q':'哪一天是你的？',
     'status.taken':'{date}已經誕生——共 {n} 枚。最早的 #{id} 在 {owner} 的錢包裡。',
     'status.taken.one':'{date}已經誕生。#{id} 在 {owner} 的錢包裡。',
@@ -1180,7 +1177,7 @@ function renderLiveTags(){
   if(!DAYS) return;
   const lit = Object.keys(DAYS).filter(isRealDate).length;
   const alive = INDEX_META.items;
-  const host = document.getElementById('hero-meta');
+  const host = document.getElementById('year-stats');
   host.textContent = '';
   const mk = txt => { const el = document.createElement('span'); el.className = 'tag'; el.textContent = txt; host.appendChild(el); };
   mk(t('live.lit', { lit }));
