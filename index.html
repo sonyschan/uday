@@ -193,19 +193,34 @@ section{ position:relative; }
 }
 .daypick__row{ display:flex; flex-wrap:wrap; gap:10px; }
 .sel{ position:relative; display:inline-flex; }
-.sel select{
+.sel__btn{
   appearance:none; -webkit-appearance:none;
   font-family:var(--display); font-size:var(--fs-small); letter-spacing:var(--ls-narrow);
   color:var(--vellum); background:rgba(243,231,205,.04);
   border:1px solid var(--rule); border-radius:4px;
-  padding:13px 38px 13px 16px; min-width:132px; cursor:pointer;
+  padding:13px 38px 13px 16px; min-width:132px; cursor:pointer; text-align:left;
   transition:border-color .18s, background .18s;
 }
-.sel--day select{ min-width:96px; }
-.sel select:hover{ border-color:rgba(232,185,63,.55); background:rgba(243,231,205,.07); }
-.sel select:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
-/* the OS menu is painted by the platform — force a legible pair on dark UIs */
-.sel option{ background:#181430; color:#f3e7cd; }
+.sel--day .sel__btn{ min-width:96px; }
+.sel__btn:hover{ border-color:rgba(232,185,63,.55); background:rgba(243,231,205,.07); }
+.sel__btn:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+/* our own menu, not the platform's: some wallet in-app browsers never open
+   the native <select> popup at all, so the picker cannot depend on it */
+.sel__menu{
+  position:absolute; top:calc(100% + 6px); left:0; z-index:30;
+  min-width:100%; max-height:264px; overflow-y:auto;
+  background:#181430; border:1px solid rgba(232,185,63,.35); border-radius:6px;
+  box-shadow:0 12px 30px rgba(0,0,0,.55); padding:4px;
+  scrollbar-width:thin; scrollbar-color:rgba(232,185,63,.4) transparent;
+}
+.sel__opt{
+  display:block; width:100%; text-align:left; border:0; cursor:pointer;
+  font-family:var(--display); font-size:var(--fs-small); letter-spacing:var(--ls-narrow);
+  color:var(--vellum); background:none; padding:10px 14px; border-radius:4px;
+  white-space:nowrap;
+}
+.sel__opt:hover{ background:rgba(232,185,63,.12); }
+.sel__opt[aria-selected="true"]{ color:var(--gold); background:rgba(232,185,63,.08); }
 .sel__chev{
   position:absolute; right:15px; top:50%; transform:translateY(-2px);
   width:0; height:0; pointer-events:none;
@@ -524,12 +539,16 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <label class="daypick__q" for="hero-month" data-i18n="pick.q">Which day is yours?</label>
           <div class="daypick__row">
             <div class="sel">
-              <select id="hero-month" aria-label="Month"></select>
+              <button type="button" class="sel__btn" id="hero-month" aria-label="Month"
+                      aria-haspopup="listbox" aria-expanded="false"></button>
               <span class="sel__chev" aria-hidden="true"></span>
+              <div class="sel__menu" id="hero-month-menu" role="listbox" hidden></div>
             </div>
             <div class="sel sel--day">
-              <select id="hero-day" aria-label="Day"></select>
+              <button type="button" class="sel__btn" id="hero-day" aria-label="Day"
+                      aria-haspopup="listbox" aria-expanded="false"></button>
               <span class="sel__chev" aria-hidden="true"></span>
+              <div class="sel__menu" id="hero-day-menu" role="listbox" hidden></div>
             </div>
           </div>
         </div>
@@ -963,40 +982,69 @@ function heroDaySpec(){
 // the index is slow or failed, and a late arrival still repaints on top.
 setTimeout(() => { if(!heroDrawn) heroPaint(heroSpec, { stagger: reduced ? 0 : 260 }); }, 1200);
 
-const selMonth = document.getElementById('hero-month');
-const selDay   = document.getElementById('hero-day');
+const selMonth  = document.getElementById('hero-month');
+const selDay    = document.getElementById('hero-day');
+const menuMonth = document.getElementById('hero-month-menu');
+const menuDay   = document.getElementById('hero-day-menu');
+
+/* The picker is a plain-DOM listbox, NOT a native <select>. Wallet in-app
+   browsers (OKX and friends) delegate the select popup to the host app's
+   WebChromeClient, and hosts that skip that leave every <select> silently
+   dead \u2014 nothing a page can detect or fix. Buttons and divs open anywhere.
+   (This also retires the iOS live-`change` rebuild hazard entirely: an
+   option pick closes the menu before any rebuild happens.) */
+let openSel = null;
+function closeMenus(){
+  [[selMonth, menuMonth], [selDay, menuDay]].forEach(([b, m]) => {
+    m.hidden = true; b.setAttribute('aria-expanded', 'false');
+  });
+  openSel = null;
+}
+function toggleMenu(btn, menu){
+  const opening = menu.hidden;
+  closeMenus();
+  if(opening){
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    openSel = menu;
+    const cur = menu.querySelector('[aria-selected="true"]');
+    if(cur) cur.scrollIntoView({ block: 'nearest' });
+  }
+}
+selMonth.addEventListener('click', () => toggleMenu(selMonth, menuMonth));
+selDay.addEventListener('click', () => toggleMenu(selDay, menuDay));
+addEventListener('pointerdown', e => {
+  if(openSel && !e.target.closest('.sel')) closeMenus();
+}, { passive: true, capture: true });
+addEventListener('keydown', e => { if(e.key === 'Escape') closeMenus(); });
+
+function buildMenu(menu, count, labelFn, current, pick){
+  menu.textContent = '';
+  for(let v = 1; v <= count; v++){
+    const o = document.createElement('button');
+    o.type = 'button'; o.className = 'sel__opt';
+    o.setAttribute('role', 'option');
+    o.setAttribute('aria-selected', String(v === current));
+    o.textContent = labelFn(v);
+    o.addEventListener('click', () => { closeMenus(); pick(v); });
+    menu.appendChild(o);
+  }
+}
+const dayOptLabel = d => lang === 'zh' ? d + '\u65e5' : pad2(d);
 
 function fillHeroPicker(){
-  selMonth.textContent = '';
-  MONTHS_EN.forEach((_, i) => {
-    const o = document.createElement('option');
-    o.value = i + 1;
-    o.textContent = monthLabel(i + 1);
-    if(heroSpec.month === i + 1) o.selected = true;
-    selMonth.appendChild(o);
-  });
-  selDay.textContent = '';          // force a rebuild (locale labels changed)
+  selMonth.textContent = monthLabel(heroSpec.month);
+  buildMenu(menuMonth, 12, monthLabel, heroSpec.month,
+            v => { heroSpec.month = v; heroPick(); });
   syncDayOptions();
 }
 
-/* Adjusts the day select IN PLACE, rebuilding its options only when the
-   month's length actually changed. iOS Safari fires `change` continuously
-   while its wheel picker is still open \u2014 rebuilding a select's options
-   mid-interaction detaches the wheel and the picker stops responding, so
-   a change handler must never wipe options it does not have to. */
 function syncDayOptions(){
   const max = daysInMonth(heroSpec.month);
   if(heroSpec.date > max) heroSpec.date = max;
-  if(selDay.options.length !== max){
-    selDay.textContent = '';
-    for(let d = 1; d <= max; d++){
-      const o = document.createElement('option');
-      o.value = d;
-      o.textContent = lang === 'zh' ? d + '\u65e5' : pad2(d);
-      selDay.appendChild(o);
-    }
-  }
-  selDay.value = String(heroSpec.date);
+  buildMenu(menuDay, max, dayOptLabel, heroSpec.date,
+            v => { heroSpec.date = v; heroPick(); });
+  selDay.textContent = dayOptLabel(heroSpec.date);
 }
 
 function heroCap(){
@@ -1006,15 +1054,11 @@ function heroCap(){
 }
 
 function heroPick(){
-  heroSpec.month = Number(selMonth.value);
-  heroSpec.date  = Number(selDay.value);
-  syncDayOptions();          // day list follows the month — no full rebuild
+  fillHeroPicker();     // menus are already closed when an option is picked
   heroCap();
   heroPaint(heroDaySpec());
   renderDayStatus();
 }
-selMonth.addEventListener('change', heroPick);
-selDay.addEventListener('change', heroPick);
 
 /* ─────────────────────────────────────────────────────────────────────
    composer
