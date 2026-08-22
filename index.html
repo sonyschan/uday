@@ -936,7 +936,8 @@ const heroCanvas = document.getElementById('hero-canvas');
 // Hero paints are serialized: a repaint (picker change, index arrival) queues
 // behind the staggered first draw instead of racing it on the same canvas.
 let heroQ = Promise.resolve();
-function heroPaint(spec, opts){ heroQ = heroQ.then(() => paint(heroCanvas, spec, opts)); }
+let heroDrawn = false;
+function heroPaint(spec, opts){ heroDrawn = true; heroQ = heroQ.then(() => paint(heroCanvas, spec, opts)); }
 // What the hero draws for the picked day: the day's REAL earliest piece once
 // it has been born (recipe from the index — the same #id the status line
 // names), the default unicorn/classic composition only while it is unborn.
@@ -951,7 +952,12 @@ function heroDaySpec(){
   }
   return heroSpec;
 }
-heroPaint(heroSpec, { stagger: reduced ? 0 : 260 });
+// No eager default paint: on a warm cache the index lands in milliseconds
+// and repainting over the imagined unicorn/classic piece reads as a flash
+// of the wrong art. The canvas stays empty (the dotted ring is the
+// placeholder) until the real recipe arrives; the default only paints if
+// the index is slow or failed, and a late arrival still repaints on top.
+setTimeout(() => { if(!heroDrawn) heroPaint(heroSpec, { stagger: reduced ? 0 : 260 }); }, 1200);
 
 const selMonth = document.getElementById('hero-month');
 const selDay   = document.getElementById('hero-day');
@@ -1345,7 +1351,9 @@ async function loadIndex(){
     renderLiveTags();
     renderDayStatus();
     renderYear();
-    heroPaint(heroDaySpec());   // swap the imagined piece for the day's real one
+    // First paint on the fast path: the layer-by-layer reveal IS the real
+    // piece. On the slow path (default already up) this repaints over it.
+    heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
   }catch(e){ /* no index yet — the static page stands on its own */ }
 }
 
