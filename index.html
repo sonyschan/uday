@@ -354,6 +354,9 @@ section{ position:relative; }
 .yeartip__sub{ font-family:var(--body); font-size:var(--fs-micro); color:var(--muted); margin-top:2px; white-space:nowrap; }
 .yeartip--glitch{ border-color:rgba(192,68,85,.65); }
 .yeartip--glitch .yeartip__day{ color:#e08496; }
+/* touch mode: the card is the interaction — it takes taps and carries a CTA */
+.yeartip--touch{ pointer-events:auto; }
+.yeartip__cta{ display:block; margin-top:10px; font-size:var(--fs-micro); padding:9px 14px; }
 
 /* ─── generic section ───────────────────────────────────────────────── */
 .band{ padding:clamp(58px,6.4vw,104px) 0; }
@@ -1209,7 +1212,7 @@ function dayLabel(m, d){
    96px on-chain layers using the piece's decoded recipe (already in the day
    index), so a hover costs zero network requests after the first paint. */
 const CAN_HOVER = matchMedia('(hover:hover) and (pointer:fine)').matches;
-let yearTip = null, yearTipCanvas, yearTipDay, yearTipSub;
+let yearTip = null, yearTipCanvas, yearTipDay, yearTipSub, yearTipCta;
 let tipPaintQ = Promise.resolve();   // serialized paints: the last hover wins
 function ensureTip(){
   if(yearTip) return;
@@ -1218,10 +1221,20 @@ function ensureTip(){
   yearTipCanvas = document.createElement('canvas');
   yearTipDay = document.createElement('div'); yearTipDay.className = 'yeartip__day';
   yearTipSub = document.createElement('div'); yearTipSub.className = 'yeartip__sub';
-  yearTip.append(yearTipCanvas, yearTipDay, yearTipSub);
+  yearTipCta = document.createElement('a');
+  yearTipCta.className = 'btn btn--gold yeartip__cta';
+  yearTipCta.target = '_blank'; yearTipCta.rel = 'noopener'; yearTipCta.hidden = true;
+  yearTipCta.addEventListener('click', () => {
+    va('event', { name: 'calendar_click', data: {
+      day: yearTip.dataset.day, ...(yearTip.dataset.glitch ? { glitch: 1 } : {}) } });
+  });
+  yearTip.append(yearTipCanvas, yearTipDay, yearTipSub, yearTipCta);
   document.body.appendChild(yearTip);
   addEventListener('scroll', hideTip, { passive:true, capture:true });
-  addEventListener('pointerdown', hideTip, { passive:true, capture:true });
+  // a tap inside the card (its CTA) must not dismiss the card it lives in
+  addEventListener('pointerdown', e => {
+    if(yearTip && !yearTip.contains(e.target)) hideTip();
+  }, { passive:true, capture:true });
 }
 function hideTip(){ if(yearTip) yearTip.classList.remove('on'); }
 function recipeSpec(key, e, res){
@@ -1233,33 +1246,59 @@ function recipeSpec(key, e, res){
     res: res || 'onchain'
   };
 }
+function showTip(cell, key, kind, first, n, withCta){
+  ensureTip();
+  const m = +key.slice(0,2), d = +key.slice(3);
+  yearTip.className = 'yeartip' +
+    (kind === 'glitch' ? ' yeartip--glitch' : kind === 'free' ? ' yeartip--free' : '') +
+    (withCta ? ' yeartip--touch' : '');
+  yearTipDay.textContent = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
+  yearTipSub.textContent =
+    kind === 'free'   ? t('year.tip.free') :
+    kind === 'glitch' ? t('year.glitch.cell') + ' \u00b7 ' + t('year.tip.first', { id: first.id })
+                      : t('year.tip.first', { id: first.id });
+  if(first){
+    const ctx = yearTipCanvas.getContext('2d');
+    ctx.clearRect(0, 0, yearTipCanvas.width, yearTipCanvas.height);
+    tipPaintQ = tipPaintQ.then(() => paint(yearTipCanvas, recipeSpec(key, first)));
+  }
+  yearTipCta.hidden = !withCta;
+  if(withCta){
+    yearTipCta.href = kind === 'free' ? UTOKEN_TOKEN : UTOKEN_ITEM(first.id);
+    yearTipCta.textContent = kind === 'free' ? t('status.btn.mint') : t('status.btn.offer');
+    yearTip.dataset.day = key;
+    yearTip.dataset.glitch = kind === 'glitch' ? '1' : '';
+  }
+  const r = cell.getBoundingClientRect();
+  yearTip.classList.add('on');
+  const w = yearTip.offsetWidth, h = yearTip.offsetHeight;
+  let x = Math.max(8, Math.min(r.left + r.width/2 - w/2, innerWidth - w - 8));
+  let y = r.top - h - 10;
+  if(y < 8) y = r.bottom + 10;
+  yearTip.style.left = x + 'px';
+  yearTip.style.top  = y + 'px';
+}
 function attachTip(cell, key, kind, first, n){
   if(!CAN_HOVER) return;
-  cell.addEventListener('mouseenter', () => {
-    ensureTip();
-    const m = +key.slice(0,2), d = +key.slice(3);
-    yearTip.className = 'yeartip' +
-      (kind === 'glitch' ? ' yeartip--glitch' : kind === 'free' ? ' yeartip--free' : '');
-    yearTipDay.textContent = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
-    yearTipSub.textContent =
-      kind === 'free'   ? t('year.tip.free') :
-      kind === 'glitch' ? t('year.glitch.cell') + ' \u00b7 ' + t('year.tip.first', { id: first.id })
-                        : t('year.tip.first', { id: first.id });
-    if(first){
-      const ctx = yearTipCanvas.getContext('2d');
-      ctx.clearRect(0, 0, yearTipCanvas.width, yearTipCanvas.height);
-      tipPaintQ = tipPaintQ.then(() => paint(yearTipCanvas, recipeSpec(key, first)));
-    }
-    const r = cell.getBoundingClientRect();
-    yearTip.classList.add('on');
-    const w = yearTip.offsetWidth, h = yearTip.offsetHeight;
-    let x = Math.max(8, Math.min(r.left + r.width/2 - w/2, innerWidth - w - 8));
-    let y = r.top - h - 10;
-    if(y < 8) y = r.bottom + 10;
-    yearTip.style.left = x + 'px';
-    yearTip.style.top  = y + 'px';
-  });
+  cell.addEventListener('mouseenter', () => showTip(cell, key, kind, first, n, false));
   cell.addEventListener('mouseleave', hideTip);
+}
+/* Touch has no hover, so a tap must not jump straight offsite: first tap
+   opens the same card WITH a CTA (bring it home / mint); tapping outside
+   closes it. Desktop keeps hover-to-preview, click-to-visit. */
+function attachCellAction(cell, key, kind, first, n){
+  if(CAN_HOVER){
+    if(first) cell.addEventListener('click', () => {
+      va('event', { name: 'calendar_click', data: { day: key, ...(kind === 'glitch' ? { glitch: 1 } : {}) } });
+      window.open(UTOKEN_ITEM(first.id), '_blank', 'noopener');
+    });
+    attachTip(cell, key, kind, first, n);
+  }else{
+    cell.addEventListener('click', () => {
+      va('event', { name: 'calendar_preview', data: { day: key, ...(kind === 'glitch' ? { glitch: 1 } : {}) } });
+      showTip(cell, key, kind, first, n, true);
+    });
+  }
 }
 
 function renderYear(){
@@ -1290,11 +1329,7 @@ function renderYear(){
           g.setAttribute('aria-label', glabel);
           if(!CAN_HOVER) g.title = glabel;
           const gf = DAYS[gkey].slice().sort((a,b) => a.id - b.id)[0];
-          g.addEventListener('click', () => {
-            va('event', { name: 'calendar_click', data: { day: gkey, glitch: 1 } });
-            window.open(UTOKEN_ITEM(gf.id), '_blank', 'noopener');
-          });
-          attachTip(g, gkey, 'glitch', gf, gn);
+          attachCellAction(g, gkey, 'glitch', gf, gn);
           grid.appendChild(g);
         }else{
           const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
@@ -1314,12 +1349,8 @@ function renderYear(){
         const heat = .16 + .74 * Math.sqrt(n / max);         // sqrt: one-of-many days stay visible
         cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
         first = DAYS[key].slice().sort((a,b) => a.id - b.id)[0];
-        cell.addEventListener('click', () => {
-          va('event', { name: 'calendar_click', data: { day: key } });
-          window.open(UTOKEN_ITEM(first.id), '_blank', 'noopener');
-        });
       }
-      attachTip(cell, key, n ? 'lit' : 'free', first, n);
+      attachCellAction(cell, key, n ? 'lit' : 'free', first, n);
       grid.appendChild(cell);
     }
   }
