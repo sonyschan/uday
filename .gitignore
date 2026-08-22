@@ -5,3 +5,7 @@ _shot.html
 _frame.html
 _og.html
 _fonts.html
+
+# secrets
+.env
+__pycache__/

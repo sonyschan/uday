@@ -1,0 +1,40 @@
+# Rebuilds data/date-index.json from Robinhood Chain and commits it if changed.
+# The site serves the committed JSON statically — visitors never touch the RPC,
+# so public-RPC outages only ever delay the next refresh, never break the page.
+#
+# NOTE: this file cannot be pushed by Claude Code (its token lacks the
+# `workflow` OAuth scope) — the owner pushes it.
+name: date-index
+on:
+  schedule:
+    - cron: '17 * * * *'        # hourly, off the minute-0 rush
+  workflow_dispatch: {}          # manual runs from the Actions tab
+permissions:
+  contents: write
+concurrency:
+  group: date-index
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow
+      - name: Build index
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+        run: python3 tools/build_date_index.py build
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- data/date-index.json; then
+            echo "index unchanged"; exit 0
+          fi
+          git config user.name  "uday-index-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/date-index.json
+          git commit -m "data: refresh date index"
+          git push

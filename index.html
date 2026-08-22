@@ -15,6 +15,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://uday.gift/assets/og.png">
 <link rel="icon" href="assets/uday-logo.png">
+<script>window.va = window.va || function(){(window.vaq = window.vaq || []).push(arguments);};</script>
+<script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -147,14 +149,16 @@ section{ position:relative; }
   padding:120px 0 72px;
 }
 .hero__grid{
-  display:grid; gap:clamp(32px,5vw,72px);
+  display:grid; gap:clamp(24px,3.4vw,44px) clamp(32px,5vw,72px);
   grid-template-columns:minmax(0,1fr) minmax(0,.86fr);
+  grid-template-areas:"copy stage" "act stage";
   align-items:center;
 }
-@media (max-width:880px){
-  .hero__grid{ grid-template-columns:1fr; }
-  .hero{ min-height:auto; padding-top:104px; }
-}
+.hero__copy{ grid-area:copy; align-self:end; }
+.hero__act { grid-area:act;  align-self:start; }
+.stage     { grid-area:stage; }
+/* Narrow: the medallion sits BETWEEN the copy and the picker, so choosing a day
+   changes something the reader can actually see without scrolling. */
 
 .hero__title{
   font-family:var(--display);
@@ -173,15 +177,41 @@ section{ position:relative; }
   font-size:clamp(18px,1.45vw,21px); line-height:1.55;
   color:#e6dbc2; max-width:30ch; margin-top:22px;
 }
-.hero__meta{
-  display:flex; flex-wrap:wrap; gap:8px; margin-top:26px;
-}
 .tag{
   font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid);
   padding:7px 11px; border:1px solid var(--rule); border-radius:3px;
   color:var(--gold); background:rgba(232,185,63,.05);
 }
-.hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:34px; }
+.hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:26px; }
+
+/* The hook. First screen, above the fold, before anything else asks for a tap. */
+.daypick{ margin-top:26px; }
+.daypick__q{
+  display:block; margin-bottom:10px;
+  font-family:var(--display); font-size:var(--fs-tiny); letter-spacing:var(--ls-mid);
+  text-transform:uppercase; color:var(--gold);
+}
+.daypick__row{ display:flex; flex-wrap:wrap; gap:10px; }
+.sel{ position:relative; display:inline-flex; }
+.sel select{
+  appearance:none; -webkit-appearance:none;
+  font-family:var(--display); font-size:var(--fs-small); letter-spacing:var(--ls-narrow);
+  color:var(--vellum); background:rgba(243,231,205,.04);
+  border:1px solid var(--rule); border-radius:4px;
+  padding:13px 38px 13px 16px; min-width:132px; cursor:pointer;
+  transition:border-color .18s, background .18s;
+}
+.sel--day select{ min-width:96px; }
+.sel select:hover{ border-color:rgba(232,185,63,.55); background:rgba(243,231,205,.07); }
+.sel select:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+/* the OS menu is painted by the platform — force a legible pair on dark UIs */
+.sel option{ background:#181430; color:#f3e7cd; }
+.sel__chev{
+  position:absolute; right:15px; top:50%; transform:translateY(-2px);
+  width:0; height:0; pointer-events:none;
+  border-left:5px solid transparent; border-right:5px solid transparent;
+  border-top:6px solid var(--gold);
+}
 
 .btn{
   display:inline-flex; align-items:center; gap:9px;
@@ -205,9 +235,12 @@ section{ position:relative; }
 }
 .medallion{
   position:relative; width:min(430px, 82vw); aspect-ratio:1;
+}
+.medallion canvas{
+  width:100%; height:100%; display:block;
   filter:drop-shadow(0 26px 46px rgba(0,0,0,.6));
 }
-.medallion canvas{ width:100%; height:100%; display:block; }
+.medallion__spin{ will-change:transform; }
 .medallion__spin{
   position:absolute; inset:-4%; border-radius:50%;
   border:1px dashed rgba(232,185,63,.20);
@@ -218,6 +251,109 @@ section{ position:relative; }
   margin-top:18px; text-align:center;
   font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid); color:var(--muted);
 }
+
+@media (max-width:880px){
+  .hero__grid{ grid-template-columns:1fr; grid-template-areas:"copy" "stage" "act"; gap:16px; }
+  .hero{ min-height:auto; padding:86px 0 56px; }
+  /* Everything above the picker is budget: on a 360x700 fold the question and
+     both selects must be visible WITH the medallion, or choosing a day changes
+     something the reader cannot see. Measured, not guessed. */
+  .medallion{ width:min(300px, 56vw); }
+  .medallion__cap{ margin-top:8px; }
+  .hero__lede{ margin-top:14px; }
+  .hero__title{ margin-top:8px; }
+  .daypick{ margin-top:0; }
+  .hero__cta{ margin-top:18px; }
+}
+
+/* ─── day status (under the hero medallion) ─────────────────────────── */
+.daystatus{
+  margin-top:14px; text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.daystatus__line{
+  margin:0; max-width:34ch;
+  font-size:var(--fs-sub); line-height:1.5; color:#dbcfb4;
+}
+.daystatus__line b{ color:var(--gold); font-weight:600; }
+.daystatus__btn{ font-size:var(--fs-small); padding:12px 20px; }
+
+/* ─── the year wall ─────────────────────────────────────────────────── */
+.yearwall__scroll{ overflow-x:auto; padding-bottom:8px; }
+.yearwall__grid{
+  display:grid; grid-template-columns:auto repeat(31, 1fr);
+  gap:3px; min-width:680px;
+  /* room for the 1.35x hover scale: without it a scaled edge cell adds
+     scrollable overflow and the container's scrollbar pops in and out */
+  padding:6px 6px 6px 0;
+}
+.yearwall__stats{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:26px; }
+.yearwall__mon{
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  color:var(--muted); align-self:center; padding-right:10px; white-space:nowrap;
+}
+.yearcell{
+  aspect-ratio:1; border-radius:2px; border:1px solid rgba(243,231,205,.07);
+  background:rgba(243,231,205,.03); display:block; padding:0; cursor:default;
+}
+.yearcell--void{ border:0; background:transparent; }
+.yearcell--lit{
+  cursor:pointer; border-color:rgba(232,185,63,.35);
+  transition:transform .12s, box-shadow .12s;
+}
+.yearcell--lit:hover{ transform:scale(1.35); box-shadow:0 0 10px var(--gold-glow); z-index:1; position:relative; }
+/* An impossible date (FEB 30, JUN 31…) minted onchain: it lives in the cell
+   the calendar does not have. Crimson, not gold — a day outside the year. */
+.yearcell--glitch{
+  cursor:pointer; background:rgba(192,68,85,.55); border-color:rgba(192,68,85,.8);
+  transition:transform .12s, box-shadow .12s;
+}
+.yearcell--glitch:hover{ transform:scale(1.35); box-shadow:0 0 12px rgba(192,68,85,.7); z-index:1; position:relative; }
+/* today's cell breathes so a first-time visitor finds "now" at a glance */
+.yearcell--today{ animation:yc-breathe 2.8s ease-in-out infinite; }
+@keyframes yc-breathe{
+  0%,100%{ box-shadow:0 0 0 0 rgba(232,185,63,0); }
+  50%{ box-shadow:0 0 12px 2px var(--gold-glow); }
+}
+/* an impossible day flickers like the glitch it is; delays are staggered in JS */
+@keyframes yc-glitch{
+  0%,91.5%,94.5%,100%{ opacity:1; }
+  92%,94%{ opacity:.4; }
+}
+.yearcell--glitch{ animation:yc-glitch 5.2s steps(1,end) infinite; }
+@media (prefers-reduced-motion:reduce){
+  .yearcell--today,.yearcell--glitch{ animation:none; }
+  .yearcell--today{ box-shadow:0 0 10px var(--gold-glow); }
+}
+.yearwall__note{
+  margin-top:14px; font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--muted);
+}
+.yearwall__glitchline{
+  margin-top:18px; font-family:var(--display); font-size:var(--fs-small);
+  letter-spacing:var(--ls-narrow); color:#d97c8d;
+}
+/* one floating card for the whole wall: the day, its count, and the earliest
+   piece's art composed live from the 96px on-chain layers */
+.yeartip{
+  position:fixed; z-index:40; pointer-events:none; opacity:0;
+  background:#100d20; border:1px solid rgba(232,185,63,.32); border-radius:8px;
+  padding:10px 12px; text-align:center; box-shadow:0 10px 28px rgba(0,0,0,.55);
+  transition:opacity .1s;
+}
+.yeartip.on{ opacity:1; }
+.yeartip canvas{
+  width:96px; height:96px; image-rendering:pixelated; display:block;
+  margin:0 auto 8px; border-radius:4px; background:rgba(243,231,205,.05);
+}
+.yeartip--free canvas{ display:none; }
+.yeartip__day{
+  font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--gold); white-space:nowrap;
+}
+.yeartip__sub{ font-family:var(--body); font-size:var(--fs-micro); color:var(--muted); margin-top:2px; white-space:nowrap; }
+.yeartip--glitch{ border-color:rgba(192,68,85,.65); }
+.yeartip--glitch .yeartip__day{ color:#e08496; }
 
 /* ─── generic section ───────────────────────────────────────────────── */
 .band{ padding:clamp(58px,6.4vw,104px) 0; }
@@ -371,19 +507,30 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
   <!-- ── hero ─────────────────────────────────────────────────────── -->
   <section class="hero">
     <div class="shell hero__grid">
-      <div>
+      <div class="hero__copy">
         <p class="kicker" data-i18n="hero.kicker">Onchain art on Robinhood Chain</p>
         <h1 class="hero__title">u<em>DAY</em></h1>
         <p class="hero__lede" data-i18n="hero.lede">Some days are just dates. Some become part of your story.</p>
-        <div class="hero__meta">
-          <span class="tag" data-i18n="tag.layers">4 LAYERS</span>
-          <span class="tag" data-i18n="tag.styles">7 STYLES</span>
-          <span class="tag" data-i18n="tag.days">365 DAYS</span>
-          <span class="tag" data-i18n="tag.combos">95,232 COMBINATIONS</span>
+      </div>
+      <div class="hero__act">
+        <div class="daypick">
+          <label class="daypick__q" for="hero-month" data-i18n="pick.q">Which day is yours?</label>
+          <div class="daypick__row">
+            <div class="sel">
+              <select id="hero-month" aria-label="Month"></select>
+              <span class="sel__chev" aria-hidden="true"></span>
+            </div>
+            <div class="sel sel--day">
+              <select id="hero-day" aria-label="Day"></select>
+              <span class="sel__chev" aria-hidden="true"></span>
+            </div>
+          </div>
         </div>
+        <!-- One question, one interaction, one payoff. The collection's live
+             numbers live with the year wall; the mint/offer CTA is the day
+             status's answer. This single quiet link is the bridge down. -->
         <div class="hero__cta">
-          <a class="btn btn--gold" href="https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146" target="_blank" rel="noopener" data-i18n="cta.buy">FIND YOUR DAY</a>
-          <a class="btn btn--ghost" href="#forge" data-i18n="cta.forge">TRY THE COMPOSER</a>
+          <a class="btn btn--ghost" href="#year" data-i18n="cta.year">SEE WHICH DAYS ARE LIT</a>
         </div>
       </div>
       <div class="stage">
@@ -392,6 +539,10 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <canvas id="hero-canvas" width="96" height="96" role="img" aria-label="A uDAY medallion"></canvas>
         </div>
         <p class="medallion__cap" id="hero-cap">TODAY</p>
+        <div class="daystatus" id="day-status" hidden>
+          <p class="daystatus__line" id="day-status-line"></p>
+          <a class="btn btn--gold daystatus__btn" id="day-status-btn" target="_blank" rel="noopener"></a>
+        </div>
       </div>
     </div>
   </section>
@@ -411,6 +562,26 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <p data-i18n="story.p2">And they are not static. Their appearance can be dynamically regenerated through token trades.</p>
           <p data-i18n="story.p3">Keep one for yourself. Send one to someone who matters. Each uDAY represents a specific day.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── the year (escalation: from your one day to all of them) ──── -->
+  <section class="band" id="year" hidden>
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="year.kicker">The year</p>
+        <h2 id="year-title" data-i18n="year.title">A year, lighting up</h2>
+        <p data-i18n="year.blurb">Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.</p>
+      </div>
+      <div class="yearwall__stats rise" id="year-stats"></div>
+      <div class="yearwall rise">
+        <div class="yearwall__scroll">
+          <div class="yearwall__grid" id="year-grid"></div>
+        </div>
+        <p class="yearwall__glitchline" id="year-glitch" hidden></p>
+        <p class="yearwall__note" id="year-note"></p>
       </div>
     </div>
   </section>
@@ -476,6 +647,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
     </div>
   </section>
 
+  <!-- ── the year ─────────────────────────────────────────────────── -->
   <!-- ── styles ───────────────────────────────────────────────────── -->
   <section class="band" id="styles">
     <div class="shell">
@@ -551,8 +723,20 @@ const I18N = {
   en: {
     'hero.kicker':'Onchain art on Robinhood Chain',
     'hero.lede':'Some days are just dates. Some become part of your story.',
-    'tag.layers':'4 LAYERS','tag.styles':'7 STYLES','tag.days':'365 DAYS','tag.combos':'95,232 COMBINATIONS',
-    'cta.buy':'FIND YOUR DAY','cta.forge':'TRY THE COMPOSER',
+    'cta.year':'SEE WHICH DAYS ARE LIT',
+    'pick.q':'Which day is yours?',
+    'status.taken':'{date} has been born — {n} of them exist. The earliest, #{id}, lives in {owner}\u2019s wallet.',
+    'status.taken.one':'{date} has been born. #{id} lives in {owner}\u2019s wallet.',
+    'status.free':'{date} has not been born yet. Every mint could be the one.',
+    'status.btn.offer':'BRING IT HOME','status.btn.mint':'MINT A DAY',
+    'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} DAYS BORN','live.sealed':'{n} STILL SEALED','live.owners':'{n} COLLECTORS',
+    'year.kicker':'The year','year.title':'A year, lighting up',
+    'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.',
+    'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
+    'year.glitch.cell':'A DAY THAT DOES NOT EXIST',
+    'year.glitch.line':'{n} pieces are minted on days that do not exist \u2014 someone owns {day}.',
+    'year.tip.first':'Earliest #{id}',
+    'year.tip.free':'Not born yet',
     'story.kicker':'The idea',
     'story.title':'Which days mean something to you?',
     'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
@@ -585,8 +769,20 @@ const I18N = {
   zh: {
     'hero.kicker':'Robinhood Chain 上的鏈上藝術',
     'hero.lede':'有些日子只是日期。有些日子成為你的一部分。',
-    'tag.layers':'4 個圖層','tag.styles':'7 種畫風','tag.days':'365 天','tag.combos':'95,232 種組合',
-    'cta.buy':'找到你的那一天','cta.forge':'試試合成器',
+    'cta.year':'看看哪些日子亮了',
+    'pick.q':'哪一天是你的？',
+    'status.taken':'{date}已經誕生——共 {n} 枚。最早的 #{id} 在 {owner} 的錢包裡。',
+    'status.taken.one':'{date}已經誕生。#{id} 在 {owner} 的錢包裡。',
+    'status.free':'{date}還沒誕生。每一次鑄造，都可能是它。',
+    'status.btn.offer':'把它帶回家','status.btn.mint':'鑄造一天',
+    'live.lit':'全年點亮 {lit}/366 天','live.alive':'已誕生 {n} 枚','live.sealed':'{n} 枚待揭曉','live.owners':'收藏者 {n} 位',
+    'year.kicker':'一整年','year.title':'一年，正在點亮',
+    'year.blurb':'每一格是一天。亮起代表這一天已在鏈上誕生，越亮代表這一天的 uDAY 越多。點一格，去看那一天最早的一枚。',
+    'year.note':'366 天已點亮 {lit} 天 · 每小時從 Robinhood Chain 更新',
+    'year.glitch.cell':'不存在的日子',
+    'year.glitch.line':'有 {n} 枚鑄在不存在的日子上——有人真的擁有{day}。',
+    'year.tip.first':'最早 #{id}',
+    'year.tip.free':'還沒誕生',
     'story.kicker':'緣起',
     'story.title':'哪些日子對你有意義？',
     'story.quote':'一個生日。一個紀念日。或是那個改變了你的日子。',
@@ -632,7 +828,11 @@ const STYLE_LABEL = {
 
 let lang = 'en';
 
-function t(key){ return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key; }
+function t(key, vars){
+  let v = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  if(vars) for(const k in vars) v = v.replaceAll('{' + k + '}', vars[k]);
+  return v;
+}
 
 function applyLang(next){
   lang = next;
@@ -644,11 +844,12 @@ function applyLang(next){
   document.querySelector('[data-i18n="fact.supply.sub"]').textContent = t('fact.supply.sub');
   document.querySelectorAll('.langs button').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.lang === next)));
-  document.getElementById('hero-cap').textContent = t('hero.cap');
   try{ localStorage.setItem('uday.lang', next); }catch(e){}
   renderChips();
   renderGallery();
   syncReadout();
+  if(typeof fillHeroPicker === 'function'){ fillHeroPicker(); heroCap(); }
+  if(typeof renderDayStatus === 'function' && DAYS){ renderLiveTags(); renderDayStatus(); renderYear(); }
 }
 
 function setSub(valKey, subKey){
@@ -728,7 +929,73 @@ const heroSpec = {
   res:'hd'
 };
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-paint(document.getElementById('hero-canvas'), heroSpec, { stagger: reduced ? 0 : 260 });
+const heroCanvas = document.getElementById('hero-canvas');
+// Hero paints are serialized: a repaint (picker change, index arrival) queues
+// behind the staggered first draw instead of racing it on the same canvas.
+let heroQ = Promise.resolve();
+let heroDrawn = false;
+function heroPaint(spec, opts){ heroDrawn = true; heroQ = heroQ.then(() => paint(heroCanvas, spec, opts)); }
+// What the hero draws for the picked day: the day's REAL earliest piece once
+// it has been born (recipe from the index — the same #id the status line
+// names), the default unicorn/classic composition only while it is unborn.
+function heroDaySpec(){
+  if(DAYS){
+    const key = pad2(heroSpec.month) + '-' + pad2(heroSpec.date);
+    const list = DAYS[key];
+    if(list && list.length){
+      const first = list.slice().sort((a,b) => a.id - b.id)[0];
+      return recipeSpec(key, first, 'hd');
+    }
+  }
+  return heroSpec;
+}
+// No eager default paint: on a warm cache the index lands in milliseconds
+// and repainting over the imagined unicorn/classic piece reads as a flash
+// of the wrong art. The canvas stays empty (the dotted ring is the
+// placeholder) until the real recipe arrives; the default only paints if
+// the index is slow or failed, and a late arrival still repaints on top.
+setTimeout(() => { if(!heroDrawn) heroPaint(heroSpec, { stagger: reduced ? 0 : 260 }); }, 1200);
+
+const selMonth = document.getElementById('hero-month');
+const selDay   = document.getElementById('hero-day');
+
+function fillHeroPicker(){
+  selMonth.textContent = '';
+  MONTHS_EN.forEach((_, i) => {
+    const o = document.createElement('option');
+    o.value = i + 1;
+    o.textContent = monthLabel(i + 1);
+    if(heroSpec.month === i + 1) o.selected = true;
+    selMonth.appendChild(o);
+  });
+  const max = daysInMonth(heroSpec.month);
+  if(heroSpec.date > max) heroSpec.date = max;
+  selDay.textContent = '';
+  for(let d = 1; d <= max; d++){
+    const o = document.createElement('option');
+    o.value = d;
+    o.textContent = lang === 'zh' ? d + '\u65e5' : pad2(d);
+    if(heroSpec.date === d) o.selected = true;
+    selDay.appendChild(o);
+  }
+}
+
+function heroCap(){
+  const el = document.getElementById('hero-cap');
+  const isToday = heroSpec.month === today.getMonth()+1 && heroSpec.date === today.getDate();
+  el.textContent = isToday ? t('hero.cap') : monthLabel(heroSpec.month) + ' ' + pad2(heroSpec.date);
+}
+
+function heroPick(){
+  heroSpec.month = Number(selMonth.value);
+  heroSpec.date  = Number(selDay.value);
+  fillHeroPicker();          // day list follows the month
+  heroCap();
+  heroPaint(heroDaySpec());
+  renderDayStatus();
+}
+selMonth.addEventListener('change', heroPick);
+selDay.addEventListener('change', heroPick);
 
 /* ─────────────────────────────────────────────────────────────────────
    composer
@@ -865,6 +1132,229 @@ function renderGallery(){
 }
 
 /* ─────────────────────────────────────────────────────────────────────
+   date index — data/date-index.json, rebuilt hourly from Robinhood Chain.
+   Everything here degrades gracefully: no index, no change to the page.
+   ───────────────────────────────────────────────────────────────────── */
+const UTOKEN_ITEM = id =>
+  'https://utoken.so/collection/0x359211bb6b8cabce02dcbec1c55b50f2ec884146?tab=items&item=' + id;
+const UTOKEN_TOKEN = 'https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146';
+let DAYS = null, INDEX_META = null;
+
+const isRealDate = k => {                       // "02-30" can exist on-chain; a calendar only counts real days
+  const [m, d] = k.split('-').map(Number);
+  return d <= [31,29,31,30,31,30,31,31,30,31,30,31][m-1];
+};
+const shortAddr = a => a ? a.slice(0,6) + '\u2026' + a.slice(-4) : '?';
+
+function renderDayStatus(){
+  const box = document.getElementById('day-status');
+  if(!DAYS){ box.hidden = true; return; }
+  const key = pad2(heroSpec.month) + '-' + pad2(heroSpec.date);
+  const entries = (DAYS[key] || []).slice().sort((a,b) => a.id - b.id);
+  const line = document.getElementById('day-status-line');
+  const btn  = document.getElementById('day-status-btn');
+  const date = lang === 'zh'
+    ? heroSpec.month + '\u6708' + heroSpec.date + '\u65e5'
+    : monthLabel(heroSpec.month) + ' ' + pad2(heroSpec.date);
+  if(entries.length){
+    const first = entries[0];
+    line.innerHTML = t(entries.length > 1 ? 'status.taken' : 'status.taken.one',
+      { date: '<b>' + date + '</b>', n: entries.length, id: first.id,
+        owner: '<b>' + shortAddr(first.owner) + '</b>' });
+    btn.textContent = t('status.btn.offer');
+    btn.href = UTOKEN_ITEM(first.id);
+    va('event', { name: 'day_check', data: { state: 'taken' } });
+  }else{
+    line.innerHTML = t('status.free', { date: '<b>' + date + '</b>' });
+    btn.textContent = t('status.btn.mint');
+    btn.href = UTOKEN_TOKEN;
+    va('event', { name: 'day_check', data: { state: 'free' } });
+  }
+  box.hidden = false;
+}
+
+function renderLiveTags(){
+  if(!DAYS) return;
+  const lit = Object.keys(DAYS).filter(isRealDate).length;
+  const alive = INDEX_META.items;
+  const host = document.getElementById('year-stats');
+  host.textContent = '';
+  const mk = txt => { const el = document.createElement('span'); el.className = 'tag'; el.textContent = txt; host.appendChild(el); };
+  mk(t('live.lit', { lit }));
+  mk(t('live.alive', { n: alive.toLocaleString() }));
+  // 5,290 sealed pieces = most holders have never seen their day. The mystery
+  // is real, on-chain, and better copy than anything we could invent.
+  if(INDEX_META.unrevealed) mk(t('live.sealed', { n: INDEX_META.unrevealed.toLocaleString() }));
+  // burned is deliberately NOT shown: buys mint and sells burn, so the burn
+  // counter is cumulative churn, not scarcity — displaying it implies a
+  // deflation that does not exist (owner call, 2026-08-22). The real scarcity
+  // signal is lit-days, which can go DARK when a day's last piece burns.
+  // owners of ALL alive items (sealed included), from the builder — the same
+  // definition as uToken's "item owners". Counting owners of dated pieces
+  // only (the old way, kept as fallback for a stale index) understates it.
+  let owners = INDEX_META.owners;
+  if(!owners){
+    const set = new Set();
+    for(const k in DAYS) DAYS[k].forEach(e => set.add(e.owner));
+    owners = set.size;
+  }
+  if(owners) mk(t('live.owners', { n: owners.toLocaleString() }));
+}
+
+function dayLabel(m, d){
+  return lang === 'zh' ? m + '\u6708' + d + '\u65e5' : MONTHS_EN[m-1] + ' ' + pad2(d);
+}
+
+/* One floating tooltip for the whole wall. The art is composed live from the
+   96px on-chain layers using the piece's decoded recipe (already in the day
+   index), so a hover costs zero network requests after the first paint. */
+const CAN_HOVER = matchMedia('(hover:hover) and (pointer:fine)').matches;
+let yearTip = null, yearTipCanvas, yearTipDay, yearTipSub;
+let tipPaintQ = Promise.resolve();   // serialized paints: the last hover wins
+function ensureTip(){
+  if(yearTip) return;
+  yearTip = document.createElement('div');
+  yearTip.className = 'yeartip';
+  yearTipCanvas = document.createElement('canvas');
+  yearTipDay = document.createElement('div'); yearTipDay.className = 'yeartip__day';
+  yearTipSub = document.createElement('div'); yearTipSub.className = 'yeartip__sub';
+  yearTip.append(yearTipCanvas, yearTipDay, yearTipSub);
+  document.body.appendChild(yearTip);
+  addEventListener('scroll', hideTip, { passive:true, capture:true });
+  addEventListener('pointerdown', hideTip, { passive:true, capture:true });
+}
+function hideTip(){ if(yearTip) yearTip.classList.remove('on'); }
+function recipeSpec(key, e, res){
+  return {
+    plate: e.p || null, frame: e.f || null,
+    month: +key.slice(0,2), date: +key.slice(3),
+    monthPlace: e.mp === 'r' ? 'corner' : 'center',
+    datePlace:  e.dp === 'r' ? 'corner' : 'center',
+    res: res || 'onchain'
+  };
+}
+function attachTip(cell, key, kind, first, n){
+  if(!CAN_HOVER) return;
+  cell.addEventListener('mouseenter', () => {
+    ensureTip();
+    const m = +key.slice(0,2), d = +key.slice(3);
+    yearTip.className = 'yeartip' +
+      (kind === 'glitch' ? ' yeartip--glitch' : kind === 'free' ? ' yeartip--free' : '');
+    yearTipDay.textContent = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
+    yearTipSub.textContent =
+      kind === 'free'   ? t('year.tip.free') :
+      kind === 'glitch' ? t('year.glitch.cell') + ' \u00b7 ' + t('year.tip.first', { id: first.id })
+                        : t('year.tip.first', { id: first.id });
+    if(first){
+      const ctx = yearTipCanvas.getContext('2d');
+      ctx.clearRect(0, 0, yearTipCanvas.width, yearTipCanvas.height);
+      tipPaintQ = tipPaintQ.then(() => paint(yearTipCanvas, recipeSpec(key, first)));
+    }
+    const r = cell.getBoundingClientRect();
+    yearTip.classList.add('on');
+    const w = yearTip.offsetWidth, h = yearTip.offsetHeight;
+    let x = Math.max(8, Math.min(r.left + r.width/2 - w/2, innerWidth - w - 8));
+    let y = r.top - h - 10;
+    if(y < 8) y = r.bottom + 10;
+    yearTip.style.left = x + 'px';
+    yearTip.style.top  = y + 'px';
+  });
+  cell.addEventListener('mouseleave', hideTip);
+}
+
+function renderYear(){
+  if(!DAYS) return;
+  const sec = document.getElementById('year');
+  const grid = document.getElementById('year-grid');
+  grid.textContent = '';
+  const counts = {};
+  let max = 1, lit = 0;
+  for(const k in DAYS){ if(isRealDate(k)){ counts[k] = DAYS[k].length; max = Math.max(max, counts[k]); lit++; } }
+  const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
+  const todayKey = pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
+  let gi = 0;                                     // staggers the glitch flicker
+  for(let m = 1; m <= 12; m++){
+    const lab = document.createElement('span');
+    lab.className = 'yearwall__mon';
+    lab.textContent = lang === 'zh' ? m + '\u6708' : MONTHS_EN[m-1];
+    grid.appendChild(lab);
+    for(let d = 1; d <= 31; d++){
+      if(d > DIM[m-1]){
+        const gkey = pad2(m) + '-' + pad2(d);
+        const gn = (DAYS[gkey] || []).length;
+        if(gn){                                   // an impossible date, minted anyway
+          const g = document.createElement('button');
+          g.className = 'yearcell yearcell--glitch';
+          g.style.animationDelay = (gi++ * 1.3) + 's';
+          const glabel = dayLabel(m, d) + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gn;
+          g.setAttribute('aria-label', glabel);
+          if(!CAN_HOVER) g.title = glabel;
+          const gf = DAYS[gkey].slice().sort((a,b) => a.id - b.id)[0];
+          g.addEventListener('click', () => {
+            va('event', { name: 'calendar_click', data: { day: gkey, glitch: 1 } });
+            window.open(UTOKEN_ITEM(gf.id), '_blank', 'noopener');
+          });
+          attachTip(g, gkey, 'glitch', gf, gn);
+          grid.appendChild(g);
+        }else{
+          const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
+        }
+        continue;
+      }
+      const key = pad2(m) + '-' + pad2(d);
+      const n = counts[key] || 0;
+      const cell = document.createElement(n ? 'button' : 'span');
+      cell.className = 'yearcell' + (n ? ' yearcell--lit' : '');
+      if(key === todayKey) cell.classList.add('yearcell--today');
+      const label = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
+      if(n) cell.setAttribute('aria-label', label);
+      if(!CAN_HOVER) cell.title = label;
+      let first = null;
+      if(n){
+        const heat = .16 + .74 * Math.sqrt(n / max);         // sqrt: one-of-many days stay visible
+        cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
+        first = DAYS[key].slice().sort((a,b) => a.id - b.id)[0];
+        cell.addEventListener('click', () => {
+          va('event', { name: 'calendar_click', data: { day: key } });
+          window.open(UTOKEN_ITEM(first.id), '_blank', 'noopener');
+        });
+      }
+      attachTip(cell, key, n ? 'lit' : 'free', first, n);
+      grid.appendChild(cell);
+    }
+  }
+  document.getElementById('year-note').textContent = t('year.note', { lit });
+  // The impossible days are the wall's most shareable fact \u2014 one loud line,
+  // not a footnote. {day} names the first glitch day (FEB 30) as proof.
+  const glitchDays = Object.keys(DAYS).filter(k => !isRealDate(k)).sort();
+  const glitchPieces = glitchDays.reduce((n, k) => n + DAYS[k].length, 0);
+  const gl = document.getElementById('year-glitch');
+  if(glitchPieces){
+    const k0 = glitchDays[0];
+    gl.textContent = t('year.glitch.line', { n: glitchPieces, day: dayLabel(+k0.slice(0,2), +k0.slice(3)) });
+    gl.hidden = false;
+  }
+  sec.hidden = false;
+  if(io) io.observe(sec.querySelectorAll('.rise')[0]);
+}
+
+async function loadIndex(){
+  try{
+    const r = await fetch('data/date-index.json', { cache: 'no-cache' });
+    if(!r.ok) return;
+    const j = await r.json();
+    DAYS = j.days || {};
+    INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0, owners: j.owners || 0 };
+    renderLiveTags();
+    renderDayStatus();
+    renderYear();
+    // First paint on the fast path: the layer-by-layer reveal IS the real
+    // piece. On the slow path (default already up) this repaints over it.
+    heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
+  }catch(e){ /* no index yet — the static page stands on its own */ }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
    chrome
    ───────────────────────────────────────────────────────────────────── */
 document.querySelectorAll('.langs button').forEach(b =>
@@ -878,12 +1368,13 @@ document.getElementById('btn-copy').addEventListener('click', async (e) => {
   }catch(err){ /* clipboard blocked — the address is selectable on the page */ }
 });
 
+let io = null;
 const revealAll = () =>
   document.querySelectorAll('.rise').forEach(el => el.classList.add('in'));
 
 if('IntersectionObserver' in window){
   document.documentElement.classList.add('reveal-on');
-  const io = new IntersectionObserver(entries => {
+  io = new IntersectionObserver(entries => {
     entries.forEach(en => { if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
   }, { rootMargin:'0px 0px -12% 0px' });
   document.querySelectorAll('.rise').forEach(el => io.observe(el));
@@ -903,6 +1394,7 @@ try{
 if(!I18N[saved]) saved = 'en';
 applyLang(saved);
 paint(forgeCanvas, spec);
+loadIndex();
 </script>
 </body>
 </html>
