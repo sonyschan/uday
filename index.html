@@ -337,11 +337,15 @@ section{ position:relative; }
    piece's art composed live from the 96px on-chain layers */
 .yeartip{
   position:fixed; z-index:40; pointer-events:none; opacity:0;
+  /* visibility, not just opacity: a faded-out card must also leave hit
+     testing, or it floats invisibly over the wall eating taps (its CTA
+     could even be tapped blind, jumping to uToken) */
+  visibility:hidden;
   background:#100d20; border:1px solid rgba(232,185,63,.32); border-radius:8px;
   padding:10px 12px; text-align:center; box-shadow:0 10px 28px rgba(0,0,0,.55);
-  transition:opacity .1s;
+  transition:opacity .1s, visibility 0s .1s;
 }
-.yeartip.on{ opacity:1; }
+.yeartip.on{ opacity:1; visibility:visible; transition:opacity .1s, visibility 0s; }
 .yeartip canvas{
   width:96px; height:96px; image-rendering:pixelated; display:block;
   margin:0 auto 8px; border-radius:4px; background:rgba(243,231,205,.05);
@@ -1248,7 +1252,13 @@ function ensureTip(){
     if(yearTip && !yearTip.contains(e.target)) hideTip();
   }, { passive:true, capture:true });
 }
-function hideTip(){ if(yearTip) yearTip.classList.remove('on'); }
+function hideTip(){
+  if(!yearTip) return;
+  yearTip.classList.remove('on');
+  // drop pointer-events NOW, not after the fade — the 100ms fade window
+  // must not keep an invisible tap target over the calendar
+  yearTip.classList.remove('yeartip--touch');
+}
 function recipeSpec(key, e, res){
   return {
     plate: e.p || null, frame: e.f || null,
