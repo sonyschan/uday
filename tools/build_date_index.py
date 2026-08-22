@@ -426,6 +426,10 @@ def build():
            "unrevealed": sum(1 for a in ids
                              if isinstance(cache.get(a), dict) and cache[a].get("u")),
            "burned": max(0, max_id - len(ids)),
+           # unique owners across ALL alive items, sealed included — matches
+           # uToken's "item owners" stat; owners-of-dated-only is a subset
+           # and reads as a wrong number next to the collection page
+           "owners": len(set(owner.values())),
            "days": index}
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
     json.dump(out, open(INDEX_PATH, "w"), separators=(",", ":"), sort_keys=True)

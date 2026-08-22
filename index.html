@@ -933,7 +933,25 @@ const heroSpec = {
 };
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const heroCanvas = document.getElementById('hero-canvas');
-paint(heroCanvas, heroSpec, { stagger: reduced ? 0 : 260 });
+// Hero paints are serialized: a repaint (picker change, index arrival) queues
+// behind the staggered first draw instead of racing it on the same canvas.
+let heroQ = Promise.resolve();
+function heroPaint(spec, opts){ heroQ = heroQ.then(() => paint(heroCanvas, spec, opts)); }
+// What the hero draws for the picked day: the day's REAL earliest piece once
+// it has been born (recipe from the index — the same #id the status line
+// names), the default unicorn/classic composition only while it is unborn.
+function heroDaySpec(){
+  if(DAYS){
+    const key = pad2(heroSpec.month) + '-' + pad2(heroSpec.date);
+    const list = DAYS[key];
+    if(list && list.length){
+      const first = list.slice().sort((a,b) => a.id - b.id)[0];
+      return recipeSpec(key, first, 'hd');
+    }
+  }
+  return heroSpec;
+}
+heroPaint(heroSpec, { stagger: reduced ? 0 : 260 });
 
 const selMonth = document.getElementById('hero-month');
 const selDay   = document.getElementById('hero-day');
@@ -970,7 +988,7 @@ function heroPick(){
   heroSpec.date  = Number(selDay.value);
   fillHeroPicker();          // day list follows the month
   heroCap();
-  paint(heroCanvas, heroSpec);
+  heroPaint(heroDaySpec());
   renderDayStatus();
 }
 selMonth.addEventListener('change', heroPick);
@@ -1168,9 +1186,16 @@ function renderLiveTags(){
   // counter is cumulative churn, not scarcity — displaying it implies a
   // deflation that does not exist (owner call, 2026-08-22). The real scarcity
   // signal is lit-days, which can go DARK when a day's last piece burns.
-  const owners = new Set();
-  for(const k in DAYS) DAYS[k].forEach(e => owners.add(e.owner));
-  if(owners.size) mk(t('live.owners', { n: owners.size.toLocaleString() }));
+  // owners of ALL alive items (sealed included), from the builder — the same
+  // definition as uToken's "item owners". Counting owners of dated pieces
+  // only (the old way, kept as fallback for a stale index) understates it.
+  let owners = INDEX_META.owners;
+  if(!owners){
+    const set = new Set();
+    for(const k in DAYS) DAYS[k].forEach(e => set.add(e.owner));
+    owners = set.size;
+  }
+  if(owners) mk(t('live.owners', { n: owners.toLocaleString() }));
 }
 
 function dayLabel(m, d){
@@ -1196,13 +1221,13 @@ function ensureTip(){
   addEventListener('pointerdown', hideTip, { passive:true, capture:true });
 }
 function hideTip(){ if(yearTip) yearTip.classList.remove('on'); }
-function recipeSpec(key, e){
+function recipeSpec(key, e, res){
   return {
     plate: e.p || null, frame: e.f || null,
     month: +key.slice(0,2), date: +key.slice(3),
     monthPlace: e.mp === 'r' ? 'corner' : 'center',
     datePlace:  e.dp === 'r' ? 'corner' : 'center',
-    res: 'onchain'
+    res: res || 'onchain'
   };
 }
 function attachTip(cell, key, kind, first, n){
@@ -1316,10 +1341,11 @@ async function loadIndex(){
     if(!r.ok) return;
     const j = await r.json();
     DAYS = j.days || {};
-    INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0 };
+    INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0, owners: j.owners || 0 };
     renderLiveTags();
     renderDayStatus();
     renderYear();
+    heroPaint(heroDaySpec());   // swap the imagined piece for the day's real one
   }catch(e){ /* no index yet — the static page stands on its own */ }
 }
 
