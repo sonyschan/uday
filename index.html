@@ -15,6 +15,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://uday.gift/assets/og.png">
 <link rel="icon" href="assets/uday-logo.png">
+<script>window.va = window.va || function(){(window.vaq = window.vaq || []).push(arguments);};</script>
+<script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -236,9 +238,12 @@ section{ position:relative; }
 }
 .medallion{
   position:relative; width:min(430px, 82vw); aspect-ratio:1;
+}
+.medallion canvas{
+  width:100%; height:100%; display:block;
   filter:drop-shadow(0 26px 46px rgba(0,0,0,.6));
 }
-.medallion canvas{ width:100%; height:100%; display:block; }
+.medallion__spin{ will-change:transform; }
 .medallion__spin{
   position:absolute; inset:-4%; border-radius:50%;
   border:1px dashed rgba(232,185,63,.20);
@@ -263,6 +268,43 @@ section{ position:relative; }
   .daypick{ margin-top:0; }
   .hero__meta{ margin-top:18px; }
   .hero__cta{ margin-top:18px; }
+}
+
+/* ─── day status (under the hero medallion) ─────────────────────────── */
+.daystatus{
+  margin-top:14px; text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.daystatus__line{
+  margin:0; max-width:34ch;
+  font-size:var(--fs-sub); line-height:1.5; color:#dbcfb4;
+}
+.daystatus__line b{ color:var(--gold); font-weight:600; }
+.daystatus__btn{ font-size:var(--fs-small); padding:12px 20px; }
+
+/* ─── the year wall ─────────────────────────────────────────────────── */
+.yearwall__scroll{ overflow-x:auto; padding-bottom:8px; }
+.yearwall__grid{
+  display:grid; grid-template-columns:auto repeat(31, 1fr);
+  gap:3px; min-width:680px;
+}
+.yearwall__mon{
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  color:var(--muted); align-self:center; padding-right:10px; white-space:nowrap;
+}
+.yearcell{
+  aspect-ratio:1; border-radius:2px; border:1px solid rgba(243,231,205,.07);
+  background:rgba(243,231,205,.03); display:block; padding:0; cursor:default;
+}
+.yearcell--void{ border:0; background:transparent; }
+.yearcell--lit{
+  cursor:pointer; border-color:rgba(232,185,63,.35);
+  transition:transform .12s, box-shadow .12s;
+}
+.yearcell--lit:hover{ transform:scale(1.35); box-shadow:0 0 10px var(--gold-glow); z-index:1; position:relative; }
+.yearwall__note{
+  margin-top:14px; font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--muted);
 }
 
 /* ─── generic section ───────────────────────────────────────────────── */
@@ -436,7 +478,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
             </div>
           </div>
         </div>
-        <div class="hero__meta">
+        <div class="hero__meta" id="hero-meta">
           <span class="tag" data-i18n="tag.days">365 DAYS</span>
           <span class="tag" data-i18n="tag.styles">7 STYLES</span>
           <span class="tag" data-i18n="tag.combos">95,232 COMBINATIONS</span>
@@ -452,6 +494,10 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <canvas id="hero-canvas" width="96" height="96" role="img" aria-label="A uDAY medallion"></canvas>
         </div>
         <p class="medallion__cap" id="hero-cap">TODAY</p>
+        <div class="daystatus" id="day-status" hidden>
+          <p class="daystatus__line" id="day-status-line"></p>
+          <a class="btn btn--gold daystatus__btn" id="day-status-btn" target="_blank" rel="noopener"></a>
+        </div>
       </div>
     </div>
   </section>
@@ -536,6 +582,24 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
     </div>
   </section>
 
+  <!-- ── the year ─────────────────────────────────────────────────── -->
+  <section class="band" id="year" hidden>
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="year.kicker">The year</p>
+        <h2 id="year-title" data-i18n="year.title">A year, lighting up</h2>
+        <p data-i18n="year.blurb">Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.</p>
+      </div>
+      <div class="yearwall rise">
+        <div class="yearwall__scroll">
+          <div class="yearwall__grid" id="year-grid"></div>
+        </div>
+        <p class="yearwall__note" id="year-note"></p>
+      </div>
+    </div>
+  </section>
+
   <!-- ── styles ───────────────────────────────────────────────────── -->
   <section class="band" id="styles">
     <div class="shell">
@@ -614,6 +678,14 @@ const I18N = {
     'tag.layers':'4 LAYERS','tag.styles':'7 STYLES','tag.days':'365 DAYS','tag.combos':'95,232 COMBINATIONS',
     'cta.browse':'BROWSE EVERY DAY','cta.mint':'MINT A DAY',
     'pick.q':'Which day is yours?',
+    'status.taken':'{date} has been born — {n} of them exist. The earliest, #{id}, lives in {owner}\u2019s wallet.',
+    'status.taken.one':'{date} has been born. #{id} lives in {owner}\u2019s wallet.',
+    'status.free':'{date} has not been born yet. Every mint could be the one.',
+    'status.btn.offer':'BRING IT HOME','status.btn.mint':'MINT A DAY',
+    'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} PIECES ALIVE','live.burned':'{n} BURNED FOREVER',
+    'year.kicker':'The year','year.title':'A year, lighting up',
+    'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.',
+    'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
     'story.kicker':'The idea',
     'story.title':'Which days mean something to you?',
     'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
@@ -649,6 +721,14 @@ const I18N = {
     'tag.layers':'4 個圖層','tag.styles':'7 種畫風','tag.days':'365 天','tag.combos':'95,232 種組合',
     'cta.browse':'看看每一天','cta.mint':'鑄造一天',
     'pick.q':'哪一天是你的？',
+    'status.taken':'{date}已經誕生——共 {n} 枚。最早的 #{id} 在 {owner} 的錢包裡。',
+    'status.taken.one':'{date}已經誕生。#{id} 在 {owner} 的錢包裡。',
+    'status.free':'{date}還沒誕生。每一次鑄造，都可能是它。',
+    'status.btn.offer':'把它帶回家','status.btn.mint':'鑄造一天',
+    'live.lit':'全年點亮 {lit}/366 天','live.alive':'存世 {n} 枚','live.burned':'已燒毀 {n} 枚',
+    'year.kicker':'一整年','year.title':'一年，正在點亮',
+    'year.blurb':'每一格是一天。亮起代表這一天已在鏈上誕生，越亮代表這一天的 uDAY 越多。點一格，去看那一天最早的一枚。',
+    'year.note':'366 天已點亮 {lit} 天 · 每小時從 Robinhood Chain 更新',
     'story.kicker':'緣起',
     'story.title':'哪些日子對你有意義？',
     'story.quote':'一個生日。一個紀念日。或是那個改變了你的日子。',
@@ -694,7 +774,11 @@ const STYLE_LABEL = {
 
 let lang = 'en';
 
-function t(key){ return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key; }
+function t(key, vars){
+  let v = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  if(vars) for(const k in vars) v = v.replaceAll('{' + k + '}', vars[k]);
+  return v;
+}
 
 function applyLang(next){
   lang = next;
@@ -711,6 +795,7 @@ function applyLang(next){
   renderGallery();
   syncReadout();
   if(typeof fillHeroPicker === 'function'){ fillHeroPicker(); heroCap(); }
+  if(typeof renderDayStatus === 'function' && DAYS){ renderLiveTags(); renderDayStatus(); renderYear(); }
 }
 
 function setSub(valKey, subKey){
@@ -829,6 +914,7 @@ function heroPick(){
   fillHeroPicker();          // day list follows the month
   heroCap();
   paint(heroCanvas, heroSpec);
+  renderDayStatus();
 }
 selMonth.addEventListener('change', heroPick);
 selDay.addEventListener('change', heroPick);
@@ -968,6 +1054,114 @@ function renderGallery(){
 }
 
 /* ─────────────────────────────────────────────────────────────────────
+   date index — data/date-index.json, rebuilt hourly from Robinhood Chain.
+   Everything here degrades gracefully: no index, no change to the page.
+   ───────────────────────────────────────────────────────────────────── */
+const UTOKEN_ITEM = id =>
+  'https://utoken.so/collection/0x359211bb6b8cabce02dcbec1c55b50f2ec884146?tab=items&item=' + id;
+const UTOKEN_TOKEN = 'https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146';
+let DAYS = null, INDEX_META = null;
+
+const isRealDate = k => {                       // "02-30" can exist on-chain; a calendar only counts real days
+  const [m, d] = k.split('-').map(Number);
+  return d <= [31,29,31,30,31,30,31,31,30,31,30,31][m-1];
+};
+const shortAddr = a => a ? a.slice(0,6) + '\u2026' + a.slice(-4) : '?';
+
+function renderDayStatus(){
+  const box = document.getElementById('day-status');
+  if(!DAYS){ box.hidden = true; return; }
+  const key = pad2(heroSpec.month) + '-' + pad2(heroSpec.date);
+  const entries = (DAYS[key] || []).slice().sort((a,b) => a.id - b.id);
+  const line = document.getElementById('day-status-line');
+  const btn  = document.getElementById('day-status-btn');
+  const date = lang === 'zh'
+    ? heroSpec.month + '\u6708' + heroSpec.date + '\u65e5'
+    : monthLabel(heroSpec.month) + ' ' + pad2(heroSpec.date);
+  if(entries.length){
+    const first = entries[0];
+    line.innerHTML = t(entries.length > 1 ? 'status.taken' : 'status.taken.one',
+      { date: '<b>' + date + '</b>', n: entries.length, id: first.id,
+        owner: '<b>' + shortAddr(first.owner) + '</b>' });
+    btn.textContent = t('status.btn.offer');
+    btn.href = UTOKEN_ITEM(first.id);
+    va('event', { name: 'day_check', data: { state: 'taken' } });
+  }else{
+    line.innerHTML = t('status.free', { date: '<b>' + date + '</b>' });
+    btn.textContent = t('status.btn.mint');
+    btn.href = UTOKEN_TOKEN;
+    va('event', { name: 'day_check', data: { state: 'free' } });
+  }
+  box.hidden = false;
+}
+
+function renderLiveTags(){
+  if(!DAYS) return;
+  const lit = Object.keys(DAYS).filter(isRealDate).length;
+  const alive = INDEX_META.items;
+  const host = document.getElementById('hero-meta');
+  host.textContent = '';
+  const mk = txt => { const el = document.createElement('span'); el.className = 'tag'; el.textContent = txt; host.appendChild(el); };
+  mk(t('live.lit', { lit }));
+  mk(t('live.alive', { n: alive.toLocaleString() }));
+  if(INDEX_META.burned > 0) mk(t('live.burned', { n: INDEX_META.burned.toLocaleString() }));
+}
+
+function renderYear(){
+  if(!DAYS) return;
+  const sec = document.getElementById('year');
+  const grid = document.getElementById('year-grid');
+  grid.textContent = '';
+  const counts = {};
+  let max = 1, lit = 0;
+  for(const k in DAYS){ if(isRealDate(k)){ counts[k] = DAYS[k].length; max = Math.max(max, counts[k]); lit++; } }
+  const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
+  for(let m = 1; m <= 12; m++){
+    const lab = document.createElement('span');
+    lab.className = 'yearwall__mon';
+    lab.textContent = lang === 'zh' ? m + '\u6708' : MONTHS_EN[m-1];
+    grid.appendChild(lab);
+    for(let d = 1; d <= 31; d++){
+      if(d > DIM[m-1]){
+        const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
+        continue;
+      }
+      const key = pad2(m) + '-' + pad2(d);
+      const n = counts[key] || 0;
+      const cell = document.createElement(n ? 'button' : 'span');
+      cell.className = 'yearcell' + (n ? ' yearcell--lit' : '');
+      cell.title = (lang === 'zh' ? m + '\u6708' + d + '\u65e5' : MONTHS_EN[m-1] + ' ' + pad2(d)) + (n ? ' \u00b7 \u00d7' + n : '');
+      if(n){
+        const heat = .16 + .74 * Math.sqrt(n / max);         // sqrt: one-of-many days stay visible
+        cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
+        const first = DAYS[key].slice().sort((a,b) => a.id - b.id)[0];
+        cell.addEventListener('click', () => {
+          va('event', { name: 'calendar_click', data: { day: key } });
+          window.open(UTOKEN_ITEM(first.id), '_blank', 'noopener');
+        });
+      }
+      grid.appendChild(cell);
+    }
+  }
+  document.getElementById('year-note').textContent = t('year.note', { lit });
+  sec.hidden = false;
+  if(io) io.observe(sec.querySelectorAll('.rise')[0]);
+}
+
+async function loadIndex(){
+  try{
+    const r = await fetch('data/date-index.json', { cache: 'no-cache' });
+    if(!r.ok) return;
+    const j = await r.json();
+    DAYS = j.days || {};
+    INDEX_META = { items: j.items || 0, burned: j.burned || 0 };
+    renderLiveTags();
+    renderDayStatus();
+    renderYear();
+  }catch(e){ /* no index yet — the static page stands on its own */ }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
    chrome
    ───────────────────────────────────────────────────────────────────── */
 document.querySelectorAll('.langs button').forEach(b =>
@@ -981,12 +1175,13 @@ document.getElementById('btn-copy').addEventListener('click', async (e) => {
   }catch(err){ /* clipboard blocked — the address is selectable on the page */ }
 });
 
+let io = null;
 const revealAll = () =>
   document.querySelectorAll('.rise').forEach(el => el.classList.add('in'));
 
 if('IntersectionObserver' in window){
   document.documentElement.classList.add('reveal-on');
-  const io = new IntersectionObserver(entries => {
+  io = new IntersectionObserver(entries => {
     entries.forEach(en => { if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
   }, { rootMargin:'0px 0px -12% 0px' });
   document.querySelectorAll('.rise').forEach(el => io.observe(el));
@@ -1006,6 +1201,7 @@ try{
 if(!I18N[saved]) saved = 'en';
 applyLang(saved);
 paint(forgeCanvas, spec);
+loadIndex();
 </script>
 </body>
 </html>
