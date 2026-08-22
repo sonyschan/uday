@@ -309,10 +309,51 @@ section{ position:relative; }
   transition:transform .12s, box-shadow .12s;
 }
 .yearcell--glitch:hover{ transform:scale(1.35); box-shadow:0 0 12px rgba(192,68,85,.7); z-index:1; position:relative; }
+/* today's cell breathes so a first-time visitor finds "now" at a glance */
+.yearcell--today{ animation:yc-breathe 2.8s ease-in-out infinite; }
+@keyframes yc-breathe{
+  0%,100%{ box-shadow:0 0 0 0 rgba(232,185,63,0); }
+  50%{ box-shadow:0 0 12px 2px var(--gold-glow); }
+}
+/* an impossible day flickers like the glitch it is; delays are staggered in JS */
+@keyframes yc-glitch{
+  0%,91.5%,94.5%,100%{ opacity:1; }
+  92%,94%{ opacity:.4; }
+}
+.yearcell--glitch{ animation:yc-glitch 5.2s steps(1,end) infinite; }
+@media (prefers-reduced-motion:reduce){
+  .yearcell--today,.yearcell--glitch{ animation:none; }
+  .yearcell--today{ box-shadow:0 0 10px var(--gold-glow); }
+}
 .yearwall__note{
   margin-top:14px; font-family:var(--display); font-size:var(--fs-micro);
   letter-spacing:var(--ls-narrow); color:var(--muted);
 }
+.yearwall__glitchline{
+  margin-top:18px; font-family:var(--display); font-size:var(--fs-small);
+  letter-spacing:var(--ls-narrow); color:#d97c8d;
+}
+/* one floating card for the whole wall: the day, its count, and the earliest
+   piece's art composed live from the 96px on-chain layers */
+.yeartip{
+  position:fixed; z-index:40; pointer-events:none; opacity:0;
+  background:#100d20; border:1px solid rgba(232,185,63,.32); border-radius:8px;
+  padding:10px 12px; text-align:center; box-shadow:0 10px 28px rgba(0,0,0,.55);
+  transition:opacity .1s;
+}
+.yeartip.on{ opacity:1; }
+.yeartip canvas{
+  width:96px; height:96px; image-rendering:pixelated; display:block;
+  margin:0 auto 8px; border-radius:4px; background:rgba(243,231,205,.05);
+}
+.yeartip--free canvas{ display:none; }
+.yeartip__day{
+  font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--gold); white-space:nowrap;
+}
+.yeartip__sub{ font-family:var(--body); font-size:var(--fs-micro); color:var(--muted); margin-top:2px; white-space:nowrap; }
+.yeartip--glitch{ border-color:rgba(192,68,85,.65); }
+.yeartip--glitch .yeartip__day{ color:#e08496; }
 
 /* ─── generic section ───────────────────────────────────────────────── */
 .band{ padding:clamp(58px,6.4vw,104px) 0; }
@@ -602,6 +643,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         <div class="yearwall__scroll">
           <div class="yearwall__grid" id="year-grid"></div>
         </div>
+        <p class="yearwall__glitchline" id="year-glitch" hidden></p>
         <p class="yearwall__note" id="year-note"></p>
       </div>
     </div>
@@ -694,7 +736,9 @@ const I18N = {
     'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.',
     'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
     'year.glitch.cell':'A DAY THAT DOES NOT EXIST',
-    'year.glitch.note':'{n} pieces carry dates that do not exist \u2014 the crimson cells',
+    'year.glitch.line':'{n} pieces are minted on days that do not exist \u2014 someone owns {day}.',
+    'year.tip.first':'Earliest #{id}',
+    'year.tip.free':'Not born yet',
     'story.kicker':'The idea',
     'story.title':'Which days mean something to you?',
     'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
@@ -739,7 +783,9 @@ const I18N = {
     'year.blurb':'每一格是一天。亮起代表這一天已在鏈上誕生，越亮代表這一天的 uDAY 越多。點一格，去看那一天最早的一枚。',
     'year.note':'366 天已點亮 {lit} 天 · 每小時從 Robinhood Chain 更新',
     'year.glitch.cell':'不存在的日子',
-    'year.glitch.note':'有 {n} 枚鑄在不存在的日子上——緋紅色的格子',
+    'year.glitch.line':'有 {n} 枚鑄在不存在的日子上——有人真的擁有{day}。',
+    'year.tip.first':'最早 #{id}',
+    'year.tip.free':'還沒誕生',
     'story.kicker':'緣起',
     'story.title':'哪些日子對你有意義？',
     'story.quote':'一個生日。一個紀念日。或是那個改變了你的日子。',
@@ -1127,6 +1173,67 @@ function renderLiveTags(){
   if(owners.size) mk(t('live.owners', { n: owners.size.toLocaleString() }));
 }
 
+function dayLabel(m, d){
+  return lang === 'zh' ? m + '\u6708' + d + '\u65e5' : MONTHS_EN[m-1] + ' ' + pad2(d);
+}
+
+/* One floating tooltip for the whole wall. The art is composed live from the
+   96px on-chain layers using the piece's decoded recipe (already in the day
+   index), so a hover costs zero network requests after the first paint. */
+const CAN_HOVER = matchMedia('(hover:hover) and (pointer:fine)').matches;
+let yearTip = null, yearTipCanvas, yearTipDay, yearTipSub;
+let tipPaintQ = Promise.resolve();   // serialized paints: the last hover wins
+function ensureTip(){
+  if(yearTip) return;
+  yearTip = document.createElement('div');
+  yearTip.className = 'yeartip';
+  yearTipCanvas = document.createElement('canvas');
+  yearTipDay = document.createElement('div'); yearTipDay.className = 'yeartip__day';
+  yearTipSub = document.createElement('div'); yearTipSub.className = 'yeartip__sub';
+  yearTip.append(yearTipCanvas, yearTipDay, yearTipSub);
+  document.body.appendChild(yearTip);
+  addEventListener('scroll', hideTip, { passive:true, capture:true });
+  addEventListener('pointerdown', hideTip, { passive:true, capture:true });
+}
+function hideTip(){ if(yearTip) yearTip.classList.remove('on'); }
+function recipeSpec(key, e){
+  return {
+    plate: e.p || null, frame: e.f || null,
+    month: +key.slice(0,2), date: +key.slice(3),
+    monthPlace: e.mp === 'r' ? 'corner' : 'center',
+    datePlace:  e.dp === 'r' ? 'corner' : 'center',
+    res: 'onchain'
+  };
+}
+function attachTip(cell, key, kind, first, n){
+  if(!CAN_HOVER) return;
+  cell.addEventListener('mouseenter', () => {
+    ensureTip();
+    const m = +key.slice(0,2), d = +key.slice(3);
+    yearTip.className = 'yeartip' +
+      (kind === 'glitch' ? ' yeartip--glitch' : kind === 'free' ? ' yeartip--free' : '');
+    yearTipDay.textContent = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
+    yearTipSub.textContent =
+      kind === 'free'   ? t('year.tip.free') :
+      kind === 'glitch' ? t('year.glitch.cell') + ' \u00b7 ' + t('year.tip.first', { id: first.id })
+                        : t('year.tip.first', { id: first.id });
+    if(first){
+      const ctx = yearTipCanvas.getContext('2d');
+      ctx.clearRect(0, 0, yearTipCanvas.width, yearTipCanvas.height);
+      tipPaintQ = tipPaintQ.then(() => paint(yearTipCanvas, recipeSpec(key, first)));
+    }
+    const r = cell.getBoundingClientRect();
+    yearTip.classList.add('on');
+    const w = yearTip.offsetWidth, h = yearTip.offsetHeight;
+    let x = Math.max(8, Math.min(r.left + r.width/2 - w/2, innerWidth - w - 8));
+    let y = r.top - h - 10;
+    if(y < 8) y = r.bottom + 10;
+    yearTip.style.left = x + 'px';
+    yearTip.style.top  = y + 'px';
+  });
+  cell.addEventListener('mouseleave', hideTip);
+}
+
 function renderYear(){
   if(!DAYS) return;
   const sec = document.getElementById('year');
@@ -1136,6 +1243,8 @@ function renderYear(){
   let max = 1, lit = 0;
   for(const k in DAYS){ if(isRealDate(k)){ counts[k] = DAYS[k].length; max = Math.max(max, counts[k]); lit++; } }
   const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
+  const todayKey = pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
+  let gi = 0;                                     // staggers the glitch flicker
   for(let m = 1; m <= 12; m++){
     const lab = document.createElement('span');
     lab.className = 'yearwall__mon';
@@ -1148,13 +1257,16 @@ function renderYear(){
         if(gn){                                   // an impossible date, minted anyway
           const g = document.createElement('button');
           g.className = 'yearcell yearcell--glitch';
-          g.title = (lang === 'zh' ? m + '\u6708' + d + '\u65e5' : MONTHS_EN[m-1] + ' ' + pad2(d))
-                    + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gn;
+          g.style.animationDelay = (gi++ * 1.3) + 's';
+          const glabel = dayLabel(m, d) + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gn;
+          g.setAttribute('aria-label', glabel);
+          if(!CAN_HOVER) g.title = glabel;
           const gf = DAYS[gkey].slice().sort((a,b) => a.id - b.id)[0];
           g.addEventListener('click', () => {
             va('event', { name: 'calendar_click', data: { day: gkey, glitch: 1 } });
             window.open(UTOKEN_ITEM(gf.id), '_blank', 'noopener');
           });
+          attachTip(g, gkey, 'glitch', gf, gn);
           grid.appendChild(g);
         }else{
           const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
@@ -1165,23 +1277,35 @@ function renderYear(){
       const n = counts[key] || 0;
       const cell = document.createElement(n ? 'button' : 'span');
       cell.className = 'yearcell' + (n ? ' yearcell--lit' : '');
-      cell.title = (lang === 'zh' ? m + '\u6708' + d + '\u65e5' : MONTHS_EN[m-1] + ' ' + pad2(d)) + (n ? ' \u00b7 \u00d7' + n : '');
+      if(key === todayKey) cell.classList.add('yearcell--today');
+      const label = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
+      if(n) cell.setAttribute('aria-label', label);
+      if(!CAN_HOVER) cell.title = label;
+      let first = null;
       if(n){
         const heat = .16 + .74 * Math.sqrt(n / max);         // sqrt: one-of-many days stay visible
         cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
-        const first = DAYS[key].slice().sort((a,b) => a.id - b.id)[0];
+        first = DAYS[key].slice().sort((a,b) => a.id - b.id)[0];
         cell.addEventListener('click', () => {
           va('event', { name: 'calendar_click', data: { day: key } });
           window.open(UTOKEN_ITEM(first.id), '_blank', 'noopener');
         });
       }
+      attachTip(cell, key, n ? 'lit' : 'free', first, n);
       grid.appendChild(cell);
     }
   }
-  const glitchDays = Object.keys(DAYS).filter(k => !isRealDate(k));
+  document.getElementById('year-note').textContent = t('year.note', { lit });
+  // The impossible days are the wall's most shareable fact \u2014 one loud line,
+  // not a footnote. {day} names the first glitch day (FEB 30) as proof.
+  const glitchDays = Object.keys(DAYS).filter(k => !isRealDate(k)).sort();
   const glitchPieces = glitchDays.reduce((n, k) => n + DAYS[k].length, 0);
-  document.getElementById('year-note').textContent =
-    t('year.note', { lit }) + (glitchPieces ? ' \u00b7 ' + t('year.glitch.note', { n: glitchPieces }) : '');
+  const gl = document.getElementById('year-glitch');
+  if(glitchPieces){
+    const k0 = glitchDays[0];
+    gl.textContent = t('year.glitch.line', { n: glitchPieces, day: dayLabel(+k0.slice(0,2), +k0.slice(3)) });
+    gl.hidden = false;
+  }
   sec.hidden = false;
   if(io) io.observe(sec.querySelectorAll('.rise')[0]);
 }
