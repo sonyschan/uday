@@ -147,14 +147,16 @@ section{ position:relative; }
   padding:120px 0 72px;
 }
 .hero__grid{
-  display:grid; gap:clamp(32px,5vw,72px);
+  display:grid; gap:clamp(24px,3.4vw,44px) clamp(32px,5vw,72px);
   grid-template-columns:minmax(0,1fr) minmax(0,.86fr);
+  grid-template-areas:"copy stage" "act stage";
   align-items:center;
 }
-@media (max-width:880px){
-  .hero__grid{ grid-template-columns:1fr; }
-  .hero{ min-height:auto; padding-top:104px; }
-}
+.hero__copy{ grid-area:copy; align-self:end; }
+.hero__act { grid-area:act;  align-self:start; }
+.stage     { grid-area:stage; }
+/* Narrow: the medallion sits BETWEEN the copy and the picker, so choosing a day
+   changes something the reader can actually see without scrolling. */
 
 .hero__title{
   font-family:var(--display);
@@ -181,7 +183,36 @@ section{ position:relative; }
   padding:7px 11px; border:1px solid var(--rule); border-radius:3px;
   color:var(--gold); background:rgba(232,185,63,.05);
 }
-.hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:34px; }
+.hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:26px; }
+
+/* The hook. First screen, above the fold, before anything else asks for a tap. */
+.daypick{ margin-top:26px; }
+.daypick__q{
+  display:block; margin-bottom:10px;
+  font-family:var(--display); font-size:var(--fs-tiny); letter-spacing:var(--ls-mid);
+  text-transform:uppercase; color:var(--gold);
+}
+.daypick__row{ display:flex; flex-wrap:wrap; gap:10px; }
+.sel{ position:relative; display:inline-flex; }
+.sel select{
+  appearance:none; -webkit-appearance:none;
+  font-family:var(--display); font-size:var(--fs-small); letter-spacing:var(--ls-narrow);
+  color:var(--vellum); background:rgba(243,231,205,.04);
+  border:1px solid var(--rule); border-radius:4px;
+  padding:13px 38px 13px 16px; min-width:132px; cursor:pointer;
+  transition:border-color .18s, background .18s;
+}
+.sel--day select{ min-width:96px; }
+.sel select:hover{ border-color:rgba(232,185,63,.55); background:rgba(243,231,205,.07); }
+.sel select:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+/* the OS menu is painted by the platform — force a legible pair on dark UIs */
+.sel option{ background:#181430; color:#f3e7cd; }
+.sel__chev{
+  position:absolute; right:15px; top:50%; transform:translateY(-2px);
+  width:0; height:0; pointer-events:none;
+  border-left:5px solid transparent; border-right:5px solid transparent;
+  border-top:6px solid var(--gold);
+}
 
 .btn{
   display:inline-flex; align-items:center; gap:9px;
@@ -217,6 +248,21 @@ section{ position:relative; }
 .medallion__cap{
   margin-top:18px; text-align:center;
   font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid); color:var(--muted);
+}
+
+@media (max-width:880px){
+  .hero__grid{ grid-template-columns:1fr; grid-template-areas:"copy" "stage" "act"; gap:16px; }
+  .hero{ min-height:auto; padding:86px 0 56px; }
+  /* Everything above the picker is budget: on a 360x700 fold the question and
+     both selects must be visible WITH the medallion, or choosing a day changes
+     something the reader cannot see. Measured, not guessed. */
+  .medallion{ width:min(300px, 56vw); }
+  .medallion__cap{ margin-top:8px; }
+  .hero__lede{ margin-top:14px; }
+  .hero__title{ margin-top:8px; }
+  .daypick{ margin-top:0; }
+  .hero__meta{ margin-top:18px; }
+  .hero__cta{ margin-top:18px; }
 }
 
 /* ─── generic section ───────────────────────────────────────────────── */
@@ -371,19 +417,33 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
   <!-- ── hero ─────────────────────────────────────────────────────── -->
   <section class="hero">
     <div class="shell hero__grid">
-      <div>
+      <div class="hero__copy">
         <p class="kicker" data-i18n="hero.kicker">Onchain art on Robinhood Chain</p>
         <h1 class="hero__title">u<em>DAY</em></h1>
         <p class="hero__lede" data-i18n="hero.lede">Some days are just dates. Some become part of your story.</p>
+      </div>
+      <div class="hero__act">
+        <div class="daypick">
+          <label class="daypick__q" for="hero-month" data-i18n="pick.q">Which day is yours?</label>
+          <div class="daypick__row">
+            <div class="sel">
+              <select id="hero-month" aria-label="Month"></select>
+              <span class="sel__chev" aria-hidden="true"></span>
+            </div>
+            <div class="sel sel--day">
+              <select id="hero-day" aria-label="Day"></select>
+              <span class="sel__chev" aria-hidden="true"></span>
+            </div>
+          </div>
+        </div>
         <div class="hero__meta">
-          <span class="tag" data-i18n="tag.layers">4 LAYERS</span>
-          <span class="tag" data-i18n="tag.styles">7 STYLES</span>
           <span class="tag" data-i18n="tag.days">365 DAYS</span>
+          <span class="tag" data-i18n="tag.styles">7 STYLES</span>
           <span class="tag" data-i18n="tag.combos">95,232 COMBINATIONS</span>
         </div>
         <div class="hero__cta">
-          <a class="btn btn--gold" href="https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146" target="_blank" rel="noopener" data-i18n="cta.buy">FIND YOUR DAY</a>
-          <a class="btn btn--ghost" href="#forge" data-i18n="cta.forge">TRY THE COMPOSER</a>
+          <a class="btn btn--gold" href="https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146" target="_blank" rel="noopener" data-i18n="cta.buy">GET THIS DAY</a>
+          <a class="btn btn--ghost" href="#forge" data-i18n="cta.forge">MAKE IT YOURS</a>
         </div>
       </div>
       <div class="stage">
@@ -552,7 +612,8 @@ const I18N = {
     'hero.kicker':'Onchain art on Robinhood Chain',
     'hero.lede':'Some days are just dates. Some become part of your story.',
     'tag.layers':'4 LAYERS','tag.styles':'7 STYLES','tag.days':'365 DAYS','tag.combos':'95,232 COMBINATIONS',
-    'cta.buy':'FIND YOUR DAY','cta.forge':'TRY THE COMPOSER',
+    'cta.buy':'GET THIS DAY','cta.forge':'MAKE IT YOURS',
+    'pick.q':'Which day is yours?',
     'story.kicker':'The idea',
     'story.title':'Which days mean something to you?',
     'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
@@ -586,7 +647,8 @@ const I18N = {
     'hero.kicker':'Robinhood Chain 上的鏈上藝術',
     'hero.lede':'有些日子只是日期。有些日子成為你的一部分。',
     'tag.layers':'4 個圖層','tag.styles':'7 種畫風','tag.days':'365 天','tag.combos':'95,232 種組合',
-    'cta.buy':'找到你的那一天','cta.forge':'試試合成器',
+    'cta.buy':'擁有這一天','cta.forge':'調成你的樣子',
+    'pick.q':'哪一天是你的？',
     'story.kicker':'緣起',
     'story.title':'哪些日子對你有意義？',
     'story.quote':'一個生日。一個紀念日。或是那個改變了你的日子。',
@@ -644,11 +706,11 @@ function applyLang(next){
   document.querySelector('[data-i18n="fact.supply.sub"]').textContent = t('fact.supply.sub');
   document.querySelectorAll('.langs button').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.lang === next)));
-  document.getElementById('hero-cap').textContent = t('hero.cap');
   try{ localStorage.setItem('uday.lang', next); }catch(e){}
   renderChips();
   renderGallery();
   syncReadout();
+  if(typeof fillHeroPicker === 'function'){ fillHeroPicker(); heroCap(); }
 }
 
 function setSub(valKey, subKey){
@@ -728,7 +790,48 @@ const heroSpec = {
   res:'hd'
 };
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-paint(document.getElementById('hero-canvas'), heroSpec, { stagger: reduced ? 0 : 260 });
+const heroCanvas = document.getElementById('hero-canvas');
+paint(heroCanvas, heroSpec, { stagger: reduced ? 0 : 260 });
+
+const selMonth = document.getElementById('hero-month');
+const selDay   = document.getElementById('hero-day');
+
+function fillHeroPicker(){
+  selMonth.textContent = '';
+  MONTHS_EN.forEach((_, i) => {
+    const o = document.createElement('option');
+    o.value = i + 1;
+    o.textContent = monthLabel(i + 1);
+    if(heroSpec.month === i + 1) o.selected = true;
+    selMonth.appendChild(o);
+  });
+  const max = daysInMonth(heroSpec.month);
+  if(heroSpec.date > max) heroSpec.date = max;
+  selDay.textContent = '';
+  for(let d = 1; d <= max; d++){
+    const o = document.createElement('option');
+    o.value = d;
+    o.textContent = lang === 'zh' ? d + '\u65e5' : pad2(d);
+    if(heroSpec.date === d) o.selected = true;
+    selDay.appendChild(o);
+  }
+}
+
+function heroCap(){
+  const el = document.getElementById('hero-cap');
+  const isToday = heroSpec.month === today.getMonth()+1 && heroSpec.date === today.getDate();
+  el.textContent = isToday ? t('hero.cap') : monthLabel(heroSpec.month) + ' ' + pad2(heroSpec.date);
+}
+
+function heroPick(){
+  heroSpec.month = Number(selMonth.value);
+  heroSpec.date  = Number(selDay.value);
+  fillHeroPicker();          // day list follows the month
+  heroCap();
+  paint(heroCanvas, heroSpec);
+}
+selMonth.addEventListener('change', heroPick);
+selDay.addEventListener('change', heroPick);
 
 /* ─────────────────────────────────────────────────────────────────────
    composer
