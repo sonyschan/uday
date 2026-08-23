@@ -439,9 +439,11 @@ section{ position:relative; }
 .giftmodal .daymodal__panel{ max-width:460px; position:relative; padding-top:26px; }
 .giftmodal .daymodal__close{ position:absolute; top:10px; right:12px; }
 .giftmodal__emblem{
-  display:block; width:84px; height:84px; margin:2px auto 12px;
-  border-radius:18px; border:1px solid rgba(232,185,63,.4);
-  box-shadow:0 6px 18px rgba(0,0,0,.45);
+  display:block; width:96px; height:96px; margin:0 auto 10px;
+  /* no tile, no border: the edges feather away so the U rises out of the
+     panel itself instead of sitting in a frame within a frame */
+  -webkit-mask-image:radial-gradient(circle, #000 62%, transparent 92%);
+  mask-image:radial-gradient(circle, #000 62%, transparent 92%);
 }
 .giftmodal__title{ display:block; text-align:center; }
 .giftmodal__body p{ margin:12px 0 0; font-size:var(--fs-sub); color:#e6dbc2; line-height:1.75; }
