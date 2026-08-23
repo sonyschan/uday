@@ -1599,9 +1599,6 @@ function setMineAddr(a, src){
   mineAddr = a.toLowerCase();
   document.getElementById('mine-addr').value = mineAddr;
   try{ localStorage.setItem('uday.addr', mineAddr); }catch(e){}
-  const u = new URL(location.href);
-  u.searchParams.set('addr', mineAddr);
-  history.replaceState(null, '', u);        // the URL itself is the share link
   mineWalletUI();                           // renders the wall and the chrome
   va('event', { name: 'mine_view', data: { src } });
   return true;
@@ -1775,6 +1772,9 @@ document.getElementById('mine-addr').addEventListener('keydown', e => {
   if(a && ADDR_RE.test(a)){
     mineAddr = a.toLowerCase();
     document.getElementById('mine-addr').value = mineAddr;
+    // persist a URL-carried address: the URL is about to be cleaned, and the
+    // next visit to this origin should not need any parameters at all
+    try{ localStorage.setItem('uday.addr', mineAddr); }catch(e){}
   }
 })();
 
@@ -1864,6 +1864,22 @@ if(!I18N[saved]) saved = 'en';
 applyLang(saved);
 paint(forgeCanvas, spec);
 loadIndex();
+
+// ?lang= and ?addr= are one-time handoff carriers (cross-origin redirects
+// cannot share localStorage). By this point both are consumed and persisted
+// per-origin — applyLang stored the language, initMineAddr the address — so
+// the address bar gets cleaned back to the bare origin. Share links still
+// work: they render first, then tidy. (?view= is the localhost test switch
+// and keeps its URL untouched.)
+(function cleanUrl(){
+  const u = new URL(location.href);
+  if(u.searchParams.get('view')) return;
+  let dirty = false;
+  ['lang', 'addr'].forEach(k => {
+    if(u.searchParams.has(k)){ u.searchParams.delete(k); dirty = true; }
+  });
+  if(dirty) history.replaceState(null, '', u.pathname + u.search + u.hash);
+})();
 </script>
 </body>
 </html>
