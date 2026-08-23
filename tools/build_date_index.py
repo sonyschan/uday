@@ -341,6 +341,15 @@ def decode_svg(raw, months, dates, frames, plates):
             "f": fr or "", "p": pl or ""}
 
 
+def _sealed_by_owner(ids, cache, owner):
+    out = {}
+    for a in ids:
+        v = cache.get(a)
+        if isinstance(v, dict) and v.get("u"):
+            out[owner[a]] = out.get(owner[a], 0) + 1
+    return out
+
+
 def build():
     months = layer_pngs("month"); dates = layer_pngs("date")
     frames = layer_pngs("frame"); plates = layer_pngs("plate")
@@ -430,6 +439,10 @@ def build():
            # uToken's "item owners" stat; owners-of-dated-only is a subset
            # and reads as a wrong number next to the collection page
            "owners": len(set(owner.values())),
+           # sealed pieces per owner: the holder page needs "you hold N still-
+           # sealed pieces" or an all-sealed holder sees an empty calendar and
+           # concludes they own nothing (85% of the collection is sealed)
+           "sealed": _sealed_by_owner(ids, cache, owner),
            "days": index}
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
     json.dump(out, open(INDEX_PATH, "w"), separators=(",", ":"), sort_keys=True)

@@ -348,6 +348,17 @@ section{ position:relative; }
   margin-top:18px; font-family:var(--display); font-size:var(--fs-small);
   letter-spacing:var(--ls-narrow); color:#d97c8d;
 }
+/* ─── your days (holder calendar) ───────────────────────────────────── */
+.mine__controls{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:26px; }
+.mine__addr{
+  flex:1 1 220px; max-width:480px;
+  font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:var(--fs-small);
+  color:var(--vellum); background:rgba(243,231,205,.04);
+  border:1px solid var(--rule); border-radius:4px; padding:12px 14px;
+}
+.mine__addr::placeholder{ color:var(--muted); }
+.mine__addr:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+.mine__empty{ font-size:var(--fs-sub); color:#dbcfb4; margin-bottom:18px; max-width:56ch; }
 /* one floating card for the whole wall: the day, its count, and the earliest
    piece's art composed live from the 96px on-chain layers */
 .yeartip{
@@ -612,6 +623,32 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
     </div>
   </section>
 
+  <!-- ── your days (holder calendar) ─────────────────────────────── -->
+  <section class="band" id="mine" hidden>
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="mine.kicker">Your days</p>
+        <h2 data-i18n="mine.title">Which days are already yours?</h2>
+        <p data-i18n="mine.blurb">Connect a wallet or paste any address. The lookup runs entirely in your browser against the same public index the wall uses — nothing is sent anywhere.</p>
+      </div>
+      <div class="mine__controls rise">
+        <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>CONNECT WALLET</button>
+        <input class="mine__addr" id="mine-addr" placeholder="0x…" spellcheck="false" autocomplete="off" aria-label="Wallet address">
+        <button type="button" class="btn btn--ghost" id="mine-view" data-i18n="mine.view">VIEW</button>
+      </div>
+      <div id="mine-result" hidden>
+        <div class="yearwall__stats" id="mine-stats"></div>
+        <p class="mine__empty" id="mine-empty" hidden></p>
+        <div class="yearwall">
+          <div class="yearwall__scroll">
+            <div class="yearwall__grid" id="mine-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── forge ────────────────────────────────────────────────────── -->
   <section class="band" id="forge">
     <div class="shell">
@@ -763,6 +800,14 @@ const I18N = {
     'year.glitch.line':'{n} pieces are minted on days that do not exist \u2014 someone owns {day}.',
     'year.tip.first':'Earliest #{id}',
     'year.tip.free':'Not born yet',
+    'mine.kicker':'Your days',
+    'mine.title':'Which days are already yours?',
+    'mine.blurb':'Connect a wallet or paste any address. The lookup runs entirely in your browser against the same public index the wall uses \u2014 nothing is sent anywhere.',
+    'mine.connect':'CONNECT WALLET','mine.view':'VIEW',
+    'mine.stat.days':'{n} DAYS COLLECTED','mine.stat.pieces':'{n} PIECES',
+    'mine.stat.sealed':'{n} STILL SEALED','mine.stat.glitch':'{n} IMPOSSIBLE DAYS',
+    'mine.empty':'No days here yet \u2014 every mint could be the first.',
+    'mine.sealed.only':'All {n} of your pieces are still sealed \u2014 any of them could turn out to be any day.',
     'story.kicker':'The idea',
     'story.title':'Which days mean something to you?',
     'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
@@ -809,6 +854,14 @@ const I18N = {
     'year.glitch.line':'有 {n} 枚鑄在不存在的日子上——有人真的擁有{day}。',
     'year.tip.first':'最早 #{id}',
     'year.tip.free':'還沒誕生',
+    'mine.kicker':'你的收藏',
+    'mine.title':'哪些日子已經是你的？',
+    'mine.blurb':'連接錢包，或貼上任何地址。比對完全在你的瀏覽器裡進行——用的就是這面牆的同一份公開索引，不會送出任何資料。',
+    'mine.connect':'連接錢包','mine.view':'查看',
+    'mine.stat.days':'收集了 {n} 天','mine.stat.pieces':'共 {n} 枚',
+    'mine.stat.sealed':'{n} 枚待揭曉','mine.stat.glitch':'{n} 枚不存在的日子',
+    'mine.empty':'這裡還沒有日子——每一次鑄造都可能是第一枚。',
+    'mine.sealed.only':'你的 {n} 枚都還密封著——每一枚都可能是任何一天。',
     'story.kicker':'緣起',
     'story.title':'哪些日子對你有意義？',
     'story.quote':'一個生日。一個紀念日。或是那個改變了你的日子。',
@@ -875,7 +928,10 @@ function applyLang(next){
   renderGallery();
   syncReadout();
   if(typeof fillHeroPicker === 'function'){ fillHeroPicker(); heroCap(); }
-  if(typeof renderDayStatus === 'function' && DAYS){ renderLiveTags(); renderDayStatus(); renderYear(); }
+  if(typeof renderDayStatus === 'function' && DAYS){
+    renderLiveTags(); renderDayStatus(); renderYear();
+    if(mineAddr) renderMine();
+  }
 }
 
 function setSub(valKey, subKey){
@@ -1367,14 +1423,17 @@ function attachCellAction(cell, key, kind, first, n){
   }
 }
 
-function renderYear(){
-  if(!DAYS) return;
-  const sec = document.getElementById('year');
-  const grid = document.getElementById('year-grid');
+/* Shared 12x31 wall builder \u2014 the collection wall and any holder's personal
+   wall are the same structure over a different byDay map. Tooltip/touch-card
+   behavior rides along via attachCellAction. Returns {lit, pieces}. */
+function buildWall(grid, byDay, opts){
   grid.textContent = '';
   const counts = {};
-  let max = 1, lit = 0;
-  for(const k in DAYS){ if(isRealDate(k)){ counts[k] = DAYS[k].length; max = Math.max(max, counts[k]); lit++; } }
+  let max = 1, lit = 0, pieces = 0;
+  for(const k in byDay){
+    pieces += byDay[k].length;
+    if(isRealDate(k)){ counts[k] = byDay[k].length; max = Math.max(max, counts[k]); lit++; }
+  }
   const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
   const todayKey = pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
   let gi = 0;                                     // staggers the glitch flicker
@@ -1386,16 +1445,16 @@ function renderYear(){
     for(let d = 1; d <= 31; d++){
       if(d > DIM[m-1]){
         const gkey = pad2(m) + '-' + pad2(d);
-        const gn = (DAYS[gkey] || []).length;
-        if(gn){                                   // an impossible date, minted anyway
+        const gl = byDay[gkey] || [];
+        if(gl.length){                            // an impossible date, minted anyway
           const g = document.createElement('button');
           g.className = 'yearcell yearcell--glitch';
           g.style.animationDelay = (gi++ * 1.3) + 's';
-          const glabel = dayLabel(m, d) + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gn;
+          const glabel = dayLabel(m, d) + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gl.length;
           g.setAttribute('aria-label', glabel);
           if(!CAN_HOVER) g.title = glabel;
-          const gf = DAYS[gkey].slice().sort((a,b) => a.id - b.id)[0];
-          attachCellAction(g, gkey, 'glitch', gf, gn);
+          const gf = gl.slice().sort((a,b) => a.id - b.id)[0];
+          attachCellAction(g, gkey, 'glitch', gf, gl.length);
           grid.appendChild(g);
         }else{
           const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
@@ -1406,7 +1465,7 @@ function renderYear(){
       const n = counts[key] || 0;
       const cell = document.createElement(n ? 'button' : 'span');
       cell.className = 'yearcell' + (n ? ' yearcell--lit' : '');
-      if(key === todayKey) cell.classList.add('yearcell--today');
+      if(opts.today && key === todayKey) cell.classList.add('yearcell--today');
       const label = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
       if(n) cell.setAttribute('aria-label', label);
       if(!CAN_HOVER) cell.title = label;
@@ -1414,12 +1473,19 @@ function renderYear(){
       if(n){
         const heat = .16 + .74 * Math.sqrt(n / max);         // sqrt: one-of-many days stay visible
         cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
-        first = DAYS[key].slice().sort((a,b) => a.id - b.id)[0];
+        first = byDay[key].slice().sort((a,b) => a.id - b.id)[0];
       }
       attachCellAction(cell, key, n ? 'lit' : 'free', first, n);
       grid.appendChild(cell);
     }
   }
+  return { lit, pieces };
+}
+
+function renderYear(){
+  if(!DAYS) return;
+  const sec = document.getElementById('year');
+  const { lit } = buildWall(document.getElementById('year-grid'), DAYS, { today: true });
   document.getElementById('year-note').textContent = t('year.note', { lit });
   // The impossible days are the wall's most shareable fact \u2014 one loud line,
   // not a footnote. {day} names the first glitch day (FEB 30) as proof.
@@ -1435,16 +1501,106 @@ function renderYear(){
   if(io) io.observe(sec.querySelectorAll('.rise')[0]);
 }
 
+/* ─── your days: any address's calendar, computed entirely in the browser.
+   The index already carries every dated piece's owner, so "which days are
+   mine" needs no RPC and no backend — the wallet only supplies an address,
+   and pasting one works just as well (which also makes ?addr= a share link). */
+let mineAddr = null;
+const ADDR_RE = /^0x[0-9a-fA-F]{40}$/;
+
+function setMineAddr(a, src){
+  if(!a || !ADDR_RE.test(a)) return false;
+  mineAddr = a.toLowerCase();
+  document.getElementById('mine-addr').value = mineAddr;
+  try{ localStorage.setItem('uday.addr', mineAddr); }catch(e){}
+  const u = new URL(location.href);
+  u.searchParams.set('addr', mineAddr);
+  history.replaceState(null, '', u);        // the URL itself is the share link
+  renderMine();
+  va('event', { name: 'mine_view', data: { src } });
+  return true;
+}
+
+function renderMine(){
+  if(!DAYS || !mineAddr) return;
+  const mine = {};
+  for(const k in DAYS){
+    const l = DAYS[k].filter(e => e.owner === mineAddr);
+    if(l.length) mine[k] = l;
+  }
+  const { lit, pieces } = buildWall(document.getElementById('mine-grid'), mine, { today: false });
+  const sealed = (INDEX_META.sealed || {})[mineAddr] || 0;
+  const host = document.getElementById('mine-stats');
+  host.textContent = '';
+  const mk = txt => { const el = document.createElement('span'); el.className = 'tag'; el.textContent = txt; host.appendChild(el); };
+  mk(t('mine.stat.days', { n: lit }));
+  mk(t('mine.stat.pieces', { n: pieces }));
+  if(sealed) mk(t('mine.stat.sealed', { n: sealed }));
+  const glitchMine = Object.keys(mine).filter(k => !isRealDate(k))
+                       .reduce((n, k) => n + mine[k].length, 0);
+  if(glitchMine) mk(t('mine.stat.glitch', { n: glitchMine }));
+  const empty = document.getElementById('mine-empty');
+  if(!pieces && sealed){ empty.textContent = t('mine.sealed.only', { n: sealed }); empty.hidden = false; }
+  else if(!pieces){ empty.textContent = t('mine.empty'); empty.hidden = false; }
+  else empty.hidden = true;
+  document.getElementById('mine-result').hidden = false;
+}
+
+const mineEth = window.ethereum;
+const mineConnect = document.getElementById('mine-connect');
+if(mineEth) mineConnect.hidden = false;
+mineConnect.addEventListener('click', async () => {
+  try{
+    const acc = await mineEth.request({ method: 'eth_requestAccounts' });
+    if(acc && acc[0]) setMineAddr(acc[0], 'wallet');
+  }catch(e){ return; /* user declined — nothing to show */ }
+  // Best effort: leave the wallet on Robinhood Chain for the uToken trip.
+  // Viewing needs no chain at all, so failures here are silently fine.
+  try{
+    await mineEth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1237' }] });
+  }catch(err){
+    if(err && err.code === 4902){
+      try{
+        await mineEth.request({ method: 'wallet_addEthereumChain', params: [{
+          chainId: '0x1237', chainName: 'Robinhood Chain',
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+          rpcUrls: ['https://rpc.mainnet.chain.robinhood.com/rpc'],
+          blockExplorerUrls: ['https://robinhoodchain.blockscout.com']
+        }]});
+      }catch(e2){}
+    }
+  }
+});
+if(mineEth && mineEth.on) mineEth.on('accountsChanged', a => { if(a && a[0]) setMineAddr(a[0], 'wallet'); });
+
+document.getElementById('mine-view').addEventListener('click', () =>
+  setMineAddr(document.getElementById('mine-addr').value.trim(), 'manual'));
+document.getElementById('mine-addr').addEventListener('keydown', e => {
+  if(e.key === 'Enter') setMineAddr(e.target.value.trim(), 'manual');
+});
+
+(function initMineAddr(){
+  let a = new URLSearchParams(location.search).get('addr');
+  if(!a){ try{ a = localStorage.getItem('uday.addr'); }catch(e){} }
+  if(a && ADDR_RE.test(a)){
+    mineAddr = a.toLowerCase();
+    document.getElementById('mine-addr').value = mineAddr;
+  }
+})();
+
 async function loadIndex(){
   try{
     const r = await fetch('data/date-index.json', { cache: 'no-cache' });
     if(!r.ok) return;
     const j = await r.json();
     DAYS = j.days || {};
-    INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0, owners: j.owners || 0 };
+    INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0,
+                   owners: j.owners || 0, sealed: j.sealed || null };
     renderLiveTags();
     renderDayStatus();
     renderYear();
+    document.getElementById('mine').hidden = false;
+    if(mineAddr) renderMine();
     // First paint on the fast path: the layer-by-layer reveal IS the real
     // piece. On the slow path (default already up) this repaints over it.
     heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
