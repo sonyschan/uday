@@ -661,7 +661,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
       <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
         <p class="kicker" data-i18n="mine.kicker">Your days</p>
         <h2 data-i18n="mine.title">Which days are already yours?</h2>
-        <p data-i18n="mine.blurb">Connect a wallet or paste any address. The lookup runs entirely in your browser against the same public index the wall uses — nothing is sent anywhere.</p>
+        <p data-i18n="mine.blurb">Connect a wallet — or paste your address. The lookup runs entirely in your browser against the same public index the wall uses; nothing is sent anywhere.</p>
       </div>
       <div class="mine__controls rise">
         <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>CONNECT WALLET</button>
@@ -836,7 +836,7 @@ const I18N = {
     'year.tip.free':'Not born yet',
     'mine.kicker':'Your days',
     'mine.title':'Which days are already yours?',
-    'mine.blurb':'Connect a wallet or paste any address. The lookup runs entirely in your browser against the same public index the wall uses \u2014 nothing is sent anywhere.',
+    'mine.blurb':'Connect a wallet \u2014 or paste your address. The lookup runs entirely in your browser against the same public index the wall uses; nothing is sent anywhere.',
     'mine.connect':'CONNECT WALLET','mine.view':'VIEW',
     'mine.disconnect':'DISCONNECT','mine.wallet.back':'Back to my days',
     'mine.btn.view':'VIEW YOUR PIECE',
@@ -895,7 +895,7 @@ const I18N = {
     'year.tip.free':'還沒誕生',
     'mine.kicker':'你的收藏',
     'mine.title':'哪些日子已經是你的？',
-    'mine.blurb':'連接錢包，或貼上任何地址。比對完全在你的瀏覽器裡進行——用的就是這面牆的同一份公開索引，不會送出任何資料。',
+    'mine.blurb':'連接錢包，或直接貼上你的地址。比對完全在你的瀏覽器裡進行——用的就是年曆牆的同一份公開索引，不會送出任何資料。',
     'mine.connect':'連接錢包','mine.view':'查看',
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日曆',
     'mine.btn.view':'查看你的這一枚',
@@ -1634,6 +1634,10 @@ function mineWalletUI(){
   const chip = document.getElementById('mine-wallet');
   const dis  = document.getElementById('mine-disconnect');
   chip.hidden = dis.hidden = !connected;
+  // Connected = identified: the paste-an-address fallback is for wallet-less
+  // visitors checking their own address, so it leaves once a wallet is here.
+  document.getElementById('mine-addr').hidden = connected;
+  document.getElementById('mine-view').hidden = connected;
   if(connected){
     chip.textContent = shortAddr(mineWallet);
     chip.title = t('mine.wallet.back');
