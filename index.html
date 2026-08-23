@@ -399,6 +399,7 @@ section{ position:relative; }
 .sealcell:nth-child(4n){ color:#8fd0a0; border-color:rgba(110,190,140,.5); }
 .sealcell:hover{ background:rgba(232,185,63,.15); }
 .sealcell--more{ width:auto; padding:0 10px; animation:none; }
+.mine__sealedhint{ margin-top:12px; font-size:var(--fs-small); color:var(--muted); max-width:62ch; line-height:1.6; }
 @keyframes seal-shimmer{ 0%,100%{ opacity:.55 } 50%{ opacity:1 } }
 @media (prefers-reduced-motion:reduce){ .sealcell{ animation:none; opacity:.85 } }
 /* one floating card for the whole wall: the day, its count, and the earliest
@@ -695,6 +696,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           </div>
         </div>
         <div class="mine__sealedwall" id="mine-sealed" hidden></div>
+        <p class="mine__sealedhint" id="mine-sealed-hint" hidden></p>
       </div>
     </div>
   </section>
@@ -858,6 +860,7 @@ const I18N = {
     'mine.showyear':'SEE THE FULL YEAR','mine.hideyear':'HIDE THE FULL YEAR',
     'mine.btn.view':'VIEW YOUR PIECE',
     'mine.sealed.tip':'Still sealed — reveal it on uToken',
+    'mine.sealed.hint':'uToken opens a piece layer by layer — the plate and frame often appear first while the month and date stay hidden. Tap a tile to open uToken, press “Batch Reveal”, and repeat until every layer is out. The calendar catches up within the hour.',
     'status.taken.you':'{date} has been born — {n} of them exist. The earliest, #{id}, is in YOUR wallet.',
     'status.taken.one.you':'{date} has been born. #{id} is in your wallet.',
     'mine.stat.days':'{n} DAYS COLLECTED','mine.stat.pieces':'{n} PIECES',
@@ -918,6 +921,7 @@ const I18N = {
     'mine.showyear':'看全年年曆','mine.hideyear':'收起全年年曆',
     'mine.btn.view':'查看你的這一枚',
     'mine.sealed.tip':'還密封著——到 uToken 揭曉',
+    'mine.sealed.hint':'uToken 的揭曉是一層一層開的——常常背板、外框先現身，月份和日期還藏著。點任一方塊前往 uToken，按「Batch Reveal」多揭幾輪，直到所有圖層解開。日曆會在一小時內跟上。',
     'status.taken.you':'{date}已經誕生——共 {n} 枚。最早的 #{id} 就在你的錢包裡。',
     'status.taken.one.you':'{date}已經誕生。#{id} 就在你的錢包裡。',
     'mine.stat.days':'收集了 {n} 天','mine.stat.pieces':'共 {n} 枚',
@@ -1651,6 +1655,11 @@ function renderMine(){
     if(sealed > CAP) sw.appendChild(mkSeal('+' + (sealed - CAP), ' sealcell--more'));
     sw.hidden = false;
   }else sw.hidden = true;
+  // uToken opens a piece layer by layer — without this line, a holder who
+  // revealed once and still sees question marks assumes the site is broken
+  const hint = document.getElementById('mine-sealed-hint');
+  hint.textContent = t('mine.sealed.hint');
+  hint.hidden = !sealed;
   document.getElementById('mine-result').hidden = false;
 }
 
