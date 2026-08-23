@@ -123,13 +123,28 @@ a{ color:var(--gold); text-underline-offset:4px; text-decoration-thickness:1px; 
 html.personal main{ padding-top:70px; }
 .tb-wallet{ display:flex; align-items:center; gap:8px; }
 .tb-wallet .btn{ padding:9px 13px; font-size:var(--fs-micro); }
-.tb-wallet .mine__wallet{ padding:9px 12px; }
+.tb-wallet .mine__wallet{ padding:9px 12px; white-space:nowrap; }
+.tb-out svg{ display:none; }
 @media (max-width:560px){
   .topbar__right{ gap:6px; }
   .tb-wallet .btn{ padding:8px 10px; }
-  .tb-wallet .mine__wallet{ padding:8px 10px; }
+  /* one line, never wrapped — JS also hands the chip a shorter address here.
+     The address is pure Latin, so 14px respects the text-size floor even
+     under the zh locale's 16px chrome bump. */
+  .tb-wallet .mine__wallet{
+    padding:8px 9px; max-width:120px; overflow:hidden;
+    font-size:14px; gap:6px;
+  }
+  /* logout collapses to its icon */
+  .tb-out span{ display:none; }
+  .tb-out svg{ display:block; }
+  .tb-out{ padding:8px; }
+  /* the fixed bar has no scrollbar to reveal overflow — every element must
+     actually fit: tighter paddings across the whole bar */
+  .topbar{ padding:12px 14px; gap:10px; }
 }
-.langs{ display:flex; gap:2px; padding:3px; border:1px solid var(--rule); border-radius:999px; background:rgba(16,13,32,.6); }
+.langs{ display:flex; gap:2px; padding:3px; border:1px solid var(--rule); border-radius:999px; background:rgba(16,13,32,.6); flex-shrink:0; }
+.langs button{ white-space:nowrap; }
 .langs button{
   font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
   padding:6px 12px; border:0; border-radius:999px; cursor:pointer;
@@ -138,6 +153,12 @@ html.personal main{ padding-top:70px; }
 .langs button[aria-pressed="true"]{ background:var(--gold); color:#1a1206; }
 .langs button:hover{ color:var(--vellum); }
 .langs button[aria-pressed="true"]:hover{ color:#1a1206; }
+/* AFTER the base rules — a media query never outranks same-specificity
+   rules that come later in the sheet */
+@media (max-width:560px){
+  .langs{ padding:2px; }
+  .langs button{ padding:6px 9px; }   /* CJK label: size stays on the token */
+}
 
 /* ─── layout ────────────────────────────────────────────────────────── */
 section{ position:relative; }
@@ -599,7 +620,14 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
     <div class="tb-wallet">
       <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>CONNECT</button>
       <button type="button" class="mine__wallet" id="mine-wallet" hidden></button>
-      <button type="button" class="btn btn--ghost" id="mine-disconnect" data-i18n="mine.disconnect" hidden>LOG OUT</button>
+      <button type="button" class="btn btn--ghost tb-out" id="mine-disconnect" hidden>
+        <span data-i18n="mine.disconnect">LOG OUT</span>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>
+        </svg>
+      </button>
     </div>
   </div>
 </header>
@@ -1739,8 +1767,12 @@ function mineWalletUI(){
   document.getElementById('mine-addr').hidden = connected;
   document.getElementById('mine-view').hidden = connected;
   if(connected){
-    chip.textContent = shortAddr(id);
+    // narrow screens get the head of the address only — the chip must stay
+    // on one line next to the language switch and the logout icon
+    chip.textContent = matchMedia('(max-width:560px)').matches
+      ? id.slice(0, 5) + '…' : shortAddr(id);
     chip.title = t('mine.wallet.back');
+    dis.setAttribute('aria-label', t('mine.disconnect'));  // icon-only on mobile
   }
   // ownership colours the copy (YOUR wallet / view YOUR piece) — refresh the
   // surfaces that mention it whenever the connected wallet changes
