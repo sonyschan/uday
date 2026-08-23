@@ -28,17 +28,21 @@ jobs:
         env:
           ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
         run: python3 tools/build_date_index.py build
+      - name: Snapshot fee ledger
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+        run: python3 tools/snapshot_ledger.py
       - name: Commit if changed
         # art-cache.json MUST be committed too: the index is derived from the
         # cache each run, so a reveal discovered by the rotating recheck slice
         # would flicker back to unrevealed next run if only the index landed.
         run: |
-          if git diff --quiet -- data/date-index.json data/art-cache.json; then
-            echo "index unchanged"; exit 0
+          git add data/date-index.json data/art-cache.json data/gift-ledger.json
+          if git diff --cached --quiet; then
+            echo "nothing changed"; exit 0
           fi
           git config user.name  "uday-index-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/date-index.json data/art-cache.json
           git commit -m "data: refresh date index"
           # a human push can land mid-build; rebase (our fresh data wins the
           # data files) and retry instead of failing the whole hour

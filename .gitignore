@@ -13,3 +13,7 @@ __pycache__/
 # editor droppings — a .env swapfile carries the key
 .env*
 *.swp
+
+# foundry build artifacts (forge create run from repo root)
+out/
+cache/
