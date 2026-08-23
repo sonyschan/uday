@@ -435,6 +435,12 @@ section{ position:relative; }
 }
 .daymodal__who{ font-family:ui-monospace, monospace; font-size:var(--fs-micro); color:var(--muted); }
 .daymodal__who--you{ color:var(--gold); }
+/* the homepage gift modal rides the daymodal chrome, smaller and wordier */
+.giftmodal .daymodal__panel{ max-width:460px; }
+.giftmodal__body p{ margin:12px 0 0; font-size:var(--fs-sub); color:#e6dbc2; line-height:1.75; }
+.giftmodal__state{ margin-top:18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+.giftmodal__ok{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
+.giftmodal__note{ margin:0; font-size:var(--fs-sub); color:var(--muted); }
 @keyframes yc-breathe{
   0%,100%{ box-shadow:0 0 0 0 rgba(232,185,63,0); }
   50%{ box-shadow:0 0 12px 2px var(--gold-glow); }
@@ -984,7 +990,13 @@ const I18N = {
     'mine.showyear':'SEE THE FULL YEAR','mine.hideyear':'HIDE THE FULL YEAR',
     'mine.btn.view':'VIEW YOUR PIECE',
     'gift.title':'TODAY’S GIFT',
-    'gift.not.yours':'Every uDAY is a calendar date — and when the real calendar reaches that date, its holder can claim the day’s gift. Today belongs to holders of {day}.',
+    'gift.not.yours':'Every uDAY is a calendar date — and when the real calendar reaches that date, its holder can claim the day’s gift. Today, {total} USDG belongs to holders of {day}.',
+    'gift.cta':'CLAIM THE GIFT',
+    'gift.modal.title':'TODAY’S GIFT · {day}',
+    'gift.modal.p1':'Every uDAY is a calendar date. When the real calendar reaches that date, its holder claims the day’s gift — today, {total} USDG belongs to holders of {day}.',
+    'gift.modal.p2':'The gift grows and changes with the uDAY ecosystem — today it is USDG; tomorrow it may be something more.',
+    'gift.modal.connect':'CONNECT WALLET TO CLAIM',
+    'gift.modal.nothave':'This day is not in your wallet yet.',
     'gift.connect':'A {n} USDG gift is waiting for this address — connect the wallet to claim it.',
     'gift.claimed':'Claimed — {n} USDG is yours. Come back with tomorrow’s date.',
     'gift.ready':'You hold {day} — a {n} USDG gift is yours to claim today.',
@@ -1058,7 +1070,13 @@ const I18N = {
     'mine.showyear':'看全年年历','mine.hideyear':'收起全年年历',
     'mine.btn.view':'查看你的这一枚',
     'gift.title':'今日礼物',
-    'gift.not.yours':'每枚 uDAY 都是一个日期——当现实的日历走到那一天，它的主人就能领取当天的礼物。今天轮到 {day} 的持有者。',
+    'gift.not.yours':'每枚 uDAY 都是一个日期——当现实的日历走到那一天，它的主人就能领取当天的礼物。今天共 {total} USDG，属于 {day} 的持有者。',
+    'gift.cta':'领取礼物',
+    'gift.modal.title':'今日礼物 · {day}',
+    'gift.modal.p1':'每枚 uDAY 都是一个日期。当现实的日历走到那一天，它的主人就能领取当天的礼物——今天，共 {total} USDG 属于 {day} 的持有者。',
+    'gift.modal.p2':'礼物会随 uDAY 生态一起成长变化——今天是 USDG，明天也许更有趣。',
+    'gift.modal.connect':'连接钱包领取',
+    'gift.modal.nothave':'这一天还不在你的钱包里。',
     'gift.connect':'这个地址有一份 {n} USDG 的礼物待领——连接钱包即可领取。',
     'gift.claimed':'已领取——{n} USDG 已是你的。明天带着明天的日期再来。',
     'gift.ready':'你持有 {day}——今天可以领取 {n} USDG 的礼物。',
@@ -1504,13 +1522,26 @@ function renderDayStatus(){
             : (entries.length > 1 ? 'status.taken' : 'status.taken.one'),
       { date: '<b>' + date + '</b>', n: entries.length, id: first.id,
         owner: '<b>' + shortAddr(first.owner) + '</b>' });
-    btn.textContent = t(yours ? 'mine.btn.view' : 'status.btn.offer');
-    btn.href = UTOKEN_ITEM(first.id);
+    // On the gift day itself the CTA becomes the gift: every visitor learns
+    // the perk, and the modal routes each of them (connect / claim / offer).
+    if(GIFT_DATA && key === giftToday().key){
+      btn.textContent = t('gift.cta');
+      btn.dataset.gift = '1';
+      btn.removeAttribute('href');
+      btn.removeAttribute('target');
+    }else{
+      btn.dataset.gift = '';
+      btn.textContent = t(yours ? 'mine.btn.view' : 'status.btn.offer');
+      btn.href = UTOKEN_ITEM(first.id);
+      btn.target = '_blank';
+    }
     va('event', { name: 'day_check', data: { state: 'taken' } });
   }else{
+    btn.dataset.gift = '';
     line.innerHTML = t('status.free', { date: '<b>' + date + '</b>' });
     btn.textContent = t('status.btn.mint');
     btn.href = UTOKEN_TOKEN;
+    btn.target = '_blank';
     va('event', { name: 'day_check', data: { state: 'free' } });
   }
   box.hidden = false;
@@ -2084,16 +2115,43 @@ function giftToday(){
   return { year: y, key: pad2(m) + '-' + pad2(d), dayId: y * 10000 + m * 100 + d };
 }
 
+let GIFT_DATA;                        // undefined = not loaded yet, false = none today
+async function loadGiftData(){
+  if(GIFT_DATA !== undefined) return GIFT_DATA;
+  const { year, key } = giftToday();
+  GIFT_DATA = false;
+  try{
+    const r = await fetch('data/gift/' + year + '-' + key + '.json', { cache: 'no-cache' });
+    if(r.ok) GIFT_DATA = await r.json();
+  }catch(e){}
+  return GIFT_DATA;
+}
+async function giftClaimedCheck(dayId, id){
+  try{
+    const res = await mineEth.request({ method: 'eth_call', params: [{
+      to: GIFT_ADDR,
+      data: '0x' + GIFT_SEL_CLAIMED + pad32(dayId.toString(16)) + pad32(id.slice(2))
+    }, 'latest'] });
+    return /1$/.test(res || '');
+  }catch(e){ return false; /* wrong chain etc — the claim tx is the arbiter */ }
+}
+async function sendGiftClaim(dayId, id, entry){
+  if(!await ensureChain()) throw new Error('chain declined');
+  const proof = entry.proof.map(x => x.replace('0x', ''));
+  const data = '0x' + GIFT_SEL_CLAIM +
+    pad32(dayId.toString(16)) + pad32(id.slice(2)) +
+    pad32(entry.amount.toString(16)) +
+    pad32('80') + pad32(proof.length.toString(16)) + proof.join('');
+  await mineEth.request({ method: 'eth_sendTransaction',
+    params: [{ from: mineWallet, to: GIFT_ADDR, data }] });
+}
+
 let giftBusy = false;
 async function renderGift(){
   const card = document.getElementById('gift-card');
   if(!IS_PERSONAL){ card.hidden = true; return; }
-  const { year, key, dayId } = giftToday();
-  let g = null;
-  try{
-    const r = await fetch('data/gift/' + year + '-' + key + '.json', { cache: 'no-cache' });
-    if(r.ok) g = await r.json();
-  }catch(e){}
+  const g = await loadGiftData();
+  const { key, dayId } = giftToday();
   const line = document.getElementById('gift-line');
   const btn  = document.getElementById('gift-claim');
   if(!g){ card.hidden = true; return; }
@@ -2102,19 +2160,15 @@ async function renderGift(){
   btn.hidden = true;
   const id = mineIdentity();
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  const total = String(Math.floor(g.total / 1e6));
   const entry = id ? g.claims[id] : null;
-  if(!entry){ line.textContent = t('gift.not.yours', { day: dayTxt }); return; }
+  if(!entry){ line.textContent = t('gift.not.yours', { day: dayTxt, total }); return; }
   const amt = String(Math.floor(entry.amount / 1e6));
   if(!mineWallet){ line.textContent = t('gift.connect', { n: amt }); return; }
-  let done = false;
-  try{
-    const res = await mineEth.request({ method: 'eth_call', params: [{
-      to: GIFT_ADDR,
-      data: '0x' + GIFT_SEL_CLAIMED + pad32(dayId.toString(16)) + pad32(id.slice(2))
-    }, 'latest'] });
-    done = /1$/.test(res || '');
-  }catch(e){ /* wrong chain etc — the claim tx itself is the arbiter */ }
-  if(done){ line.textContent = t('gift.claimed', { n: amt }); return; }
+  if(await giftClaimedCheck(dayId, id)){
+    line.textContent = t('gift.claimed', { n: amt });
+    return;
+  }
   line.textContent = t('gift.ready', { day: dayTxt, n: amt });
   btn.hidden = false;
   btn.disabled = false;
@@ -2124,14 +2178,7 @@ async function renderGift(){
     giftBusy = true; btn.disabled = true;
     btn.textContent = t('gift.pending');
     try{
-      if(!await ensureChain()) throw new Error('chain');
-      const proof = entry.proof.map(x => x.replace('0x', ''));
-      const data = '0x' + GIFT_SEL_CLAIM +
-        pad32(dayId.toString(16)) + pad32(id.slice(2)) +
-        pad32(entry.amount.toString(16)) +
-        pad32('80') + pad32(proof.length.toString(16)) + proof.join('');
-      await mineEth.request({ method: 'eth_sendTransaction',
-        params: [{ from: mineWallet, to: GIFT_ADDR, data }] });
+      await sendGiftClaim(dayId, id, entry);
       line.textContent = t('gift.sent');
       btn.hidden = true;
       va('event', { name: 'gift_claim', data: { day: key } });
@@ -2142,6 +2189,120 @@ async function renderGift(){
     giftBusy = false;
   };
 }
+
+/* ── the homepage gift modal: the hero CTA becomes 领取礼物 on the gift day.
+   Every visitor learns the perk; the eligible claim right here. */
+let giftModal = null, gmTitle, gmBody, gmState;
+function ensureGiftModal(){
+  if(giftModal) return;
+  giftModal = document.createElement('div');
+  giftModal.className = 'daymodal giftmodal';
+  giftModal.hidden = true;
+  const panel = document.createElement('div');
+  panel.className = 'daymodal__panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  const head = document.createElement('div');
+  head.className = 'daymodal__head';
+  gmTitle = document.createElement('span');
+  gmTitle.className = 'daymodal__title';
+  const x = document.createElement('button');
+  x.type = 'button'; x.className = 'daymodal__close'; x.textContent = '×';
+  x.addEventListener('click', closeGiftModal);
+  head.append(gmTitle, x);
+  gmBody = document.createElement('div');  gmBody.className = 'giftmodal__body';
+  gmState = document.createElement('div'); gmState.className = 'giftmodal__state';
+  panel.append(head, gmBody, gmState);
+  giftModal.appendChild(panel);
+  giftModal.addEventListener('click', e => { if(e.target === giftModal) closeGiftModal(); });
+  addEventListener('keydown', e => { if(e.key === 'Escape') closeGiftModal(); });
+  document.body.appendChild(giftModal);
+}
+function closeGiftModal(){
+  if(!giftModal || giftModal.hidden) return;
+  giftModal.hidden = true;
+  document.body.style.overflow = '';
+}
+async function openGiftModal(){
+  ensureGiftModal();
+  const g = await loadGiftData();
+  if(!g) return;
+  const { key, dayId } = giftToday();
+  const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  const total = String(Math.floor(g.total / 1e6));
+  gmTitle.textContent = t('gift.modal.title', { day: dayTxt });
+  gmBody.textContent = '';
+  [t('gift.modal.p1', { day: dayTxt, total }), t('gift.modal.p2')].forEach(txt => {
+    const p = document.createElement('p'); p.textContent = txt; gmBody.appendChild(p);
+  });
+  gmState.textContent = '';
+  const id = mineIdentity();
+  const entry = id ? g.claims[id] : null;
+  if(!id || (!mineWallet && entry)){
+    // anonymous (or an address-identity that cannot sign): guide to connect
+    if(mineEth){
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn btn--gold';
+      b.textContent = t('gift.modal.connect');
+      b.addEventListener('click', () => { closeGiftModal(); mineConnect.click(); });
+      gmState.appendChild(b);
+    }else{
+      const a = document.createElement('a');
+      a.className = 'btn btn--gold';
+      a.href = 'https://' + PERSONAL_HOST + '/';
+      a.textContent = t('gift.modal.connect');
+      gmState.appendChild(a);
+    }
+  }else if(entry){
+    const amt = String(Math.floor(entry.amount / 1e6));
+    if(await giftClaimedCheck(dayId, id)){
+      const s = document.createElement('p');
+      s.className = 'giftmodal__ok';
+      s.textContent = t('gift.claimed', { n: amt });
+      gmState.appendChild(s);
+    }else{
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn btn--gold';
+      b.textContent = t('gift.btn', { n: amt });
+      b.addEventListener('click', async () => {
+        b.disabled = true; b.textContent = t('gift.pending');
+        try{
+          await sendGiftClaim(dayId, id, entry);
+          b.hidden = true;
+          const s = document.createElement('p');
+          s.className = 'giftmodal__ok';
+          s.textContent = t('gift.sent');
+          gmState.appendChild(s);
+          va('event', { name: 'gift_claim', data: { day: key, src: 'home' } });
+        }catch(e){
+          b.disabled = false; b.textContent = t('gift.btn', { n: amt });
+        }
+      });
+      gmState.appendChild(b);
+    }
+  }else{
+    // connected but not a holder: this is where 把它带回家 lives now
+    const s = document.createElement('p');
+    s.className = 'giftmodal__note';
+    s.textContent = t('gift.modal.nothave');
+    gmState.appendChild(s);
+    const list = (DAYS && DAYS[key]) ? DAYS[key].slice().sort((a, b) => a.id - b.id) : [];
+    if(list.length){
+      const a = document.createElement('a');
+      a.className = 'btn btn--gold';
+      a.target = '_blank'; a.rel = 'noopener';
+      a.href = UTOKEN_ITEM(list[0].id);
+      a.textContent = t('status.btn.offer');
+      gmState.appendChild(a);
+    }
+  }
+  giftModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  va('event', { name: 'gift_modal', data: { day: key } });
+}
+document.getElementById('day-status-btn').addEventListener('click', e => {
+  if(e.currentTarget.dataset.gift === '1'){ e.preventDefault(); openGiftModal(); }
+});
 
 (function initMineAddr(){
   let a = (HANDOFF && HANDOFF.addr) || new URLSearchParams(location.search).get('addr');
@@ -2199,6 +2360,8 @@ async function loadIndex(){
       if(mineAddr) renderMine();
       renderGift();
     }
+    // once the gift file is known, the hero CTA can become 领取礼物
+    loadGiftData().then(() => renderDayStatus());
     // First paint on the fast path: the layer-by-layer reveal IS the real
     // piece. On the slow path (default already up) this repaints over it.
     heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
