@@ -14,8 +14,8 @@
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://uday.gift/assets/og.png">
-<link rel="icon" href="assets/uday-logo.png">
-<link rel="apple-touch-icon" href="assets/uday-logo.png">
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <script>window.va = window.va || function(){(window.vaq = window.vaq || []).push(arguments);};</script>
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1780,6 +1780,9 @@ document.getElementById('mine-addr').addEventListener('keydown', e => {
 
 if(IS_PERSONAL){
   document.documentElement.classList.add('personal');
+  // the brand is the way home: on the personal page it leads back to the
+  // main site (on the main site it stays an in-page #top link)
+  document.querySelector('.brand').href = 'https://uday.gift/';
   // the personal page IS the calendar: fold the marketing page away
   document.querySelector('.hero').hidden = true;
   ['story','forge','styles','chain'].forEach(id => {
