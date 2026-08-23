@@ -427,6 +427,23 @@ def build():
             if got != want:
                 raise SystemExit(f"sanity FAILED: asset {aid} decoded as {got}, expected {want}")
 
+    # Extinguished days: a day that HAD pieces in the previous index and has
+    # none now went dark this hour (sells burn pieces). Embers linger a week
+    # on the site, then cool; a re-lit day drops off immediately.
+    try:
+        prev = json.load(open(INDEX_PATH))
+    except Exception:
+        prev = {}
+    now = int(time.time())
+    WEEK = 7 * 86400
+    ext = {}
+    for k, ts in (prev.get("extinguished") or {}).items():
+        if k not in index and now - int(ts) < WEEK:
+            ext[k] = int(ts)
+    for k in (prev.get("days") or {}):
+        if k not in index and k not in ext:
+            ext[k] = now
+
     max_id = max(ids) if ids else 0
     dated = sum(len(v) for v in index.values())
     out = {"generated": int(time.time()), "token": TOKEN,
@@ -443,6 +460,7 @@ def build():
            # sealed pieces" or an all-sealed holder sees an empty calendar and
            # concludes they own nothing (85% of the collection is sealed)
            "sealed": _sealed_by_owner(ids, cache, owner),
+           "extinguished": ext,
            "days": index}
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
     json.dump(out, open(INDEX_PATH, "w"), separators=(",", ":"), sort_keys=True)

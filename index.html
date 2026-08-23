@@ -336,8 +336,26 @@ section{ position:relative; }
   transition:transform .12s, box-shadow .12s;
 }
 .yearcell--glitch:hover{ transform:scale(1.35); box-shadow:0 0 12px rgba(192,68,85,.7); z-index:1; position:relative; }
-/* today's cell breathes so a first-time visitor finds "now" at a glance */
-.yearcell--today{ animation:yc-breathe 2.8s ease-in-out infinite; }
+/* today's cell: a solid gold ring (calendar apps' universal "today" mark —
+   visible lit or dark) plus the breathing glow */
+.yearcell--today{
+  outline:2px solid var(--gold); outline-offset:1px;
+  animation:yc-breathe 2.8s ease-in-out infinite;
+}
+/* a day whose last piece burned this week: dark, with an ember inside */
+.yearcell--ember{
+  cursor:pointer; background:#190d10;
+  border-color:rgba(214,106,60,.45);
+  animation:yc-ember 2.6s ease-in-out infinite;
+}
+@keyframes yc-ember{
+  0%,100%{ box-shadow:inset 0 0 3px rgba(224,100,40,.3); }
+  50%    { box-shadow:inset 0 0 8px rgba(255,140,50,.75); }
+}
+.yearcell--ember:hover{ transform:scale(1.35); z-index:1; position:relative; }
+.yeartip--ember{ border-color:rgba(214,106,60,.6); }
+.yeartip--ember .yeartip__day{ color:#e8a05f; }
+.yeartip--ember .yeartip__sub{ white-space:normal; max-width:230px; }
 @keyframes yc-breathe{
   0%,100%{ box-shadow:0 0 0 0 rgba(232,185,63,0); }
   50%{ box-shadow:0 0 12px 2px var(--gold-glow); }
@@ -349,8 +367,9 @@ section{ position:relative; }
 }
 .yearcell--glitch{ animation:yc-glitch 5.2s steps(1,end) infinite; }
 @media (prefers-reduced-motion:reduce){
-  .yearcell--today,.yearcell--glitch{ animation:none; }
+  .yearcell--today,.yearcell--glitch,.yearcell--ember{ animation:none; }
   .yearcell--today{ box-shadow:0 0 10px var(--gold-glow); }
+  .yearcell--ember{ box-shadow:inset 0 0 6px rgba(255,140,50,.55); }
 }
 .yearwall__note{
   margin-top:14px; font-family:var(--display); font-size:var(--fs-micro);
@@ -852,6 +871,8 @@ const I18N = {
     'year.glitch.line':'{n} pieces are minted on days that do not exist \u2014 someone owns {day}.',
     'year.tip.first':'Earliest #{id}',
     'year.tip.free':'Not born yet',
+    'year.ember.cell':'BURNED OUT',
+    'year.tip.ember':'Went dark {ago} — this day’s last piece was sold and burned. The v4 hook mints on buy and burns on sell; a new mint can relight it.',
     'mine.kicker':'Your days',
     'mine.title':'Which days are already yours?',
     'mine.blurb':'Connect a wallet \u2014 or paste your address. The lookup runs entirely in your browser against the same public index the wall uses; nothing is sent anywhere.',
@@ -913,6 +934,8 @@ const I18N = {
     'year.glitch.line':'有 {n} 枚鑄在不存在的日子上——有人真的擁有{day}。',
     'year.tip.first':'最早 #{id}',
     'year.tip.free':'還沒誕生',
+    'year.ember.cell':'已燒盡',
+    'year.tip.ember':'{ago}熄滅——這一天的最後一枚被賣出燒毀了。v4 hook 買入即鑄造、賣出即銷毀；新的鑄造能讓它重生。',
     'mine.kicker':'你的收藏',
     'mine.title':'哪些日子已經是你的？',
     'mine.blurb':'連接錢包，或直接貼上你的地址。比對完全在你的瀏覽器裡進行——用的就是年曆牆的同一份公開索引，不會送出任何資料。',
@@ -1441,14 +1464,24 @@ function recipeSpec(key, e, res){
     res: res || 'onchain'
   };
 }
+function agoLabel(ts){
+  const h = Math.max(1, Math.round((Date.now()/1000 - ts) / 3600));
+  if(h < 24) return lang === 'zh' ? h + ' \u5c0f\u6642\u524d' : h + 'h ago';
+  const d = Math.round(h / 24);
+  return lang === 'zh' ? d + ' \u5929\u524d' : d + 'd ago';
+}
+
 function showTip(cell, key, kind, first, n, withCta){
   ensureTip();
   const m = +key.slice(0,2), d = +key.slice(3);
   yearTip.className = 'yeartip' +
-    (kind === 'glitch' ? ' yeartip--glitch' : kind === 'free' ? ' yeartip--free' : '') +
+    (kind === 'glitch' ? ' yeartip--glitch' :
+     kind === 'ember'  ? ' yeartip--free yeartip--ember' :
+     kind === 'free'   ? ' yeartip--free' : '') +
     (withCta ? ' yeartip--touch' : '');
   yearTipDay.textContent = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
   yearTipSub.textContent =
+    kind === 'ember'  ? t('year.tip.ember', { ago: agoLabel(INDEX_META.embers[key] || 0) }) :
     kind === 'free'   ? t('year.tip.free') :
     kind === 'glitch' ? t('year.glitch.cell') + ' \u00b7 ' + t('year.tip.first', { id: first.id })
                       : t('year.tip.first', { id: first.id });
@@ -1459,9 +1492,9 @@ function showTip(cell, key, kind, first, n, withCta){
   }
   yearTipCta.hidden = !withCta;
   if(withCta){
-    yearTipCta.href = kind === 'free' ? UTOKEN_TOKEN : UTOKEN_ITEM(first.id);
+    yearTipCta.href = (kind === 'free' || kind === 'ember') ? UTOKEN_TOKEN : UTOKEN_ITEM(first.id);
     yearTipCta.textContent =
-      kind === 'free' ? t('status.btn.mint') :
+      (kind === 'free' || kind === 'ember') ? t('status.btn.mint') :
       (mineIdentity() && first.owner === mineIdentity()) ? t('mine.btn.view') :
       t('status.btn.offer');
     yearTip.dataset.day = key;
@@ -1486,9 +1519,9 @@ function attachTip(cell, key, kind, first, n){
    closes it. Desktop keeps hover-to-preview, click-to-visit. */
 function attachCellAction(cell, key, kind, first, n){
   if(CAN_HOVER){
-    if(first) cell.addEventListener('click', () => {
-      va('event', { name: 'calendar_click', data: { day: key, ...(kind === 'glitch' ? { glitch: 1 } : {}) } });
-      window.open(UTOKEN_ITEM(first.id), '_blank', 'noopener');
+    if(first || kind === 'ember') cell.addEventListener('click', () => {
+      va('event', { name: 'calendar_click', data: { day: key, ...(kind === 'glitch' ? { glitch: 1 } : {}), ...(kind === 'ember' ? { ember: 1 } : {}) } });
+      window.open(kind === 'ember' ? UTOKEN_TOKEN : UTOKEN_ITEM(first.id), '_blank', 'noopener');
     });
     attachTip(cell, key, kind, first, n);
   }else{
@@ -1539,11 +1572,13 @@ function buildWall(grid, byDay, opts){
       }
       const key = pad2(m) + '-' + pad2(d);
       const n = counts[key] || 0;
-      const cell = document.createElement(n ? 'button' : 'span');
-      cell.className = 'yearcell' + (n ? ' yearcell--lit' : '');
+      const ember = !n && opts.embers && opts.embers[key];
+      const cell = document.createElement(n || ember ? 'button' : 'span');
+      cell.className = 'yearcell' + (n ? ' yearcell--lit' : ember ? ' yearcell--ember' : '');
       if(opts.today && key === todayKey) cell.classList.add('yearcell--today');
-      const label = dayLabel(m, d) + (n ? ' \u00b7 \u00d7' + n : '');
-      if(n) cell.setAttribute('aria-label', label);
+      const label = dayLabel(m, d) +
+        (n ? ' \u00b7 \u00d7' + n : ember ? ' \u00b7 ' + t('year.ember.cell') : '');
+      if(n || ember) cell.setAttribute('aria-label', label);
       if(!CAN_HOVER) cell.title = label;
       let first = null;
       if(n){
@@ -1551,7 +1586,7 @@ function buildWall(grid, byDay, opts){
         cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
         first = byDay[key].slice().sort((a,b) => a.id - b.id)[0];
       }
-      attachCellAction(cell, key, n ? 'lit' : 'free', first, n);
+      attachCellAction(cell, key, n ? 'lit' : ember ? 'ember' : 'free', first, n);
       grid.appendChild(cell);
     }
   }
@@ -1561,7 +1596,8 @@ function buildWall(grid, byDay, opts){
 function renderYear(){
   if(!DAYS) return;
   const sec = document.getElementById('year');
-  const { lit } = buildWall(document.getElementById('year-grid'), DAYS, { today: true });
+  const { lit } = buildWall(document.getElementById('year-grid'), DAYS,
+                            { today: true, embers: INDEX_META.embers });
   document.getElementById('year-note').textContent = t('year.note', { lit });
   // The impossible days are the wall's most shareable fact \u2014 one loud line,
   // not a footnote. {day} names the first glitch day (FEB 30) as proof.
@@ -1839,7 +1875,8 @@ async function loadIndex(){
     const j = await r.json();
     DAYS = j.days || {};
     INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0,
-                   owners: j.owners || 0, sealed: j.sealed || null };
+                   owners: j.owners || 0, sealed: j.sealed || null,
+                   embers: j.extinguished || {} };
     renderLiveTags();
     renderDayStatus();
     renderYear();
