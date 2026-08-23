@@ -118,6 +118,17 @@ a{ color:var(--gold); text-underline-offset:4px; text-decoration-thickness:1px; 
 .brand span{ font-family:var(--display); font-size:18px; letter-spacing:var(--ls-mid); color:var(--vellum); }
 .brand:hover span{ color:var(--gold); }
 
+.topbar__right{ display:flex; align-items:center; gap:10px; }
+/* personal mode: the first band sits directly under the fixed topbar */
+html.personal main{ padding-top:70px; }
+.tb-wallet{ display:flex; align-items:center; gap:8px; }
+.tb-wallet .btn{ padding:9px 13px; font-size:var(--fs-micro); }
+.tb-wallet .mine__wallet{ padding:9px 12px; }
+@media (max-width:560px){
+  .topbar__right{ gap:6px; }
+  .tb-wallet .btn{ padding:8px 10px; }
+  .tb-wallet .mine__wallet{ padding:8px 10px; }
+}
 .langs{ display:flex; gap:2px; padding:3px; border:1px solid var(--rule); border-radius:999px; background:rgba(16,13,32,.6); }
 .langs button{
   font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
@@ -560,9 +571,16 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
 
 <header class="topbar">
   <a class="brand" href="#top"><span>uDAY</span></a>
-  <div class="langs" role="group" aria-label="Language">
-    <button type="button" data-lang="en" aria-pressed="true">EN</button>
-    <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+  <div class="topbar__right">
+    <div class="langs" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+    </div>
+    <div class="tb-wallet">
+      <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>CONNECT</button>
+      <button type="button" class="mine__wallet" id="mine-wallet" hidden></button>
+      <button type="button" class="btn btn--ghost" id="mine-disconnect" data-i18n="mine.disconnect" hidden>LOG OUT</button>
+    </div>
   </div>
 </header>
 
@@ -664,11 +682,9 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         <p data-i18n="mine.blurb">Connect a wallet — or paste your address. The lookup runs entirely in your browser against the same public index the wall uses; nothing is sent anywhere.</p>
       </div>
       <div class="mine__controls rise">
-        <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>CONNECT WALLET</button>
-        <button type="button" class="mine__wallet" id="mine-wallet" hidden></button>
-        <button type="button" class="btn btn--ghost" id="mine-disconnect" data-i18n="mine.disconnect" hidden>DISCONNECT</button>
         <input class="mine__addr" id="mine-addr" placeholder="0x…" spellcheck="false" autocomplete="off" aria-label="Wallet address">
         <button type="button" class="btn btn--ghost" id="mine-view" data-i18n="mine.view">VIEW</button>
+        <button type="button" class="btn btn--ghost" id="mine-yearlink" hidden></button>
       </div>
       <div id="mine-result" hidden>
         <div class="yearwall__stats" id="mine-stats"></div>
@@ -837,8 +853,9 @@ const I18N = {
     'mine.kicker':'Your days',
     'mine.title':'Which days are already yours?',
     'mine.blurb':'Connect a wallet \u2014 or paste your address. The lookup runs entirely in your browser against the same public index the wall uses; nothing is sent anywhere.',
-    'mine.connect':'CONNECT WALLET','mine.view':'VIEW',
-    'mine.disconnect':'DISCONNECT','mine.wallet.back':'Back to my days',
+    'mine.connect':'CONNECT','mine.view':'VIEW',
+    'mine.disconnect':'LOG OUT','mine.wallet.back':'Back to my days',
+    'mine.showyear':'SEE THE FULL YEAR','mine.hideyear':'HIDE THE FULL YEAR',
     'mine.btn.view':'VIEW YOUR PIECE',
     'mine.sealed.tip':'Still sealed — reveal it on uToken',
     'status.taken.you':'{date} has been born — {n} of them exist. The earliest, #{id}, is in YOUR wallet.',
@@ -898,6 +915,7 @@ const I18N = {
     'mine.blurb':'連接錢包，或直接貼上你的地址。比對完全在你的瀏覽器裡進行——用的就是年曆牆的同一份公開索引，不會送出任何資料。',
     'mine.connect':'連接錢包','mine.view':'查看',
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日曆',
+    'mine.showyear':'看全年年曆','mine.hideyear':'收起全年年曆',
     'mine.btn.view':'查看你的這一枚',
     'mine.sealed.tip':'還密封著——到 uToken 揭曉',
     'status.taken.you':'{date}已經誕生——共 {n} 枚。最早的 #{id} 就在你的錢包裡。',
@@ -977,6 +995,7 @@ function applyLang(next){
     if(mineAddr) renderMine();
   }
   if(typeof mineWalletUI === 'function') mineWalletUI();
+  if(typeof yearLinkLabel === 'function') yearLinkLabel();
 }
 
 function setSub(valKey, subKey){
@@ -1550,7 +1569,7 @@ function renderYear(){
     gl.textContent = t('year.glitch.line', { n: glitchPieces, day: dayLabel(+k0.slice(0,2), +k0.slice(3)) });
     gl.hidden = false;
   }
-  sec.hidden = false;
+  sec.hidden = IS_PERSONAL && !yearShown;   // personal mode: behind the toggle
   if(io) io.observe(sec.querySelectorAll('.rise')[0]);
 }
 
@@ -1560,6 +1579,20 @@ function renderYear(){
    and pasting one works just as well (which also makes ?addr= a share link). */
 let mineAddr = null;
 const ADDR_RE = /^0x[0-9a-fA-F]{40}$/;
+
+/* my.uday.gift serves this same file: PERSONAL mode folds the marketing page
+   away and leads with the holder calendar. Wallet auth and localStorage are
+   both per-origin, so the main-site login redirects WITH ?addr= — the wall
+   renders read-only immediately; connecting on the subdomain is optional.
+   (?view=personal exists only so localhost can exercise this path.) */
+const PERSONAL_HOST = 'my.uday.gift';
+const IS_PERSONAL = location.hostname === PERSONAL_HOST ||
+                    new URLSearchParams(location.search).get('view') === 'personal';
+let yearShown = false;                 // personal mode: global wall on demand
+function yearLinkLabel(){
+  const b = document.getElementById('mine-yearlink');
+  if(!b.hidden) b.textContent = t(yearShown ? 'mine.hideyear' : 'mine.showyear');
+}
 
 function setMineAddr(a, src){
   if(!a || !ADDR_RE.test(a)) return false;
@@ -1662,19 +1695,31 @@ function mineDisconnect(){
 }
 document.getElementById('mine-disconnect').addEventListener('click', mineDisconnect);
 document.getElementById('mine-wallet').addEventListener('click', () => {
-  if(mineWallet) setMineAddr(mineWallet, 'wallet');   // back to my own wall
+  if(!mineWallet) return;
+  // on the main site the chip is a door to your page; on it, a way back home
+  if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
+    location.href = 'https://' + PERSONAL_HOST + '/?lang=' + lang + '&addr=' + mineWallet;
+    return;
+  }
+  setMineAddr(mineWallet, 'wallet');
 });
 
 if(mineEth) mineConnect.hidden = false;
 mineConnect.addEventListener('click', async () => {
+  let acc;
   try{
-    const acc = await mineEth.request({ method: 'eth_requestAccounts' });
-    if(acc && acc[0]){
-      mineWallet = acc[0].toLowerCase();
-      mineWalletUI();
-      setMineAddr(acc[0], 'wallet');
-    }
+    acc = await mineEth.request({ method: 'eth_requestAccounts' });
   }catch(e){ return; /* user declined — nothing to show */ }
+  if(!(acc && acc[0])) return;
+  // On the main site, logging in means going to YOUR page. The address rides
+  // in the URL because neither wallet auth nor localStorage crosses origins.
+  if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
+    location.href = 'https://' + PERSONAL_HOST + '/?lang=' + lang + '&addr=' + acc[0].toLowerCase();
+    return;
+  }
+  mineWallet = acc[0].toLowerCase();
+  mineWalletUI();
+  setMineAddr(acc[0], 'wallet');
   // Best effort: leave the wallet on Robinhood Chain for the uToken trip.
   // Viewing needs no chain at all, so failures here are silently fine.
   try{
@@ -1724,6 +1769,29 @@ document.getElementById('mine-addr').addEventListener('keydown', e => {
   }
 })();
 
+if(IS_PERSONAL){
+  document.documentElement.classList.add('personal');
+  // the personal page IS the calendar: fold the marketing page away
+  document.querySelector('.hero').hidden = true;
+  ['story','forge','styles','chain'].forEach(id => {
+    const s = document.getElementById(id); if(s) s.hidden = true;
+  });
+  // the holder calendar leads; the global wall waits behind a toggle
+  const mineSec = document.getElementById('mine');
+  const yearSec = document.getElementById('year');
+  yearSec.parentNode.insertBefore(mineSec, yearSec);
+  const yl = document.getElementById('mine-yearlink');
+  yl.hidden = false;
+  yl.addEventListener('click', () => {
+    yearShown = !yearShown;
+    yearSec.hidden = !yearShown;
+    yearLinkLabel();
+    if(yearShown) yearSec.scrollIntoView({ behavior: 'smooth' });
+    va('event', { name: 'personal_year_toggle', data: { open: yearShown ? 1 : 0 } });
+  });
+  yearLinkLabel();
+}
+
 async function loadIndex(){
   try{
     const r = await fetch('data/date-index.json', { cache: 'no-cache' });
@@ -1735,8 +1803,11 @@ async function loadIndex(){
     renderLiveTags();
     renderDayStatus();
     renderYear();
-    document.getElementById('mine').hidden = false;
-    if(mineAddr) renderMine();
+    // the holder calendar lives on my.uday.gift — the main page stays compact
+    if(IS_PERSONAL){
+      document.getElementById('mine').hidden = false;
+      if(mineAddr) renderMine();
+    }
     // First paint on the fast path: the layer-by-layer reveal IS the real
     // piece. On the slow path (default already up) this repaints over it.
     heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
