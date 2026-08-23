@@ -20,7 +20,7 @@
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* ─── tokens ────────────────────────────────────────────────────────── */
 :root{
@@ -53,8 +53,8 @@
   --shell:min(1180px, 92vw);
 }
 html[lang="zh"]{
-  --body:'Noto Sans TC','Nunito Sans', sans-serif;
-  --display:'Silkscreen','Noto Sans TC', ui-monospace, monospace;
+  --body:'Noto Sans SC','Nunito Sans', sans-serif;
+  --display:'Silkscreen','Noto Sans SC', ui-monospace, monospace;
   /* 16px floor for every chrome size. The wide tracking below was drawn for a
      Latin bitmap face — at 16px CJK it reads as scattered, so pull it in too. */
   --fs-micro:16px; --fs-tiny:16px; --fs-small:16px; --fs-sub:16px;
@@ -1008,70 +1008,70 @@ const I18N = {
     'hero.cap':'TODAY'
   },
   zh: {
-    'hero.kicker':'Robinhood Chain 上的鏈上藝術',
-    'hero.lede':'有些日子只是日期。有些日子成為你的一部分。',
+    'hero.kicker':'Robinhood Chain 上的链上艺术',
+    'hero.lede':'有些日子只是日期。有些日子成为你的一部分。',
     'cta.year':'看看哪些日子亮了',
     'pick.q':'哪一天是你的？',
-    'status.taken':'{date}已經誕生——共 {n} 枚。最早的 #{id} 在 {owner} 的錢包裡。',
-    'status.taken.one':'{date}已經誕生。#{id} 在 {owner} 的錢包裡。',
-    'status.free':'{date}還沒誕生。每一次鑄造，都可能是它。',
-    'status.btn.offer':'把它帶回家','status.btn.mint':'鑄造一天',
-    'live.lit':'全年點亮 {lit}/366 天','live.alive':'已誕生 {n} 枚','live.sealed':'{n} 枚待揭曉','live.owners':'收藏者 {n} 位',
-    'year.kicker':'一整年','year.title':'一年，正在點亮',
-    'year.blurb':'每一格是一天。亮起代表這一天已在鏈上誕生，越亮代表這一天的 uDAY 越多。點一格，去看那一天最早的一枚。',
-    'year.note':'366 天已點亮 {lit} 天 · 每小時從 Robinhood Chain 更新',
+    'status.taken':'{date}已经诞生——共 {n} 枚。最早的 #{id} 在 {owner} 的钱包里。',
+    'status.taken.one':'{date}已经诞生。#{id} 在 {owner} 的钱包里。',
+    'status.free':'{date}还没诞生。每一次铸造，都可能是它。',
+    'status.btn.offer':'把它带回家','status.btn.mint':'铸造一天',
+    'live.lit':'全年点亮 {lit}/366 天','live.alive':'已诞生 {n} 枚','live.sealed':'{n} 枚待揭晓','live.owners':'收藏者 {n} 位',
+    'year.kicker':'一整年','year.title':'一年，正在点亮',
+    'year.blurb':'每一格是一天。亮起代表这一天已在链上诞生，越亮代表这一天的 uDAY 越多。点一格，去看那一天诞生的每一枚。',
+    'year.note':'366 天已点亮 {lit} 天 · 每小时从 Robinhood Chain 更新',
     'year.glitch.cell':'不存在的日子',
-    'year.glitch.line':'有 {n} 枚鑄在不存在的日子上——有人真的擁有{day}。',
+    'year.glitch.line':'有 {n} 枚铸在不存在的日子上——有人真的拥有{day}。',
     'year.tip.first':'最早 #{id}',
-    'year.tip.free':'還沒誕生',
-    'year.ember.cell':'已燒盡',
-    'year.tip.ember':'{ago}熄滅——這一天的最後一枚被賣出燒毀了。v4 hook 買入即鑄造、賣出即銷毀；新的鑄造能讓它重生。',
+    'year.tip.free':'还没诞生',
+    'year.ember.cell':'已烧尽',
+    'year.tip.ember':'{ago}熄灭——这一天的最后一枚被卖出烧毁了。v4 hook 买入即铸造、卖出即销毁；新的铸造能让它重生。',
     'mine.kicker':'你的收藏',
-    'mine.title':'哪些日子已經是你的？',
-    'mine.blurb':'連接錢包，或直接貼上你的地址。比對完全在你的瀏覽器裡進行——用的就是年曆牆的同一份公開索引，不會送出任何資料。',
-    'mine.connect':'連接錢包','mine.view':'查看',
-    'mine.disconnect':'登出','mine.wallet.back':'回到我的日曆',
-    'mine.showyear':'看全年年曆','mine.hideyear':'收起全年年曆',
-    'mine.btn.view':'查看你的這一枚',
-    'modal.sub':'這一天誕生的每一枚。點作品前往 uToken，或直接在這裡下載 PNG。',
-    'modal.yours':'你的','modal.close':'關閉',
-    'modal.dl.96':'下載鏈上原版——768×768 PNG',
-    'modal.dl.hd':'下載高清重繪——1200×1200 PNG',
-    'mine.sealed.tip':'還密封著——到 uToken 揭曉',
-    'mine.sealed.hint':'uToken 的揭曉是一層一層開的——常常背板、外框先現身，月份和日期還藏著。點任一方塊前往 uToken，按「Batch Reveal」多揭幾輪，直到所有圖層解開。日曆會在一小時內跟上。',
-    'status.taken.you':'{date}已經誕生——共 {n} 枚。最早的 #{id} 就在你的錢包裡。',
-    'status.taken.one.you':'{date}已經誕生。#{id} 就在你的錢包裡。',
+    'mine.title':'哪些日子已经是你的？',
+    'mine.blurb':'连接钱包，或直接粘贴你的地址。比对完全在你的浏览器里进行——用的就是年历墙的同一份公开索引，不会发送任何数据。',
+    'mine.connect':'连接钱包','mine.view':'查看',
+    'mine.disconnect':'登出','mine.wallet.back':'回到我的日历',
+    'mine.showyear':'看全年年历','mine.hideyear':'收起全年年历',
+    'mine.btn.view':'查看你的这一枚',
+    'modal.sub':'这一天诞生的每一枚。点作品前往 uToken，或直接在这里下载 PNG。',
+    'modal.yours':'你的','modal.close':'关闭',
+    'modal.dl.96':'下载链上原版——768×768 PNG',
+    'modal.dl.hd':'下载高清重绘——1200×1200 PNG',
+    'mine.sealed.tip':'还密封着——到 uToken 揭晓',
+    'mine.sealed.hint':'uToken 的揭晓是一层一层开的——常常背板、外框先现身，月份和日期还藏着。点任一方块前往 uToken，按「Batch Reveal」多揭几轮，直到所有图层解开。日历会在一小时内跟上。',
+    'status.taken.you':'{date}已经诞生——共 {n} 枚。最早的 #{id} 就在你的钱包里。',
+    'status.taken.one.you':'{date}已经诞生。#{id} 就在你的钱包里。',
     'mine.stat.days':'收集了 {n} 天','mine.stat.pieces':'共 {n} 枚',
-    'mine.stat.sealed':'{n} 枚待揭曉','mine.stat.glitch':'{n} 枚不存在的日子',
-    'mine.empty':'這裡還沒有日子——每一次鑄造都可能是第一枚。',
-    'mine.sealed.only':'你的 {n} 枚都還密封著——每一枚都可能是任何一天。',
-    'story.kicker':'緣起',
-    'story.title':'哪些日子對你有意義？',
-    'story.quote':'一個生日。一個紀念日。或是那個改變了你的日子。',
-    'story.p1':'現在它們可以活在鏈上。uDAY 把你的日子，以及你在乎的人的日子，變成鏈上藝術資產——每一件都帶著自己的來歷，永久鑄刻於鏈。',
-    'story.p2':'而且它們不是靜止的。外觀會隨著代幣交易動態重新生成。',
-    'story.p3':'留一個給自己。送一個給重要的人。每一枚 uDAY 都代表著特定的一天。',
+    'mine.stat.sealed':'{n} 枚待揭晓','mine.stat.glitch':'{n} 枚不存在的日子',
+    'mine.empty':'这里还没有日子——每一次铸造都可能是第一枚。',
+    'mine.sealed.only':'你的 {n} 枚都还密封着——每一枚都可能是任何一天。',
+    'story.kicker':'缘起',
+    'story.title':'哪些日子对你有意义？',
+    'story.quote':'一个生日。一个纪念日。或是那个改变了你的日子。',
+    'story.p1':'现在它们可以活在链上。uDAY 把你的日子，以及你在乎的人的日子，变成链上艺术资产——每一件都带着自己的来历，永久铸刻于链。',
+    'story.p2':'而且它们不是静止的。外观会随着代币交易动态重新生成。',
+    'story.p3':'留一个给自己。送一个给重要的人。每一枚 uDAY 都代表着特定的一天。',
     'forge.kicker':'合成器',
-    'forge.title':'四個圖層，其中兩層可有可無',
-    'forge.blurb':'每一枚 uDAY 都由背板、外框、月份與日期四層依序繪成。月份與日期一定會畫上；背板與外框不一定——背板出現在 80% 的作品上，外框只有 20%。兩者各 8 種狀態（7 樣式 + 無）× 24 個月份磚 × 62 個日期磚——一個日子有 95,232 種長相。',
+    'forge.title':'四个图层，其中两层可有可无',
+    'forge.blurb':'每一枚 uDAY 都由背板、外框、月份与日期四层依序绘成。月份与日期一定会画上；背板与外框不一定——背板出现在 80% 的作品上，外框只有 20%。两者各 8 种状态（7 样式 + 无）× 24 个月份砖 × 62 个日期砖——一个日子有 95,232 种长相。',
     'forge.legend':'背板 / 外框 / 月份 / 日期',
-    'field.plate':'背板（80% 的作品有）','field.frame':'外框（20% 的作品有）','style.none':'無','field.month':'月份','field.date':'日期',
+    'field.plate':'背板（80% 的作品有）','field.frame':'外框（20% 的作品有）','style.none':'无','field.month':'月份','field.date':'日期',
     'field.mplace':'月份位置','field.dplace':'日期位置',
-    'forge.download':'下載 PNG','forge.random':'隨機一天',
-    'forge.note':'「鏈上原版 96」就是合約實際繪製的內容，輸出 768x768。「高清 300」是同樣四層以更高密度重繪，輸出 1200x1200。兩者都是整數倍放大，像素精準。',
-    'place.corner':'角落','place.center':'置中',
-    'field.res':'解析度','res.onchain':'鏈上原版 96','res.hd':'高清 300',
-    'styles.kicker':'七種畫風',
-    'styles.title':'收藏一天的七種方式',
-    'styles.blurb':'每種畫風都有自己的背板與外框。把游標移到背板上，外框會落下來罩住它。',
-    'chain.kicker':'鏈上','chain.title':'它住在哪裡',
-    'fact.contract':'合約地址','fact.copy':'複製','fact.copied':'已複製','fact.chain':'區塊鏈','fact.supply':'發行量',
-    'fact.supply.sub':'最多 10,000 件，曲線上每買進一整枚代幣即鑄造一件',
-    'fact.market':'市場','fact.market.v':'已畢業至 Uniswap v4',
-    'fact.market.sub':'流動性已進入池中，LP key 已燒毀，永久鎖倉。',
-    'fact.art':'藝術','fact.art.v':'完整儲存於鏈上',
-    'fact.art.sub':'圖層資料在創建時寫入合約儲存空間，此後不可更改。',
-    'foot.docs':'運作方式','foot.sig':'找到屬於你的那一天',
+    'forge.download':'下载 PNG','forge.random':'随机一天',
+    'forge.note':'「链上原版 96」就是合约实际绘制的内容，输出 768x768。「高清 300」是同样四层以更高密度重绘，输出 1200x1200。两者都是整数倍放大，像素精准。',
+    'place.corner':'角落','place.center':'居中',
+    'field.res':'分辨率','res.onchain':'链上原版 96','res.hd':'高清 300',
+    'styles.kicker':'七种画风',
+    'styles.title':'收藏一天的七种方式',
+    'styles.blurb':'每种画风都有自己的背板与外框。把鼠标移到背板上，外框会落下来罩住它。',
+    'chain.kicker':'链上','chain.title':'它住在哪里',
+    'fact.contract':'合约地址','fact.copy':'复制','fact.copied':'已复制','fact.chain':'区块链','fact.supply':'发行量',
+    'fact.supply.sub':'最多 10,000 件，曲线上每买进一整枚代币即铸造一件',
+    'fact.market':'市场','fact.market.v':'已毕业至 Uniswap v4',
+    'fact.market.sub':'流动性已进入池中，LP key 已烧毁，永久锁仓。',
+    'fact.art':'艺术','fact.art.v':'完整存储于链上',
+    'fact.art.sub':'图层数据在创建时写入合约存储空间，此后不可更改。',
+    'foot.docs':'运作方式','foot.sig':'找到属于你的那一天',
     'hero.cap':'今天'
   }
 };
@@ -1084,8 +1084,8 @@ const PRESENCE = { plate: 0.80, frame: 0.20 };
 const STYLE_LABEL = {
   en:{ unicorn:'UNICORN', classic:'CLASSIC', traditional:'TRADITIONAL', cyberpunk:'CYBERPUNK',
        global:'GLOBAL', cartoon:'CARTOON', 'country-road':'COUNTRY ROAD' },
-  zh:{ unicorn:'獨角獸', classic:'古典', traditional:'水墨', cyberpunk:'賽博',
-       global:'地球', cartoon:'卡通', 'country-road':'鄉間' }
+  zh:{ unicorn:'独角兽', classic:'古典', traditional:'水墨', cyberpunk:'赛博',
+       global:'地球', cartoon:'卡通', 'country-road':'乡间' }
 };
 
 let lang = 'en';
@@ -1563,7 +1563,7 @@ function recipeSpec(key, e, res){
 }
 function agoLabel(ts){
   const h = Math.max(1, Math.round((Date.now()/1000 - ts) / 3600));
-  if(h < 24) return lang === 'zh' ? h + ' \u5c0f\u6642\u524d' : h + 'h ago';
+  if(h < 24) return lang === 'zh' ? h + ' \u5c0f\u65f6\u524d' : h + 'h ago';
   const d = Math.round(h / 24);
   return lang === 'zh' ? d + ' \u5929\u524d' : d + 'd ago';
 }
