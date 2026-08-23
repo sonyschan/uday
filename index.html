@@ -482,6 +482,18 @@ section{ position:relative; }
 .mine__wallet:hover{ background:rgba(232,185,63,.14); }
 .mine__addr:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
 .mine__empty{ font-size:var(--fs-sub); color:#dbcfb4; margin-bottom:18px; max-width:56ch; }
+/* the daily gift card — quiet gold, no formulas, just a present */
+.giftcard{
+  margin-bottom:26px; padding:16px 18px; border-radius:10px;
+  border:1px solid rgba(232,185,63,.5);
+  background:linear-gradient(135deg, rgba(232,185,63,.10), rgba(232,185,63,.03));
+}
+.giftcard__title{
+  font-family:var(--display); font-size:var(--fs-small);
+  letter-spacing:var(--ls-mid); color:var(--gold);
+}
+.giftcard__line{ margin:8px 0 0; font-size:var(--fs-sub); color:#e6dbc2; max-width:60ch; }
+#gift-claim{ margin-top:12px; }
 /* sealed pieces as a mosaic of "?" tiles — jewel tints rotate so the strip
    reads as stained glass still waiting for light; each tile opens uToken */
 .mine__sealedwall{ display:flex; flex-wrap:wrap; gap:6px; margin-top:18px; }
@@ -793,6 +805,11 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         <button type="button" class="btn btn--ghost" id="mine-yearlink" hidden></button>
       </div>
       <div id="mine-result" hidden>
+        <div class="giftcard" id="gift-card" hidden>
+          <div class="giftcard__title" id="gift-title"></div>
+          <p class="giftcard__line" id="gift-line"></p>
+          <button type="button" class="btn btn--gold" id="gift-claim" hidden></button>
+        </div>
         <div class="yearwall__stats" id="mine-stats"></div>
         <p class="mine__empty" id="mine-empty" hidden></p>
         <div class="yearwall">
@@ -966,6 +983,13 @@ const I18N = {
     'mine.disconnect':'LOG OUT','mine.wallet.back':'Back to my days',
     'mine.showyear':'SEE THE FULL YEAR','mine.hideyear':'HIDE THE FULL YEAR',
     'mine.btn.view':'VIEW YOUR PIECE',
+    'gift.title':'TODAY’S GIFT',
+    'gift.not.yours':'Today’s gift belongs to holders of {day}. Hold a day; come back on its day.',
+    'gift.connect':'A {n} USDG gift is waiting for this address — connect the wallet to claim it.',
+    'gift.claimed':'Claimed — {n} USDG is yours. Come back with tomorrow’s date.',
+    'gift.ready':'You hold {day} — a {n} USDG gift is yours to claim today.',
+    'gift.btn':'CLAIM {n} USDG','gift.pending':'CONFIRM IN WALLET…',
+    'gift.sent':'Sent — the gift is on its way to your wallet.',
     'modal.sub':'Every piece born on this day. Tap one to view it on uToken — or download it right here.',
     'modal.yours':'YOURS','modal.close':'Close',
     'modal.dl.96':'Download the on-chain original — 768×768 PNG',
@@ -1033,6 +1057,13 @@ const I18N = {
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日历',
     'mine.showyear':'看全年年历','mine.hideyear':'收起全年年历',
     'mine.btn.view':'查看你的这一枚',
+    'gift.title':'今日礼物',
+    'gift.not.yours':'今天的礼物属于 {day} 的持有者。收藏一天，在属于它的那天回来。',
+    'gift.connect':'这个地址有一份 {n} USDG 的礼物待领——连接钱包即可领取。',
+    'gift.claimed':'已领取——{n} USDG 已是你的。明天带着明天的日期再来。',
+    'gift.ready':'你持有 {day}——今天可以领取 {n} USDG 的礼物。',
+    'gift.btn':'领取 {n} USDG','gift.pending':'请在钱包确认…',
+    'gift.sent':'已发送——礼物正在飞向你的钱包。',
     'modal.sub':'这一天诞生的每一枚。点作品前往 uToken，或直接在这里下载 PNG。',
     'modal.yours':'你的','modal.close':'关闭',
     'modal.dl.96':'下载链上原版——768×768 PNG',
@@ -1944,6 +1975,7 @@ function mineWalletUI(){
   // ownership colours the copy (YOUR wallet / view YOUR piece) — refresh the
   // surfaces that mention it whenever the connected wallet changes
   if(DAYS){ renderDayStatus(); if(mineAddr) renderMine(); }
+  if(typeof renderGift === 'function') renderGift();
 }
 function mineDisconnect(){
   // EIP-1193 has no programmatic disconnect: logging out means forgetting —
@@ -1989,10 +2021,15 @@ mineConnect.addEventListener('click', async () => {
   mineWallet = acc[0].toLowerCase();
   mineWalletUI();
   setMineAddr(acc[0], 'wallet');
-  // Best effort: leave the wallet on Robinhood Chain for the uToken trip.
-  // Viewing needs no chain at all, so failures here are silently fine.
+  ensureChain();   // best effort — viewing needs no chain, claiming re-checks
+});
+
+/// Puts the wallet on Robinhood Chain (4663). Returns false if the user
+/// declines; adding the chain first if the wallet has never seen it.
+async function ensureChain(){
   try{
     await mineEth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1237' }] });
+    return true;
   }catch(err){
     if(err && err.code === 4902){
       try{
@@ -2002,10 +2039,12 @@ mineConnect.addEventListener('click', async () => {
           rpcUrls: ['https://rpc.mainnet.chain.robinhood.com/rpc'],
           blockExplorerUrls: ['https://robinhoodchain.blockscout.com']
         }]});
+        return true;
       }catch(e2){}
     }
+    return false;
   }
-});
+}
 if(mineEth && mineEth.on) mineEth.on('accountsChanged', a => {
   if(a && a[0]){
     mineWallet = a[0].toLowerCase();
@@ -2028,6 +2067,81 @@ document.getElementById('mine-view').addEventListener('click', () =>
 document.getElementById('mine-addr').addEventListener('keydown', e => {
   if(e.key === 'Enter') setMineAddr(e.target.value.trim(), 'manual');
 });
+
+/* ─── Claim Gift (Phase 1): holders of today's date claim USDG.
+   Eligibility and proofs are static JSON built by tools/build_gift_root.py;
+   the wallet's own provider does the one eth_call and the claim tx, so the
+   page still never touches a public RPC. Amounts shown are the visitor's
+   own — the formula stays offstage. */
+const GIFT_ADDR = '0xBd17Ad7CD5586E8e42a73111c63A1B09985B1f09';
+const GIFT_SEL_CLAIM = 'ef30709b';
+const GIFT_SEL_CLAIMED = '96638b6c';
+const pad32 = s => s.padStart(64, '0');
+
+function giftToday(){
+  const u = new Date(Date.now() + 8 * 3600 * 1000);   // the gift day ticks in UTC+8
+  const y = u.getUTCFullYear(), m = u.getUTCMonth() + 1, d = u.getUTCDate();
+  return { year: y, key: pad2(m) + '-' + pad2(d), dayId: y * 10000 + m * 100 + d };
+}
+
+let giftBusy = false;
+async function renderGift(){
+  const card = document.getElementById('gift-card');
+  if(!IS_PERSONAL){ card.hidden = true; return; }
+  const { year, key, dayId } = giftToday();
+  let g = null;
+  try{
+    const r = await fetch('data/gift/' + year + '-' + key + '.json', { cache: 'no-cache' });
+    if(r.ok) g = await r.json();
+  }catch(e){}
+  const line = document.getElementById('gift-line');
+  const btn  = document.getElementById('gift-claim');
+  if(!g){ card.hidden = true; return; }
+  document.getElementById('gift-title').textContent = t('gift.title');
+  card.hidden = false;
+  btn.hidden = true;
+  const id = mineIdentity();
+  const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  const entry = id ? g.claims[id] : null;
+  if(!entry){ line.textContent = t('gift.not.yours', { day: dayTxt }); return; }
+  const amt = String(Math.floor(entry.amount / 1e6));
+  if(!mineWallet){ line.textContent = t('gift.connect', { n: amt }); return; }
+  let done = false;
+  try{
+    const res = await mineEth.request({ method: 'eth_call', params: [{
+      to: GIFT_ADDR,
+      data: '0x' + GIFT_SEL_CLAIMED + pad32(dayId.toString(16)) + pad32(id.slice(2))
+    }, 'latest'] });
+    done = /1$/.test(res || '');
+  }catch(e){ /* wrong chain etc — the claim tx itself is the arbiter */ }
+  if(done){ line.textContent = t('gift.claimed', { n: amt }); return; }
+  line.textContent = t('gift.ready', { day: dayTxt, n: amt });
+  btn.hidden = false;
+  btn.disabled = false;
+  btn.textContent = t('gift.btn', { n: amt });
+  btn.onclick = async () => {
+    if(giftBusy) return;
+    giftBusy = true; btn.disabled = true;
+    btn.textContent = t('gift.pending');
+    try{
+      if(!await ensureChain()) throw new Error('chain');
+      const proof = entry.proof.map(x => x.replace('0x', ''));
+      const data = '0x' + GIFT_SEL_CLAIM +
+        pad32(dayId.toString(16)) + pad32(id.slice(2)) +
+        pad32(entry.amount.toString(16)) +
+        pad32('80') + pad32(proof.length.toString(16)) + proof.join('');
+      await mineEth.request({ method: 'eth_sendTransaction',
+        params: [{ from: mineWallet, to: GIFT_ADDR, data }] });
+      line.textContent = t('gift.sent');
+      btn.hidden = true;
+      va('event', { name: 'gift_claim', data: { day: key } });
+    }catch(e){
+      btn.textContent = t('gift.btn', { n: amt });
+      btn.disabled = false;
+    }
+    giftBusy = false;
+  };
+}
 
 (function initMineAddr(){
   let a = (HANDOFF && HANDOFF.addr) || new URLSearchParams(location.search).get('addr');
@@ -2083,6 +2197,7 @@ async function loadIndex(){
     if(IS_PERSONAL){
       document.getElementById('mine').hidden = false;
       if(mineAddr) renderMine();
+      renderGift();
     }
     // First paint on the fast path: the layer-by-layer reveal IS the real
     // piece. On the slow path (default already up) this repaints over it.
