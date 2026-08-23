@@ -456,6 +456,12 @@ section{ position:relative; }
 .giftmodal__body p{ margin:12px 0 0; font-size:var(--fs-sub); color:#e6dbc2; line-height:1.75; }
 .giftmodal__state{ margin-top:18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
 .giftmodal__ok{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
+.giftmodal__bless{
+  margin:16px 0 0; text-align:center;
+  font-size:var(--fs-sub); line-height:1.85; color:#f0e2ba;
+}
+.giftmodal .giftmodal__state:has(.btn--ghost){ align-items:center; }
+#gift-tx{ margin-top:10px; }
 .giftmodal__note{ margin:0; font-size:var(--fs-sub); color:var(--muted); }
 @keyframes yc-breathe{
   0%,100%{ box-shadow:0 0 0 0 rgba(232,185,63,0); }
@@ -831,6 +837,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <div class="giftcard__title" id="gift-title"></div>
           <p class="giftcard__line" id="gift-line"></p>
           <button type="button" class="btn btn--gold" id="gift-claim" hidden></button>
+          <a class="btn btn--ghost" id="gift-tx" target="_blank" rel="noopener" hidden></a>
         </div>
         <div class="yearwall__stats" id="mine-stats"></div>
         <p class="mine__empty" id="mine-empty" hidden></p>
@@ -1018,6 +1025,8 @@ const I18N = {
     'gift.ready':'You hold {day} — a {n} USDG gift is yours to claim today.',
     'gift.btn':'CLAIM {n} USDG','gift.pending':'CONFIRM IN WALLET…',
     'gift.sent':'Sent — the gift is on its way to your wallet.',
+    'gift.bless':'This day is yours now. May {day} always be kind to you — this year, and every year after.',
+    'gift.tx':'VIEW TRANSACTION',
     'modal.sub':'Every piece born on this day. Tap one to view it on uToken — or download it right here.',
     'modal.yours':'YOURS','modal.close':'Close',
     'modal.dl.96':'Download the on-chain original — 768×768 PNG',
@@ -1098,6 +1107,8 @@ const I18N = {
     'gift.ready':'你持有 {day}——今天可以领取 {n} USDG 的礼物。',
     'gift.btn':'领取 {n} USDG','gift.pending':'请在钱包确认…',
     'gift.sent':'已发送——礼物正在飞向你的钱包。',
+    'gift.bless':'这一天是你的了。愿 {day} 一直温柔待你——今年，以及未来的每一年。',
+    'gift.tx':'查看交易',
     'modal.sub':'这一天诞生的每一枚。点作品前往 uToken，或直接在这里下载 PNG。',
     'modal.yours':'你的','modal.close':'关闭',
     'modal.dl.96':'下载链上原版——768×768 PNG',
@@ -2158,9 +2169,10 @@ async function sendGiftClaim(dayId, id, entry){
     pad32(dayId.toString(16)) + pad32(id.slice(2)) +
     pad32(entry.amount.toString(16)) +
     pad32('80') + pad32(proof.length.toString(16)) + proof.join('');
-  await mineEth.request({ method: 'eth_sendTransaction',
+  return await mineEth.request({ method: 'eth_sendTransaction',
     params: [{ from: mineWallet, to: GIFT_ADDR, data }] });
 }
+const GIFT_TX_URL = h => 'https://robinhoodchain.blockscout.com/tx/' + h;
 
 let giftBusy = false;
 async function renderGift(){
@@ -2174,6 +2186,7 @@ async function renderGift(){
   document.getElementById('gift-title').textContent = t('gift.title');
   card.hidden = false;
   btn.hidden = true;
+  document.getElementById('gift-tx').hidden = true;
   const id = mineIdentity();
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
   const total = String(Math.floor(g.total / 1e6));
@@ -2194,9 +2207,13 @@ async function renderGift(){
     giftBusy = true; btn.disabled = true;
     btn.textContent = t('gift.pending');
     try{
-      await sendGiftClaim(dayId, id, entry);
-      line.textContent = t('gift.sent');
+      const hash = await sendGiftClaim(dayId, id, entry);
+      line.textContent = t('gift.bless', { day: dayTxt });
       btn.hidden = true;
+      const txa = document.getElementById('gift-tx');
+      txa.href = GIFT_TX_URL(hash);
+      txa.textContent = t('gift.tx');
+      txa.hidden = false;
       va('event', { name: 'gift_claim', data: { day: key } });
     }catch(e){
       btn.textContent = t('gift.btn', { n: amt });
@@ -2288,12 +2305,20 @@ async function openGiftModal(){
       b.addEventListener('click', async () => {
         b.disabled = true; b.textContent = t('gift.pending');
         try{
-          await sendGiftClaim(dayId, id, entry);
-          b.hidden = true;
-          const s = document.createElement('p');
-          s.className = 'giftmodal__ok';
-          s.textContent = t('gift.sent');
-          gmState.appendChild(s);
+          const hash = await sendGiftClaim(dayId, id, entry);
+          // the warm ending: the story gives way to a blessing + the receipt
+          gmBody.textContent = '';
+          const bless = document.createElement('p');
+          bless.className = 'giftmodal__bless';
+          bless.textContent = t('gift.bless', { day: dayTxt });
+          gmBody.appendChild(bless);
+          gmState.textContent = '';
+          const a = document.createElement('a');
+          a.className = 'btn btn--ghost';
+          a.target = '_blank'; a.rel = 'noopener';
+          a.href = GIFT_TX_URL(hash);
+          a.textContent = t('gift.tx');
+          gmState.appendChild(a);
           va('event', { name: 'gift_claim', data: { day: key, src: 'home' } });
         }catch(e){
           b.disabled = false; b.textContent = t('gift.btn', { n: amt });
