@@ -377,6 +377,47 @@ section{ position:relative; }
 .yeartip--ember{ border-color:rgba(214,106,60,.6); }
 .yeartip--ember .yeartip__day{ color:#e8a05f; }
 .yeartip--ember .yeartip__sub{ white-space:normal; max-width:230px; }
+/* ─── day gallery modal: every piece of one day, pick your favourite ── */
+.daymodal{
+  position:fixed; inset:0; z-index:80; display:flex;
+  align-items:center; justify-content:center; padding:20px;
+  background:rgba(5,4,12,.72); backdrop-filter:blur(6px);
+}
+.daymodal[hidden]{ display:none; }
+.daymodal__panel{
+  background:#14102a; border:1px solid rgba(232,185,63,.35); border-radius:10px;
+  max-width:600px; width:100%; max-height:82vh; overflow-y:auto;
+  padding:18px 20px 22px; box-shadow:0 18px 50px rgba(0,0,0,.6);
+  scrollbar-width:thin; scrollbar-color:rgba(232,185,63,.4) transparent;
+}
+.daymodal--glitch .daymodal__panel{ border-color:rgba(192,68,85,.6); }
+.daymodal__head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.daymodal__title{
+  font-family:var(--display); font-size:var(--fs-small);
+  letter-spacing:var(--ls-narrow); color:var(--gold);
+}
+.daymodal--glitch .daymodal__title{ color:#e08496; }
+.daymodal__close{
+  border:0; background:none; color:var(--muted); cursor:pointer;
+  font-size:22px; line-height:1; padding:2px 8px;
+}
+.daymodal__close:hover{ color:var(--vellum); }
+.daymodal__sub{ font-size:var(--fs-micro); color:var(--muted); margin:4px 0 14px; }
+.daymodal__grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(126px,1fr)); gap:12px; }
+.daymodal__item{
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:12px 8px 10px; text-decoration:none;
+  border:1px solid var(--rule); border-radius:8px; background:rgba(243,231,205,.03);
+  transition:border-color .15s, background .15s;
+}
+.daymodal__item:hover{ border-color:rgba(232,185,63,.5); background:rgba(232,185,63,.07); }
+.daymodal__item canvas{ width:96px; height:96px; image-rendering:pixelated; }
+.daymodal__id{
+  font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--vellum); margin-top:5px;
+}
+.daymodal__who{ font-family:ui-monospace, monospace; font-size:var(--fs-micro); color:var(--muted); }
+.daymodal__who--you{ color:var(--gold); }
 @keyframes yc-breathe{
   0%,100%{ box-shadow:0 0 0 0 rgba(232,185,63,0); }
   50%{ box-shadow:0 0 12px 2px var(--gold-glow); }
@@ -908,6 +949,8 @@ const I18N = {
     'mine.disconnect':'LOG OUT','mine.wallet.back':'Back to my days',
     'mine.showyear':'SEE THE FULL YEAR','mine.hideyear':'HIDE THE FULL YEAR',
     'mine.btn.view':'VIEW YOUR PIECE',
+    'modal.sub':'Every piece born on this day. Tap one to view it on uToken.',
+    'modal.yours':'YOURS','modal.close':'Close',
     'mine.sealed.tip':'Still sealed — reveal it on uToken',
     'mine.sealed.hint':'uToken opens a piece layer by layer — the plate and frame often appear first while the month and date stay hidden. Tap a tile to open uToken, press “Batch Reveal”, and repeat until every layer is out. The calendar catches up within the hour.',
     'status.taken.you':'{date} has been born — {n} of them exist. The earliest, #{id}, is in YOUR wallet.',
@@ -971,6 +1014,8 @@ const I18N = {
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日曆',
     'mine.showyear':'看全年年曆','mine.hideyear':'收起全年年曆',
     'mine.btn.view':'查看你的這一枚',
+    'modal.sub':'這一天誕生的每一枚。點一枚，前往 uToken 查看。',
+    'modal.yours':'你的','modal.close':'關閉',
     'mine.sealed.tip':'還密封著——到 uToken 揭曉',
     'mine.sealed.hint':'uToken 的揭曉是一層一層開的——常常背板、外框先現身，月份和日期還藏著。點任一方塊前往 uToken，按「Batch Reveal」多揭幾輪，直到所有圖層解開。日曆會在一小時內跟上。',
     'status.taken.you':'{date}已經誕生——共 {n} 枚。最早的 #{id} 就在你的錢包裡。',
@@ -1542,19 +1587,97 @@ function attachTip(cell, key, kind, first, n){
   cell.addEventListener('mouseenter', () => showTip(cell, key, kind, first, n, false));
   cell.addEventListener('mouseleave', hideTip);
 }
-/* Touch has no hover, so a tap must not jump straight offsite: first tap
-   opens the same card WITH a CTA (bring it home / mint); tapping outside
-   closes it. Desktop keeps hover-to-preview, click-to-visit. */
-function attachCellAction(cell, key, kind, first, n){
+/* ── day gallery modal: a lit day opens ALL its pieces (art composed live),
+   and only a tap on a specific piece leaves for its uToken item page. */
+let dayModal = null, dayModalTitle, dayModalSub, dayModalGrid, dayModalClose;
+function ensureModal(){
+  if(dayModal) return;
+  dayModal = document.createElement('div');
+  dayModal.className = 'daymodal';
+  dayModal.hidden = true;
+  const panel = document.createElement('div');
+  panel.className = 'daymodal__panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  const head = document.createElement('div');
+  head.className = 'daymodal__head';
+  dayModalTitle = document.createElement('span');
+  dayModalTitle.className = 'daymodal__title';
+  dayModalClose = document.createElement('button');
+  dayModalClose.type = 'button';
+  dayModalClose.className = 'daymodal__close';
+  dayModalClose.textContent = '×';
+  dayModalClose.addEventListener('click', closeDayModal);
+  head.append(dayModalTitle, dayModalClose);
+  dayModalSub = document.createElement('p');
+  dayModalSub.className = 'daymodal__sub';
+  dayModalGrid = document.createElement('div');
+  dayModalGrid.className = 'daymodal__grid';
+  panel.append(head, dayModalSub, dayModalGrid);
+  dayModal.appendChild(panel);
+  dayModal.addEventListener('click', e => { if(e.target === dayModal) closeDayModal(); });
+  addEventListener('keydown', e => { if(e.key === 'Escape') closeDayModal(); });
+  document.body.appendChild(dayModal);
+}
+function closeDayModal(){
+  if(!dayModal || dayModal.hidden) return;
+  dayModal.hidden = true;
+  document.body.style.overflow = '';
+}
+function openDayModal(key, kind, list){
+  ensureModal();
+  hideTip();
+  const m = +key.slice(0,2), d = +key.slice(3);
+  dayModal.classList.toggle('daymodal--glitch', kind === 'glitch');
+  dayModalTitle.textContent = dayLabel(m, d) + ' · ×' + list.length +
+    (kind === 'glitch' ? ' · ' + t('year.glitch.cell') : '');
+  dayModalSub.textContent = t('modal.sub');
+  dayModalClose.setAttribute('aria-label', t('modal.close'));
+  dayModalGrid.textContent = '';
+  const me = mineIdentity();
+  list.forEach(e => {
+    const a = document.createElement('a');
+    a.className = 'daymodal__item';
+    a.href = UTOKEN_ITEM(e.id);
+    a.target = '_blank'; a.rel = 'noopener';
+    const c = document.createElement('canvas');
+    paint(c, recipeSpec(key, e));
+    const idEl = document.createElement('span');
+    idEl.className = 'daymodal__id';
+    idEl.textContent = '#' + e.id;
+    const who = document.createElement('span');
+    const yours = me && e.owner === me;
+    who.className = 'daymodal__who' + (yours ? ' daymodal__who--you' : '');
+    who.textContent = yours ? t('modal.yours') : shortAddr(e.owner);
+    a.addEventListener('click', () =>
+      va('event', { name: 'calendar_click', data: { day: key, id: e.id } }));
+    a.append(c, idEl, who);
+    dayModalGrid.appendChild(a);
+  });
+  dayModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  va('event', { name: 'day_modal', data: { day: key, n: list.length } });
+}
+
+/* Cells with pieces open the day gallery on EVERY pointer type — picking a
+   favourite beats being teleported to the earliest. Desktop keeps its hover
+   preview; unborn and ember days keep their mint flows. */
+function attachCellAction(cell, key, kind, list, n){
+  const first = list && list.length ? list[0] : null;
   if(CAN_HOVER){
-    if(first || kind === 'ember') cell.addEventListener('click', () => {
-      va('event', { name: 'calendar_click', data: { day: key, ...(kind === 'glitch' ? { glitch: 1 } : {}), ...(kind === 'ember' ? { ember: 1 } : {}) } });
-      window.open(kind === 'ember' ? UTOKEN_TOKEN : UTOKEN_ITEM(first.id), '_blank', 'noopener');
-    });
+    if(kind === 'lit' || kind === 'glitch'){
+      cell.addEventListener('click', () => openDayModal(key, kind, list));
+    }else if(kind === 'ember'){
+      cell.addEventListener('click', () => {
+        va('event', { name: 'calendar_click', data: { day: key, ember: 1 } });
+        window.open(UTOKEN_TOKEN, '_blank', 'noopener');
+      });
+    }
     attachTip(cell, key, kind, first, n);
   }else{
     cell.addEventListener('click', () => {
-      va('event', { name: 'calendar_preview', data: { day: key, ...(kind === 'glitch' ? { glitch: 1 } : {}) } });
+      if(kind === 'lit' || kind === 'glitch'){ openDayModal(key, kind, list); return; }
+      va('event', { name: 'calendar_preview', data: { day: key } });
       showTip(cell, key, kind, first, n, true);
     });
   }
@@ -1590,8 +1713,7 @@ function buildWall(grid, byDay, opts){
           const glabel = dayLabel(m, d) + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gl.length;
           g.setAttribute('aria-label', glabel);
           if(!CAN_HOVER) g.title = glabel;
-          const gf = gl.slice().sort((a,b) => a.id - b.id)[0];
-          attachCellAction(g, gkey, 'glitch', gf, gl.length);
+          attachCellAction(g, gkey, 'glitch', gl.slice().sort((a,b) => a.id - b.id), gl.length);
           grid.appendChild(g);
         }else{
           const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
@@ -1608,13 +1730,13 @@ function buildWall(grid, byDay, opts){
         (n ? ' \u00b7 \u00d7' + n : ember ? ' \u00b7 ' + t('year.ember.cell') : '');
       if(n || ember) cell.setAttribute('aria-label', label);
       if(!CAN_HOVER) cell.title = label;
-      let first = null;
+      let list = null;
       if(n){
         const heat = .16 + .74 * Math.sqrt(n / max);         // sqrt: one-of-many days stay visible
         cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
-        first = byDay[key].slice().sort((a,b) => a.id - b.id)[0];
+        list = byDay[key].slice().sort((a,b) => a.id - b.id);
       }
-      attachCellAction(cell, key, n ? 'lit' : ember ? 'ember' : 'free', first, n);
+      attachCellAction(cell, key, n ? 'lit' : ember ? 'ember' : 'free', list, n);
       grid.appendChild(cell);
     }
   }
