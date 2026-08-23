@@ -1592,6 +1592,23 @@ const ADDR_RE = /^0x[0-9a-fA-F]{40}$/;
 const PERSONAL_HOST = 'my.uday.gift';
 const IS_PERSONAL = location.hostname === PERSONAL_HOST ||
                     new URLSearchParams(location.search).get('view') === 'personal';
+
+/* Cross-subdomain handoff rides a short-lived cookie on .uday.gift, not URL
+   params — cookies are the one storage siblings share, so the redirect can
+   target the bare https://my.uday.gift/ and the address bar never flashes
+   ?lang=&addr= at all. ?addr= keeps working as the share-link fallback. */
+function setHandoff(addr){
+  document.cookie = 'uday_h=' + addr + '|' + lang +
+    ';domain=.uday.gift;path=/;max-age=300;secure;samesite=lax';
+}
+const HANDOFF = (function takeHandoff(){
+  if(!IS_PERSONAL) return null;
+  const m = document.cookie.match(/(?:^|;\s*)uday_h=([^;]*)/);
+  if(!m) return null;
+  document.cookie = 'uday_h=;domain=.uday.gift;path=/;max-age=0;secure;samesite=lax';
+  const parts = m[1].split('|');
+  return { addr: parts[0], lang: parts[1] };
+})();
 let yearShown = false;                 // personal mode: global wall on demand
 function yearLinkLabel(){
   const b = document.getElementById('mine-yearlink');
@@ -1713,7 +1730,8 @@ document.getElementById('mine-wallet').addEventListener('click', () => {
   if(!id) return;
   // on the main site the chip is a door to your page; on it, a way back home
   if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
-    location.href = 'https://' + PERSONAL_HOST + '/?lang=' + lang + '&addr=' + id;
+    setHandoff(id);
+    location.href = 'https://' + PERSONAL_HOST + '/';
     return;
   }
   setMineAddr(id, 'wallet');
@@ -1729,7 +1747,8 @@ mineConnect.addEventListener('click', async () => {
   // On the main site, logging in means going to YOUR page. The address rides
   // in the URL because neither wallet auth nor localStorage crosses origins.
   if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
-    location.href = 'https://' + PERSONAL_HOST + '/?lang=' + lang + '&addr=' + acc[0].toLowerCase();
+    setHandoff(acc[0].toLowerCase());
+    location.href = 'https://' + PERSONAL_HOST + '/';
     return;
   }
   mineWallet = acc[0].toLowerCase();
@@ -1776,7 +1795,7 @@ document.getElementById('mine-addr').addEventListener('keydown', e => {
 });
 
 (function initMineAddr(){
-  let a = new URLSearchParams(location.search).get('addr');
+  let a = (HANDOFF && HANDOFF.addr) || new URLSearchParams(location.search).get('addr');
   if(!a){ try{ a = localStorage.getItem('uday.addr'); }catch(e){} }
   if(a && ADDR_RE.test(a)){
     mineAddr = a.toLowerCase();
@@ -1867,11 +1886,13 @@ if('IntersectionObserver' in window){
 /* boot */
 let saved = 'en';
 const urlLang = new URLSearchParams(location.search).get('lang');
+const handoffLang = (typeof HANDOFF !== 'undefined' && HANDOFF) ? HANDOFF.lang : null;
 try{
   saved = urlLang
+       || handoffLang
        || localStorage.getItem('uday.lang')
        || ((navigator.language||'').toLowerCase().startsWith('zh') ? 'zh' : 'en');
-}catch(e){ saved = urlLang || 'en'; }
+}catch(e){ saved = urlLang || handoffLang || 'en'; }
 if(!I18N[saved]) saved = 'en';
 applyLang(saved);
 paint(forgeCanvas, spec);
