@@ -373,6 +373,23 @@ section{ position:relative; }
 .mine__wallet:hover{ background:rgba(232,185,63,.14); }
 .mine__addr:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
 .mine__empty{ font-size:var(--fs-sub); color:#dbcfb4; margin-bottom:18px; max-width:56ch; }
+/* sealed pieces as a mosaic of "?" tiles — jewel tints rotate so the strip
+   reads as stained glass still waiting for light; each tile opens uToken */
+.mine__sealedwall{ display:flex; flex-wrap:wrap; gap:6px; margin-top:18px; }
+.sealcell{
+  width:30px; height:30px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-size:var(--fs-micro); text-decoration:none;
+  color:var(--gold); background:rgba(243,231,205,.05);
+  border:1px dashed rgba(232,185,63,.5); border-radius:3px;
+  animation:seal-shimmer 3.6s ease-in-out infinite;
+}
+.sealcell:nth-child(4n+2){ color:#7fb4e8; border-color:rgba(96,150,220,.55); }
+.sealcell:nth-child(4n+3){ color:#d98ac0; border-color:rgba(200,110,170,.55); }
+.sealcell:nth-child(4n){ color:#8fd0a0; border-color:rgba(110,190,140,.5); }
+.sealcell:hover{ background:rgba(232,185,63,.15); }
+.sealcell--more{ width:auto; padding:0 10px; animation:none; }
+@keyframes seal-shimmer{ 0%,100%{ opacity:.55 } 50%{ opacity:1 } }
+@media (prefers-reduced-motion:reduce){ .sealcell{ animation:none; opacity:.85 } }
 /* one floating card for the whole wall: the day, its count, and the earliest
    piece's art composed live from the 96px on-chain layers */
 .yeartip{
@@ -661,6 +678,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
             <div class="yearwall__grid" id="mine-grid"></div>
           </div>
         </div>
+        <div class="mine__sealedwall" id="mine-sealed" hidden></div>
       </div>
     </div>
   </section>
@@ -821,6 +839,10 @@ const I18N = {
     'mine.blurb':'Connect a wallet or paste any address. The lookup runs entirely in your browser against the same public index the wall uses \u2014 nothing is sent anywhere.',
     'mine.connect':'CONNECT WALLET','mine.view':'VIEW',
     'mine.disconnect':'DISCONNECT','mine.wallet.back':'Back to my days',
+    'mine.btn.view':'VIEW YOUR PIECE',
+    'mine.sealed.tip':'Still sealed — reveal it on uToken',
+    'status.taken.you':'{date} has been born — {n} of them exist. The earliest, #{id}, is in YOUR wallet.',
+    'status.taken.one.you':'{date} has been born. #{id} is in your wallet.',
     'mine.stat.days':'{n} DAYS COLLECTED','mine.stat.pieces':'{n} PIECES',
     'mine.stat.sealed':'{n} STILL SEALED','mine.stat.glitch':'{n} IMPOSSIBLE DAYS',
     'mine.empty':'No days here yet \u2014 every mint could be the first.',
@@ -876,6 +898,10 @@ const I18N = {
     'mine.blurb':'連接錢包，或貼上任何地址。比對完全在你的瀏覽器裡進行——用的就是這面牆的同一份公開索引，不會送出任何資料。',
     'mine.connect':'連接錢包','mine.view':'查看',
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日曆',
+    'mine.btn.view':'查看你的這一枚',
+    'mine.sealed.tip':'還密封著——到 uToken 揭曉',
+    'status.taken.you':'{date}已經誕生——共 {n} 枚。最早的 #{id} 就在你的錢包裡。',
+    'status.taken.one.you':'{date}已經誕生。#{id} 就在你的錢包裡。',
     'mine.stat.days':'收集了 {n} 天','mine.stat.pieces':'共 {n} 枚',
     'mine.stat.sealed':'{n} 枚待揭曉','mine.stat.glitch':'{n} 枚不存在的日子',
     'mine.empty':'這裡還沒有日子——每一次鑄造都可能是第一枚。',
@@ -1296,10 +1322,15 @@ function renderDayStatus(){
     : monthLabel(heroSpec.month) + ' ' + pad2(heroSpec.date);
   if(entries.length){
     const first = entries[0];
-    line.innerHTML = t(entries.length > 1 ? 'status.taken' : 'status.taken.one',
+    // "bring it home" to someone who already holds it is a mismatch — when
+    // the connected wallet owns the piece, both the line and the CTA say so
+    const yours = !!(mineWallet && first.owner === mineWallet);
+    line.innerHTML = t(
+      yours ? (entries.length > 1 ? 'status.taken.you' : 'status.taken.one.you')
+            : (entries.length > 1 ? 'status.taken' : 'status.taken.one'),
       { date: '<b>' + date + '</b>', n: entries.length, id: first.id,
         owner: '<b>' + shortAddr(first.owner) + '</b>' });
-    btn.textContent = t('status.btn.offer');
+    btn.textContent = t(yours ? 'mine.btn.view' : 'status.btn.offer');
     btn.href = UTOKEN_ITEM(first.id);
     va('event', { name: 'day_check', data: { state: 'taken' } });
   }else{
@@ -1406,7 +1437,10 @@ function showTip(cell, key, kind, first, n, withCta){
   yearTipCta.hidden = !withCta;
   if(withCta){
     yearTipCta.href = kind === 'free' ? UTOKEN_TOKEN : UTOKEN_ITEM(first.id);
-    yearTipCta.textContent = kind === 'free' ? t('status.btn.mint') : t('status.btn.offer');
+    yearTipCta.textContent =
+      kind === 'free' ? t('status.btn.mint') :
+      (mineWallet && first.owner === mineWallet) ? t('mine.btn.view') :
+      t('status.btn.offer');
     yearTip.dataset.day = key;
     yearTip.dataset.glitch = kind === 'glitch' ? '1' : '';
   }
@@ -1562,6 +1596,31 @@ function renderMine(){
   if(!pieces && sealed){ empty.textContent = t('mine.sealed.only', { n: sealed }); empty.hidden = false; }
   else if(!pieces){ empty.textContent = t('mine.empty'); empty.hidden = false; }
   else empty.hidden = true;
+  // The sealed pieces get a face: a mosaic of "?" tiles, one per sealed
+  // piece (capped — a whale's 200 tiles teach nothing 48 don't), each one a
+  // door to uToken where the reveal actually happens.
+  const sw = document.getElementById('mine-sealed');
+  sw.textContent = '';
+  if(sealed){
+    const CAP = 48;
+    const tip = t('mine.sealed.tip');
+    const mkSeal = (label, extra) => {
+      const a = document.createElement('a');
+      a.className = 'sealcell' + (extra || '');
+      a.href = UTOKEN_TOKEN; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = label;
+      a.title = tip; a.setAttribute('aria-label', tip);
+      a.addEventListener('click', () => va('event', { name: 'mine_reveal_click' }));
+      return a;
+    };
+    for(let i = 0; i < Math.min(sealed, CAP); i++){
+      const a = mkSeal('?');
+      a.style.animationDelay = ((i % 12) * .3) + 's';
+      sw.appendChild(a);
+    }
+    if(sealed > CAP) sw.appendChild(mkSeal('+' + (sealed - CAP), ' sealcell--more'));
+    sw.hidden = false;
+  }else sw.hidden = true;
   document.getElementById('mine-result').hidden = false;
 }
 
@@ -1579,6 +1638,9 @@ function mineWalletUI(){
     chip.textContent = shortAddr(mineWallet);
     chip.title = t('mine.wallet.back');
   }
+  // ownership colours the copy (YOUR wallet / view YOUR piece) — refresh the
+  // surfaces that mention it whenever the connected wallet changes
+  if(DAYS){ renderDayStatus(); if(mineAddr) renderMine(); }
 }
 function mineDisconnect(){
   // EIP-1193 has no programmatic disconnect: logging out means forgetting —
