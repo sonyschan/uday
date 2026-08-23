@@ -1952,7 +1952,8 @@ function renderMine(){
     const l = DAYS[k].filter(e => e.owner === mineAddr);
     if(l.length) mine[k] = l;
   }
-  const { lit, pieces } = buildWall(document.getElementById('mine-grid'), mine, { today: false });
+  // today wears its gold ring here too — it is the gift day, after all
+  const { lit, pieces } = buildWall(document.getElementById('mine-grid'), mine, { today: true });
   const sealed = (INDEX_META.sealed || {})[mineAddr] || 0;
   const host = document.getElementById('mine-stats');
   host.textContent = '';
