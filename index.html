@@ -405,13 +405,30 @@ section{ position:relative; }
 .daymodal__sub{ font-size:var(--fs-micro); color:var(--muted); margin:4px 0 14px; }
 .daymodal__grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(126px,1fr)); gap:12px; }
 .daymodal__item{
-  display:flex; flex-direction:column; align-items:center; gap:3px;
-  padding:12px 8px 10px; text-decoration:none;
+  display:flex; flex-direction:column;
   border:1px solid var(--rule); border-radius:8px; background:rgba(243,231,205,.03);
   transition:border-color .15s, background .15s;
 }
 .daymodal__item:hover{ border-color:rgba(232,185,63,.5); background:rgba(232,185,63,.07); }
+.daymodal__link{
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:12px 8px 8px; text-decoration:none;
+}
 .daymodal__item canvas{ width:96px; height:96px; image-rendering:pixelated; }
+.daymodal__dl{ display:flex; gap:6px; padding:0 10px 10px; }
+.daymodal__dlbtn{
+  flex:1; cursor:pointer;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  color:var(--gold); background:rgba(232,185,63,.07);
+  border:1px solid rgba(232,185,63,.35); border-radius:4px; padding:6px 4px;
+}
+.daymodal__dlbtn:hover{ background:rgba(232,185,63,.18); }
+/* desktop: the row appears on hover or keyboard focus; touch keeps it visible */
+@media (hover:hover) and (pointer:fine){
+  .daymodal__dl{ opacity:0; transition:opacity .15s; }
+  .daymodal__item:hover .daymodal__dl,
+  .daymodal__item:focus-within .daymodal__dl{ opacity:1; }
+}
 .daymodal__id{
   font-family:var(--display); font-size:var(--fs-micro);
   letter-spacing:var(--ls-narrow); color:var(--vellum); margin-top:5px;
@@ -949,8 +966,10 @@ const I18N = {
     'mine.disconnect':'LOG OUT','mine.wallet.back':'Back to my days',
     'mine.showyear':'SEE THE FULL YEAR','mine.hideyear':'HIDE THE FULL YEAR',
     'mine.btn.view':'VIEW YOUR PIECE',
-    'modal.sub':'Every piece born on this day. Tap one to view it on uToken.',
+    'modal.sub':'Every piece born on this day. Tap one to view it on uToken — or download it right here.',
     'modal.yours':'YOURS','modal.close':'Close',
+    'modal.dl.96':'Download the on-chain original — 768×768 PNG',
+    'modal.dl.hd':'Download the HD redraw — 1200×1200 PNG',
     'mine.sealed.tip':'Still sealed — reveal it on uToken',
     'mine.sealed.hint':'uToken opens a piece layer by layer — the plate and frame often appear first while the month and date stay hidden. Tap a tile to open uToken, press “Batch Reveal”, and repeat until every layer is out. The calendar catches up within the hour.',
     'status.taken.you':'{date} has been born — {n} of them exist. The earliest, #{id}, is in YOUR wallet.',
@@ -1014,8 +1033,10 @@ const I18N = {
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日曆',
     'mine.showyear':'看全年年曆','mine.hideyear':'收起全年年曆',
     'mine.btn.view':'查看你的這一枚',
-    'modal.sub':'這一天誕生的每一枚。點一枚，前往 uToken 查看。',
+    'modal.sub':'這一天誕生的每一枚。點作品前往 uToken，或直接在這裡下載 PNG。',
     'modal.yours':'你的','modal.close':'關閉',
+    'modal.dl.96':'下載鏈上原版——768×768 PNG',
+    'modal.dl.hd':'下載高清重繪——1200×1200 PNG',
     'mine.sealed.tip':'還密封著——到 uToken 揭曉',
     'mine.sealed.hint':'uToken 的揭曉是一層一層開的——常常背板、外框先現身，月份和日期還藏著。點任一方塊前往 uToken，按「Batch Reveal」多揭幾輪，直到所有圖層解開。日曆會在一小時內跟上。',
     'status.taken.you':'{date}已經誕生——共 {n} 枚。最早的 #{id} 就在你的錢包裡。',
@@ -1381,19 +1402,22 @@ document.getElementById('btn-random').addEventListener('click', () => {
   update();
 });
 
-document.getElementById('btn-download').addEventListener('click', async () => {
-  const src = SRC[spec.res];               // integer scale keeps the pixels exact
+async function downloadPiece(pieceSpec, filename){
+  const src = SRC[pieceSpec.res];          // integer scale keeps the pixels exact
   const out = document.createElement('canvas');
   out.width = out.height = src.size * src.scale;
   const ctx = out.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  const imgs = await Promise.all(layerPaths(spec).map(load));
+  const imgs = await Promise.all(layerPaths(pieceSpec).map(load));
   imgs.forEach(im => im && ctx.drawImage(im, 0, 0, out.width, out.height));
   const a = document.createElement('a');
-  a.download = 'uDAY-' + (spec.plate || 'bare') + '-' + (spec.frame || 'bare') + '-' + pad2(spec.month) + pad2(spec.date) + '-' + spec.res + '.png';
+  a.download = filename;
   a.href = out.toDataURL('image/png');
   a.click();
-});
+}
+document.getElementById('btn-download').addEventListener('click', () =>
+  downloadPiece(spec, 'uDAY-' + (spec.plate || 'bare') + '-' + (spec.frame || 'bare') + '-' +
+                pad2(spec.month) + pad2(spec.date) + '-' + spec.res + '.png'));
 
 /* ─────────────────────────────────────────────────────────────────────
    gallery — the HD plates, with their frames on hover
@@ -1636,8 +1660,10 @@ function openDayModal(key, kind, list){
   dayModalGrid.textContent = '';
   const me = mineIdentity();
   list.forEach(e => {
+    const item = document.createElement('div');
+    item.className = 'daymodal__item';
     const a = document.createElement('a');
-    a.className = 'daymodal__item';
+    a.className = 'daymodal__link';
     a.href = UTOKEN_ITEM(e.id);
     a.target = '_blank'; a.rel = 'noopener';
     const c = document.createElement('canvas');
@@ -1652,7 +1678,26 @@ function openDayModal(key, kind, list){
     a.addEventListener('click', () =>
       va('event', { name: 'calendar_click', data: { day: key, id: e.id } }));
     a.append(c, idEl, who);
-    dayModalGrid.appendChild(a);
+    // download row: the two resolutions ARE the choice — one tap, no submenu
+    const dl = document.createElement('div');
+    dl.className = 'daymodal__dl';
+    [['onchain', '96'], ['hd', 'HD']].forEach(([res, label]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'daymodal__dlbtn';
+      b.textContent = label;
+      b.title = t(res === 'hd' ? 'modal.dl.hd' : 'modal.dl.96');
+      b.setAttribute('aria-label', b.title);
+      b.addEventListener('click', () => {
+        downloadPiece(recipeSpec(key, e, res),
+          'uDAY-' + key.replace('-', '') + '-' + e.id + '-' +
+          (res === 'hd' ? 'hd300' : 'onchain96') + '.png');
+        va('event', { name: 'piece_download', data: { id: e.id, res } });
+      });
+      dl.appendChild(b);
+    });
+    item.append(a, dl);
+    dayModalGrid.appendChild(item);
   });
   dayModal.hidden = false;
   document.body.style.overflow = 'hidden';
