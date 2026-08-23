@@ -436,7 +436,14 @@ section{ position:relative; }
 .daymodal__who{ font-family:ui-monospace, monospace; font-size:var(--fs-micro); color:var(--muted); }
 .daymodal__who--you{ color:var(--gold); }
 /* the homepage gift modal rides the daymodal chrome, smaller and wordier */
-.giftmodal .daymodal__panel{ max-width:460px; }
+.giftmodal .daymodal__panel{ max-width:460px; position:relative; padding-top:26px; }
+.giftmodal .daymodal__close{ position:absolute; top:10px; right:12px; }
+.giftmodal__emblem{
+  display:block; width:84px; height:84px; margin:2px auto 12px;
+  border-radius:18px; border:1px solid rgba(232,185,63,.4);
+  box-shadow:0 6px 18px rgba(0,0,0,.45);
+}
+.giftmodal__title{ display:block; text-align:center; }
 .giftmodal__body p{ margin:12px 0 0; font-size:var(--fs-sub); color:#e6dbc2; line-height:1.75; }
 .giftmodal__state{ margin-top:18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
 .giftmodal__ok{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
@@ -2202,17 +2209,19 @@ function ensureGiftModal(){
   panel.className = 'daymodal__panel';
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-modal', 'true');
-  const head = document.createElement('div');
-  head.className = 'daymodal__head';
-  gmTitle = document.createElement('span');
-  gmTitle.className = 'daymodal__title';
   const x = document.createElement('button');
   x.type = 'button'; x.className = 'daymodal__close'; x.textContent = '×';
   x.addEventListener('click', closeGiftModal);
-  head.append(gmTitle, x);
+  // the U with the bow — the logo IS a present, so it seals the gift card
+  const emblem = document.createElement('img');
+  emblem.className = 'giftmodal__emblem';
+  emblem.src = 'assets/apple-touch-icon.png';
+  emblem.alt = '';
+  gmTitle = document.createElement('span');
+  gmTitle.className = 'daymodal__title giftmodal__title';
   gmBody = document.createElement('div');  gmBody.className = 'giftmodal__body';
   gmState = document.createElement('div'); gmState.className = 'giftmodal__state';
-  panel.append(head, gmBody, gmState);
+  panel.append(x, emblem, gmTitle, gmBody, gmState);
   giftModal.appendChild(panel);
   giftModal.addEventListener('click', e => { if(e.target === giftModal) closeGiftModal(); });
   addEventListener('keydown', e => { if(e.key === 'Escape') closeGiftModal(); });
