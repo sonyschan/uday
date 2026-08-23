@@ -358,6 +358,19 @@ section{ position:relative; }
   border:1px solid var(--rule); border-radius:4px; padding:12px 14px;
 }
 .mine__addr::placeholder{ color:var(--muted); }
+/* connected-wallet chip: green pulse + short address; clicking it returns
+   to the wallet's own wall after browsing someone else's */
+.mine__wallet{
+  display:inline-flex; align-items:center; gap:9px; cursor:pointer;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  color:var(--gold); background:rgba(232,185,63,.08);
+  border:1px solid rgba(232,185,63,.45); border-radius:4px; padding:12px 16px;
+}
+.mine__wallet::before{
+  content:''; width:8px; height:8px; border-radius:50%;
+  background:#7fd07f; box-shadow:0 0 6px rgba(127,208,127,.8);
+}
+.mine__wallet:hover{ background:rgba(232,185,63,.14); }
 .mine__addr:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
 .mine__empty{ font-size:var(--fs-sub); color:#dbcfb4; margin-bottom:18px; max-width:56ch; }
 /* one floating card for the whole wall: the day, its count, and the earliest
@@ -635,6 +648,8 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
       </div>
       <div class="mine__controls rise">
         <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>CONNECT WALLET</button>
+        <button type="button" class="mine__wallet" id="mine-wallet" hidden></button>
+        <button type="button" class="btn btn--ghost" id="mine-disconnect" data-i18n="mine.disconnect" hidden>DISCONNECT</button>
         <input class="mine__addr" id="mine-addr" placeholder="0x…" spellcheck="false" autocomplete="off" aria-label="Wallet address">
         <button type="button" class="btn btn--ghost" id="mine-view" data-i18n="mine.view">VIEW</button>
       </div>
@@ -805,6 +820,7 @@ const I18N = {
     'mine.title':'Which days are already yours?',
     'mine.blurb':'Connect a wallet or paste any address. The lookup runs entirely in your browser against the same public index the wall uses \u2014 nothing is sent anywhere.',
     'mine.connect':'CONNECT WALLET','mine.view':'VIEW',
+    'mine.disconnect':'DISCONNECT','mine.wallet.back':'Back to my days',
     'mine.stat.days':'{n} DAYS COLLECTED','mine.stat.pieces':'{n} PIECES',
     'mine.stat.sealed':'{n} STILL SEALED','mine.stat.glitch':'{n} IMPOSSIBLE DAYS',
     'mine.empty':'No days here yet \u2014 every mint could be the first.',
@@ -859,6 +875,7 @@ const I18N = {
     'mine.title':'哪些日子已經是你的？',
     'mine.blurb':'連接錢包，或貼上任何地址。比對完全在你的瀏覽器裡進行——用的就是這面牆的同一份公開索引，不會送出任何資料。',
     'mine.connect':'連接錢包','mine.view':'查看',
+    'mine.disconnect':'登出','mine.wallet.back':'回到我的日曆',
     'mine.stat.days':'收集了 {n} 天','mine.stat.pieces':'共 {n} 枚',
     'mine.stat.sealed':'{n} 枚待揭曉','mine.stat.glitch':'{n} 枚不存在的日子',
     'mine.empty':'這裡還沒有日子——每一次鑄造都可能是第一枚。',
@@ -933,6 +950,7 @@ function applyLang(next){
     renderLiveTags(); renderDayStatus(); renderYear();
     if(mineAddr) renderMine();
   }
+  if(typeof mineWalletUI === 'function') mineWalletUI();
 }
 
 function setSub(valKey, subKey){
@@ -1549,11 +1567,47 @@ function renderMine(){
 
 const mineEth = window.ethereum;
 const mineConnect = document.getElementById('mine-connect');
+let mineWallet = null;                 // the CONNECTED address; null = logged out
+
+function mineWalletUI(){
+  const connected = !!mineWallet;
+  mineConnect.hidden = connected || !mineEth;
+  const chip = document.getElementById('mine-wallet');
+  const dis  = document.getElementById('mine-disconnect');
+  chip.hidden = dis.hidden = !connected;
+  if(connected){
+    chip.textContent = shortAddr(mineWallet);
+    chip.title = t('mine.wallet.back');
+  }
+}
+function mineDisconnect(){
+  // EIP-1193 has no programmatic disconnect: logging out means forgetting —
+  // the address, the stored copy, the share URL, and the rendered wall.
+  mineWallet = null;
+  mineAddr = null;
+  document.getElementById('mine-addr').value = '';
+  try{ localStorage.removeItem('uday.addr'); }catch(e){}
+  const u = new URL(location.href);
+  u.searchParams.delete('addr');
+  history.replaceState(null, '', u);
+  document.getElementById('mine-result').hidden = true;
+  mineWalletUI();
+  va('event', { name: 'mine_disconnect' });
+}
+document.getElementById('mine-disconnect').addEventListener('click', mineDisconnect);
+document.getElementById('mine-wallet').addEventListener('click', () => {
+  if(mineWallet) setMineAddr(mineWallet, 'wallet');   // back to my own wall
+});
+
 if(mineEth) mineConnect.hidden = false;
 mineConnect.addEventListener('click', async () => {
   try{
     const acc = await mineEth.request({ method: 'eth_requestAccounts' });
-    if(acc && acc[0]) setMineAddr(acc[0], 'wallet');
+    if(acc && acc[0]){
+      mineWallet = acc[0].toLowerCase();
+      mineWalletUI();
+      setMineAddr(acc[0], 'wallet');
+    }
   }catch(e){ return; /* user declined — nothing to show */ }
   // Best effort: leave the wallet on Robinhood Chain for the uToken trip.
   // Viewing needs no chain at all, so failures here are silently fine.
@@ -1572,7 +1626,22 @@ mineConnect.addEventListener('click', async () => {
     }
   }
 });
-if(mineEth && mineEth.on) mineEth.on('accountsChanged', a => { if(a && a[0]) setMineAddr(a[0], 'wallet'); });
+if(mineEth && mineEth.on) mineEth.on('accountsChanged', a => {
+  if(a && a[0]){
+    mineWallet = a[0].toLowerCase();
+    mineWalletUI();
+    setMineAddr(a[0], 'wallet');
+  }else{
+    mineDisconnect();                  // the wallet side logged out
+  }
+});
+// Silent session restore: eth_accounts never prompts — it only reports an
+// authorization that already exists, so a reload keeps the logged-in chip.
+if(mineEth && mineEth.request){
+  mineEth.request({ method: 'eth_accounts' }).then(a => {
+    if(a && a[0]){ mineWallet = a[0].toLowerCase(); mineWalletUI(); }
+  }).catch(() => {});
+}
 
 document.getElementById('mine-view').addEventListener('click', () =>
   setMineAddr(document.getElementById('mine-addr').value.trim(), 'manual'));
