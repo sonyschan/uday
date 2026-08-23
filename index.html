@@ -1343,7 +1343,7 @@ function renderDayStatus(){
     const first = entries[0];
     // "bring it home" to someone who already holds it is a mismatch — when
     // the connected wallet owns the piece, both the line and the CTA say so
-    const yours = !!(mineWallet && first.owner === mineWallet);
+    const yours = !!(mineIdentity() && first.owner === mineIdentity());
     line.innerHTML = t(
       yours ? (entries.length > 1 ? 'status.taken.you' : 'status.taken.one.you')
             : (entries.length > 1 ? 'status.taken' : 'status.taken.one'),
@@ -1458,7 +1458,7 @@ function showTip(cell, key, kind, first, n, withCta){
     yearTipCta.href = kind === 'free' ? UTOKEN_TOKEN : UTOKEN_ITEM(first.id);
     yearTipCta.textContent =
       kind === 'free' ? t('status.btn.mint') :
-      (mineWallet && first.owner === mineWallet) ? t('mine.btn.view') :
+      (mineIdentity() && first.owner === mineIdentity()) ? t('mine.btn.view') :
       t('status.btn.offer');
     yearTip.dataset.day = key;
     yearTip.dataset.glitch = kind === 'glitch' ? '1' : '';
@@ -1602,7 +1602,7 @@ function setMineAddr(a, src){
   const u = new URL(location.href);
   u.searchParams.set('addr', mineAddr);
   history.replaceState(null, '', u);        // the URL itself is the share link
-  renderMine();
+  mineWalletUI();                           // renders the wall and the chrome
   va('event', { name: 'mine_view', data: { src } });
   return true;
 }
@@ -1661,8 +1661,16 @@ const mineEth = window.ethereum;
 const mineConnect = document.getElementById('mine-connect');
 let mineWallet = null;                 // the CONNECTED address; null = logged out
 
+/* Who is "you"? A proven wallet connection anywhere — or, on the personal
+   page, the address you arrived with (?addr= from the main-site login, a
+   pasted address, or the stored copy). Wallet auth is per-origin, so the
+   redirect lands here unauthorized; demanding a second connect to someone
+   who just logged in reads as being logged out. */
+function mineIdentity(){ return mineWallet || (IS_PERSONAL ? mineAddr : null); }
+
 function mineWalletUI(){
-  const connected = !!mineWallet;
+  const id = mineIdentity();
+  const connected = !!id;
   mineConnect.hidden = connected || !mineEth;
   const chip = document.getElementById('mine-wallet');
   const dis  = document.getElementById('mine-disconnect');
@@ -1672,7 +1680,7 @@ function mineWalletUI(){
   document.getElementById('mine-addr').hidden = connected;
   document.getElementById('mine-view').hidden = connected;
   if(connected){
-    chip.textContent = shortAddr(mineWallet);
+    chip.textContent = shortAddr(id);
     chip.title = t('mine.wallet.back');
   }
   // ownership colours the copy (YOUR wallet / view YOUR piece) — refresh the
@@ -1695,13 +1703,14 @@ function mineDisconnect(){
 }
 document.getElementById('mine-disconnect').addEventListener('click', mineDisconnect);
 document.getElementById('mine-wallet').addEventListener('click', () => {
-  if(!mineWallet) return;
+  const id = mineIdentity();
+  if(!id) return;
   // on the main site the chip is a door to your page; on it, a way back home
   if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
-    location.href = 'https://' + PERSONAL_HOST + '/?lang=' + lang + '&addr=' + mineWallet;
+    location.href = 'https://' + PERSONAL_HOST + '/?lang=' + lang + '&addr=' + id;
     return;
   }
-  setMineAddr(mineWallet, 'wallet');
+  setMineAddr(id, 'wallet');
 });
 
 if(mineEth) mineConnect.hidden = false;
