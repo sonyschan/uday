@@ -9,3 +9,7 @@ _fonts.html
 # secrets
 .env
 __pycache__/
+
+# editor droppings — a .env swapfile carries the key
+.env*
+*.swp
