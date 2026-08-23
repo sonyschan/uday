@@ -446,6 +446,13 @@ section{ position:relative; }
   mask-image:radial-gradient(circle, #000 62%, transparent 92%);
 }
 .giftmodal__title{ display:block; text-align:center; }
+/* the number is the star: big, gold, glowing, alone on its line */
+.giftmodal__amount{
+  margin:14px 0 2px; text-align:center; line-height:1;
+  font-family:var(--display); font-size:clamp(30px, 6vw, 40px);
+  letter-spacing:.04em; color:var(--gold);
+  text-shadow:0 0 22px var(--gold-glow);
+}
 .giftmodal__body p{ margin:12px 0 0; font-size:var(--fs-sub); color:#e6dbc2; line-height:1.75; }
 .giftmodal__state{ margin-top:18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
 .giftmodal__ok{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
@@ -1002,7 +1009,7 @@ const I18N = {
     'gift.not.yours':'Every uDAY is a calendar date — and when the real calendar reaches that date, its holder can claim the day’s gift. Today, {total} USDG belongs to holders of {day}.',
     'gift.cta':'CLAIM THE GIFT',
     'gift.modal.title':'TODAY’S GIFT · {day}',
-    'gift.modal.p1':'Every uDAY is a calendar date. When the real calendar reaches that date, its holder claims the day’s gift — today, {total} USDG belongs to holders of {day}.',
+    'gift.modal.p1':'Every uDAY is a calendar date. When the real calendar reaches that date, its holder claims the day’s gift — today belongs to holders of {day}.',
     'gift.modal.p2':'The gift grows and changes with the uDAY ecosystem — today it is USDG; tomorrow it may be something more.',
     'gift.modal.connect':'CONNECT WALLET TO CLAIM',
     'gift.modal.nothave':'This day is not in your wallet yet.',
@@ -1082,7 +1089,7 @@ const I18N = {
     'gift.not.yours':'每枚 uDAY 都是一个日期——当现实的日历走到那一天，它的主人就能领取当天的礼物。今天共 {total} USDG，属于 {day} 的持有者。',
     'gift.cta':'领取礼物',
     'gift.modal.title':'今日礼物 · {day}',
-    'gift.modal.p1':'每枚 uDAY 都是一个日期。当现实的日历走到那一天，它的主人就能领取当天的礼物——今天，共 {total} USDG 属于 {day} 的持有者。',
+    'gift.modal.p1':'每枚 uDAY 都是一个日期。当现实的日历走到那一天，它的主人就能领取当天的礼物——今天属于 {day} 的持有者。',
     'gift.modal.p2':'礼物会随 uDAY 生态一起成长变化——今天是 USDG，明天也许更有趣。',
     'gift.modal.connect':'连接钱包领取',
     'gift.modal.nothave':'这一天还不在你的钱包里。',
@@ -2201,7 +2208,7 @@ async function renderGift(){
 
 /* ── the homepage gift modal: the hero CTA becomes 领取礼物 on the gift day.
    Every visitor learns the perk; the eligible claim right here. */
-let giftModal = null, gmTitle, gmBody, gmState;
+let giftModal = null, gmTitle, gmAmount, gmBody, gmState;
 function ensureGiftModal(){
   if(giftModal) return;
   giftModal = document.createElement('div');
@@ -2221,9 +2228,11 @@ function ensureGiftModal(){
   emblem.alt = '';
   gmTitle = document.createElement('span');
   gmTitle.className = 'daymodal__title giftmodal__title';
+  gmAmount = document.createElement('div');
+  gmAmount.className = 'giftmodal__amount';
   gmBody = document.createElement('div');  gmBody.className = 'giftmodal__body';
   gmState = document.createElement('div'); gmState.className = 'giftmodal__state';
-  panel.append(x, emblem, gmTitle, gmBody, gmState);
+  panel.append(x, emblem, gmTitle, gmAmount, gmBody, gmState);
   giftModal.appendChild(panel);
   giftModal.addEventListener('click', e => { if(e.target === giftModal) closeGiftModal(); });
   addEventListener('keydown', e => { if(e.key === 'Escape') closeGiftModal(); });
@@ -2242,6 +2251,7 @@ async function openGiftModal(){
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
   const total = String(Math.floor(g.total / 1e6));
   gmTitle.textContent = t('gift.modal.title', { day: dayTxt });
+  gmAmount.textContent = total + ' USDG';
   gmBody.textContent = '';
   [t('gift.modal.p1', { day: dayTxt, total }), t('gift.modal.p2')].forEach(txt => {
     const p = document.createElement('p'); p.textContent = txt; gmBody.appendChild(p);
