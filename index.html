@@ -1167,6 +1167,7 @@ const I18N = {
     'gift.modal.connect':'CONNECT WALLET TO CLAIM',
     'gift.snap':'The day’s list freezes at 00:00 (UTC+8). A piece revealed or moved after that claims when its day comes around again.',
     'gift.modal.nothave':'This day is not in your wallet yet.',
+    'gift.modal.late':'Your {day} arrived after today’s 00:00 list froze — it missed this year’s gift, not you. When {day} comes around next year, it will be waiting.',
     'gift.connect':'A {n} USDG gift is waiting for this address — connect the wallet to claim it.',
     'gift.claimed':'Claimed — {n} USDG is yours. Come back with tomorrow’s date.',
     'gift.ready':'You hold {day} — a {n} USDG gift is yours to claim today.',
@@ -1276,6 +1277,7 @@ const I18N = {
     'gift.modal.connect':'连接钱包领取',
     'gift.snap':'当日名单在 00:00（UTC+8）定格。此后才揭晓或转手的日期，等它的日子再次到来时领取。',
     'gift.modal.nothave':'这一天还不在你的钱包里。',
+    'gift.modal.late':'你的 {day} 在今日 00:00 名单定格之后才到来——错过的是今年的礼物，不是你。明年 {day} 再来时，它会等你。',
     'gift.connect':'这个地址有一份 {n} USDG 的礼物待领——连接钱包即可领取。',
     'gift.claimed':'已领取——{n} USDG 已是你的。明天带着明天的日期再来。',
     'gift.ready':'你持有 {day}——今天可以领取 {n} USDG 的礼物。',
@@ -2417,7 +2419,13 @@ async function renderGift(){
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
   const total = String(Math.floor(g.total / 1e6));
   const entry = id ? g.claims[id] : null;
-  if(!entry){ line.textContent = t('gift.not.yours', { day: dayTxt, total }); return; }
+  if(!entry){
+    const holdsToday = !!(id && DAYS && DAYS[key] && DAYS[key].some(e => e.owner === id));
+    line.textContent = holdsToday
+      ? t('gift.modal.late', { day: dayTxt })
+      : t('gift.not.yours', { day: dayTxt, total });
+    return;
+  }
   const amt = String(Math.floor(entry.amount / 1e6));
   if(!mineWallet){ line.textContent = t('gift.connect', { n: amt }); return; }
   if(await giftClaimedCheck(dayId, id)){
@@ -2569,19 +2577,26 @@ async function openGiftModal(){
       gmState.appendChild(b);
     }
   }else{
-    // connected but not a holder: this is where 把它带回家 lives now
+    // Connected but not in today's list. Two very different people land
+    // here: a true non-holder — and someone whose piece revealed or arrived
+    // AFTER the 00:00 snapshot. The index knows the difference; telling a
+    // real holder "this day is not in your wallet" would be a slap.
+    const holdsToday = !!(DAYS && DAYS[key] && DAYS[key].some(e => e.owner === id));
     const s = document.createElement('p');
     s.className = 'giftmodal__note';
-    s.textContent = t('gift.modal.nothave');
+    s.textContent = holdsToday ? t('gift.modal.late', { day: dayTxt })
+                               : t('gift.modal.nothave');
     gmState.appendChild(s);
-    const list = (DAYS && DAYS[key]) ? DAYS[key].slice().sort((a, b) => a.id - b.id) : [];
-    if(list.length){
-      const a = document.createElement('a');
-      a.className = 'btn btn--gold';
-      a.target = '_blank'; a.rel = 'noopener';
-      a.href = UTOKEN_ITEM(list[0].id);
-      a.textContent = t('status.btn.offer');
-      gmState.appendChild(a);
+    if(!holdsToday){
+      const list = (DAYS && DAYS[key]) ? DAYS[key].slice().sort((a, b) => a.id - b.id) : [];
+      if(list.length){
+        const a = document.createElement('a');
+        a.className = 'btn btn--gold';
+        a.target = '_blank'; a.rel = 'noopener';
+        a.href = UTOKEN_ITEM(list[0].id);
+        a.textContent = t('status.btn.offer');
+        gmState.appendChild(a);
+      }
     }
   }
   giftModal.hidden = false;
