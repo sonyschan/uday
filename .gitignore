@@ -23,3 +23,4 @@ CLAUDE.md
 tools/build_gift_root.py
 tools/post-gift.sh
 tools/deploy-gift.sh
+tools/deploy-dayexit.sh
