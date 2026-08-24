@@ -435,6 +435,11 @@ section{ position:relative; }
 }
 .daymodal__who{ font-family:ui-monospace, monospace; font-size:var(--fs-micro); color:var(--muted); }
 .daymodal__who--you{ color:var(--gold); }
+/* a just-sold ghost: the chain knows, the index is catching up */
+.daymodal__item--sold{ border-style:dashed; opacity:.75; }
+.daymodal__item--sold canvas{ filter:grayscale(.85) brightness(.7); opacity:.45; }
+.daymodal__item--sold .daymodal__link{ cursor:default; }
+.daymodal__who--sold{ color:#8a90c9; }
 /* the homepage gift modal rides the daymodal chrome, smaller and wordier */
 .giftmodal .daymodal__panel{ max-width:460px; position:relative; padding-top:26px; }
 .giftmodal .daymodal__close{ position:absolute; top:10px; right:12px; }
@@ -463,6 +468,63 @@ section{ position:relative; }
 .giftmodal .giftmodal__state:has(.btn--ghost){ align-items:center; }
 #gift-tx{ margin-top:10px; }
 .giftmodal__note{ margin:0; font-size:var(--fs-sub); color:var(--muted); }
+/* ─── sell this day ─────────────────────────────────────────────────── */
+.daymodal__sell{
+  margin:0 10px 10px; padding:7px 4px; cursor:pointer;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  color:var(--muted); background:none; border:1px dashed rgba(217,124,141,.35); border-radius:4px;
+}
+.daymodal__sell:hover{ color:#d97c8d; border-color:rgba(217,124,141,.7); }
+.sellmodal .daymodal__panel{ max-width:460px; position:relative; padding-top:26px; }
+.sellmodal .daymodal__close{ position:absolute; top:10px; right:12px; }
+.sellmodal__warn{ color:#d97c8d !important; }
+.sellmodal__steps{ margin:16px 0 0; padding:0 0 0 4px; list-style:none; }
+.sellmodal__steps li{
+  font-size:var(--fs-sub); color:var(--muted); padding:6px 0 6px 26px; position:relative;
+}
+.sellmodal__steps li::before{
+  content:''; position:absolute; left:2px; top:50%; transform:translateY(-50%);
+  width:10px; height:10px; border-radius:50%; border:2px solid var(--rule);
+}
+.sellmodal__steps li[data-state="run"]{ color:var(--vellum); }
+.sellmodal__steps li[data-state="run"]::before{
+  border-color:var(--gold); animation:yc-breathe 1.4s ease-in-out infinite;
+}
+.sellmodal__steps li[data-state="done"]{ color:var(--gold); }
+.sellmodal__steps li[data-state="done"]::before{ background:var(--gold); border-color:var(--gold); }
+/* the farewell: the piece sinks into the pool */
+.sink{ position:relative; height:196px; margin:14px 0 0; }
+.sink__sky{
+  position:absolute; inset:0 0 44px 0; overflow:hidden;
+  display:flex; justify-content:center; align-items:flex-start;
+}
+.sink__piece{
+  width:96px; height:96px; image-rendering:pixelated;
+  animation:sink-down 5s cubic-bezier(.45,.05,.6,1) .4s forwards;
+}
+@keyframes sink-down{
+  0%{ transform:translateY(6px) rotate(0deg); }
+  55%{ transform:translateY(74px) rotate(-2deg); opacity:1; }
+  100%{ transform:translateY(170px) rotate(3deg); opacity:.85; }
+}
+.sink__pool{ position:absolute; left:0; right:0; bottom:0; width:100%; height:64px; }
+.sink__ripple{
+  fill:none; stroke:rgba(232,185,63,.55); stroke-width:1.2; opacity:0;
+  transform-origin:120px 30px;
+  animation:sink-ripple 2.6s ease-out infinite;
+}
+.sink__ripple--a{ animation-delay:2.2s; }
+.sink__ripple--b{ animation-delay:3.0s; }
+.sink__ripple--c{ animation-delay:3.8s; }
+@keyframes sink-ripple{
+  0%{ transform:scale(.4); opacity:0; }
+  12%{ opacity:.8; }
+  100%{ transform:scale(4.2); opacity:0; }
+}
+@media (prefers-reduced-motion:reduce){
+  .sink__piece{ animation:none; transform:translateY(74px); opacity:.9; }
+  .sink__ripple{ animation:none; opacity:.3; transform:scale(2); }
+}
 @keyframes yc-breathe{
   0%,100%{ box-shadow:0 0 0 0 rgba(232,185,63,0); }
   50%{ box-shadow:0 0 12px 2px var(--gold-glow); }
@@ -1030,6 +1092,18 @@ const I18N = {
     'gift.tx':'VIEW TRANSACTION',
     'gift.share':'SHARE ON X',
     'gift.share.text':'Just claimed today’s uDAY gift — {n} USDG! It’s my uDAY.',
+    'sell.link':'SELL THIS DAY',
+    'sell.title':'SELL THIS DAY · {day}',
+    'sell.p1':'This precision-burns #{id}: the piece carries its token into an isolated vault, the vault sells that one token back to the pool, and the ETH lands in your wallet (market price, 1% protocol tax).',
+    'sell.warn':'Irreversible: the art burns and cannot be recovered.',
+    'sell.go':'BEGIN — 3 SIGNATURES',
+    'sell.step1':'Open your vault',
+    'sell.step2':'Send #{id} in',
+    'sell.step3':'Sell and return the ETH',
+    'sell.done':'{day} has returned to the pool, waiting for its next keeper. The ETH is in your wallet.',
+    'sell.fail':'That step did not complete — nothing is lost. Retry, or the vault’s rescue can return everything.',
+    'sold.badge':'BACK IN THE POOL',
+    'sold.sync':'Sold just now — the calendar index catches up within ~15 minutes.',
     'modal.sub':'Every piece born on this day. Tap one to view it on uToken — or download it right here.',
     'modal.yours':'YOURS','modal.close':'Close',
     'modal.dl.96':'Download the on-chain original — 768×768 PNG',
@@ -1114,6 +1188,18 @@ const I18N = {
     'gift.tx':'查看交易',
     'gift.share':'分享到 X',
     'gift.share.text':'在 uDAY 领了今日礼物——{n} USDG！It’s my uDAY.',
+    'sell.link':'卖掉这一天',
+    'sell.title':'卖掉这一天 · {day}',
+    'sell.p1':'这将精准烧毁 #{id}：这枚作品带着它的代币进入专属金库，金库把那一枚代币卖回流动性池，ETH 直接抵达你的钱包（按市价，含 1% 协议税）。',
+    'sell.warn':'不可逆：艺术烧毁后无法找回。',
+    'sell.go':'开始——共 3 笔签署',
+    'sell.step1':'开辟专属金库',
+    'sell.step2':'送入 #{id}',
+    'sell.step3':'卖出并取回 ETH',
+    'sell.done':'{day} 回到了池子里，等待下一位主人。ETH 已在你的钱包。',
+    'sell.fail':'这一步没有完成——没有任何资产丢失。可以重试，或用金库的救援功能取回一切。',
+    'sold.badge':'已回到池中',
+    'sold.sync':'刚刚卖出——日历索引约 15 分钟内同步。',
     'modal.sub':'这一天诞生的每一枚。点作品前往 uToken，或直接在这里下载 PNG。',
     'modal.yours':'你的','modal.close':'关闭',
     'modal.dl.96':'下载链上原版——768×768 PNG',
@@ -1754,12 +1840,17 @@ function openDayModal(key, kind, list){
   dayModalGrid.textContent = '';
   const me = mineIdentity();
   list.forEach(e => {
+    const sold = soldTombs.has(e.id);
     const item = document.createElement('div');
-    item.className = 'daymodal__item';
+    item.className = 'daymodal__item' + (sold ? ' daymodal__item--sold' : '');
     const a = document.createElement('a');
     a.className = 'daymodal__link';
-    a.href = UTOKEN_ITEM(e.id);
-    a.target = '_blank'; a.rel = 'noopener';
+    if(!sold){
+      a.href = UTOKEN_ITEM(e.id);
+      a.target = '_blank'; a.rel = 'noopener';
+    }else{
+      item.title = t('sold.sync');
+    }
     const c = document.createElement('canvas');
     paint(c, recipeSpec(key, e));
     const idEl = document.createElement('span');
@@ -1767,11 +1858,17 @@ function openDayModal(key, kind, list){
     idEl.textContent = '#' + e.id;
     const who = document.createElement('span');
     const yours = me && e.owner === me;
-    who.className = 'daymodal__who' + (yours ? ' daymodal__who--you' : '');
-    who.textContent = yours ? t('modal.yours') : shortAddr(e.owner);
-    a.addEventListener('click', () =>
+    who.className = sold ? 'daymodal__who daymodal__who--sold'
+                  : 'daymodal__who' + (yours ? ' daymodal__who--you' : '');
+    who.textContent = sold ? t('sold.badge') : (yours ? t('modal.yours') : shortAddr(e.owner));
+    if(!sold) a.addEventListener('click', () =>
       va('event', { name: 'calendar_click', data: { day: key, id: e.id } }));
     a.append(c, idEl, who);
+    if(sold){                       // a ghost keeps no doors: no links, no tools
+      item.appendChild(a);
+      dayModalGrid.appendChild(item);
+      return;
+    }
     // download row: the two resolutions ARE the choice — one tap, no submenu
     const dl = document.createElement('div');
     dl.className = 'daymodal__dl';
@@ -1791,6 +1888,15 @@ function openDayModal(key, kind, list){
       dl.appendChild(b);
     });
     item.append(a, dl);
+    // your own piece can go home to the pool — precision burn via DayExit
+    if(yours && mineWallet){
+      const sell = document.createElement('button');
+      sell.type = 'button';
+      sell.className = 'daymodal__sell';
+      sell.textContent = t('sell.link');
+      sell.addEventListener('click', () => { closeDayModal(); openSellModal(key, e); });
+      item.appendChild(sell);
+    }
     dayModalGrid.appendChild(item);
   });
   dayModal.hidden = false;
@@ -2370,6 +2476,188 @@ document.getElementById('day-status-btn').addEventListener('click', e => {
   if(e.currentTarget.dataset.gift === '1'){ e.preventDefault(); openGiftModal(); }
 });
 
+/* ── Sell this day: precision burn of a chosen piece via a DayExit vault.
+   Three signatures: clone an isolated vault, carry the piece in (its token
+   rides along), sell the vault's only token — burning its only item — and
+   the ETH lands in the seller's wallet. */
+/* Tombstones: pieces this browser just sold. The chain knows instantly; the
+   committed index takes ~15 minutes to catch up — until it does, a sold
+   piece renders as a ghost (faded, "back in the pool", no controls) instead
+   of pretending to still be alive. Pruned automatically once the refreshed
+   index no longer carries the id. */
+let soldTombs = new Set();
+try{ soldTombs = new Set(JSON.parse(localStorage.getItem('uday.sold') || '[]')); }catch(e){}
+function tombAdd(id){
+  soldTombs.add(id);
+  try{ localStorage.setItem('uday.sold', JSON.stringify([...soldTombs])); }catch(e){}
+}
+function tombPrune(){
+  if(!soldTombs.size || !DAYS) return;
+  const aliveIds = new Set();
+  for(const k in DAYS) DAYS[k].forEach(e => aliveIds.add(e.id));
+  let changed = false;
+  for(const id of [...soldTombs]){
+    if(!aliveIds.has(id)){ soldTombs.delete(id); changed = true; }   // index caught up
+  }
+  if(changed){ try{ localStorage.setItem('uday.sold', JSON.stringify([...soldTombs])); }catch(e){} }
+}
+
+const UDAY_ADDR = '0x359211bb6b8CAbcE02DCBEc1c55B50f2EC884146';
+const DAYEXIT_FACTORY = '0xb56B5f61C992b3a6CF9585909438B6f875ee4fEB';
+const SEL_CREATE_EXIT = 'fbae7ccd';
+const SEL_EXECUTE = '4dec3739';
+const SEL_ITEM_TRANSFER = '11313258';
+const TOPIC_EXIT_CREATED = '0x019bb52343004b86f76fbf174a6b6656abd313412cbe3ccf915fd41b25ea361b';
+
+async function waitReceipt(hash){
+  for(let i = 0; i < 90; i++){
+    const r = await mineEth.request({ method: 'eth_getTransactionReceipt', params: [hash] });
+    if(r){
+      if(r.status !== '0x1') throw new Error('tx reverted');
+      return r;
+    }
+    await new Promise(res => setTimeout(res, 1500));
+  }
+  throw new Error('timeout');
+}
+
+let sellModal = null, smTitle, smBody, smSteps, smState;
+function ensureSellModal(){
+  if(sellModal) return;
+  sellModal = document.createElement('div');
+  sellModal.className = 'daymodal sellmodal';
+  sellModal.hidden = true;
+  const panel = document.createElement('div');
+  panel.className = 'daymodal__panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  const x = document.createElement('button');
+  x.type = 'button'; x.className = 'daymodal__close'; x.textContent = '×';
+  x.addEventListener('click', closeSellModal);
+  smTitle = document.createElement('span');
+  smTitle.className = 'daymodal__title giftmodal__title';
+  smBody = document.createElement('div');  smBody.className = 'giftmodal__body';
+  smSteps = document.createElement('ol');  smSteps.className = 'sellmodal__steps';
+  smState = document.createElement('div'); smState.className = 'giftmodal__state';
+  panel.append(x, smTitle, smBody, smSteps, smState);
+  sellModal.appendChild(panel);
+  document.body.appendChild(sellModal);
+}
+function closeSellModal(){
+  if(!sellModal || sellModal.hidden) return;
+  sellModal.hidden = true;
+  document.body.style.overflow = '';
+}
+
+function openSellModal(key, piece){
+  ensureSellModal();
+  const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  smTitle.textContent = t('sell.title', { day: dayTxt });
+  smBody.textContent = '';
+  [t('sell.p1', { id: piece.id, day: dayTxt }), t('sell.warn')].forEach((txt, i) => {
+    const p = document.createElement('p');
+    if(i === 1) p.className = 'sellmodal__warn';
+    p.textContent = txt;
+    smBody.appendChild(p);
+  });
+  smSteps.textContent = '';
+  smState.textContent = '';
+  const go = document.createElement('button');
+  go.type = 'button'; go.className = 'btn btn--gold';
+  go.textContent = t('sell.go');
+  go.addEventListener('click', () => runSell(key, piece, go));
+  smState.appendChild(go);
+  sellModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  va('event', { name: 'sell_modal', data: { day: key, id: piece.id } });
+}
+
+function sellStep(li, state){
+  li.dataset.state = state;
+}
+
+/// The farewell: the piece's own art sinks slowly beneath an SVG pool.
+/// The sky container clips at the waterline so the canvas is swallowed as it
+/// descends; ripples wake when the piece meets the surface.
+function sinkScene(key, piece){
+  const wrap = document.createElement('div');
+  wrap.className = 'sink';
+  const sky = document.createElement('div');
+  sky.className = 'sink__sky';
+  const c = document.createElement('canvas');
+  c.className = 'sink__piece';
+  paint(c, recipeSpec(key, piece));
+  sky.appendChild(c);
+  const pool = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  pool.setAttribute('viewBox', '0 0 240 64');
+  pool.setAttribute('class', 'sink__pool');
+  pool.innerHTML =
+    '<ellipse cx="120" cy="32" rx="104" ry="20" fill="rgba(60,52,128,.5)" stroke="rgba(232,185,63,.3)" stroke-width="1"/>' +
+    '<ellipse cx="120" cy="30" rx="78" ry="13" fill="rgba(96,84,190,.28)"/>' +
+    '<ellipse class="sink__ripple sink__ripple--a" cx="120" cy="30" rx="22" ry="4.5"/>' +
+    '<ellipse class="sink__ripple sink__ripple--b" cx="120" cy="30" rx="22" ry="4.5"/>' +
+    '<ellipse class="sink__ripple sink__ripple--c" cx="120" cy="30" rx="22" ry="4.5"/>';
+  wrap.append(sky, pool);
+  return wrap;
+}
+async function runSell(key, piece, goBtn){
+  goBtn.disabled = true;
+  const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  const labels = [t('sell.step1'), t('sell.step2', { id: piece.id }), t('sell.step3')];
+  smSteps.textContent = '';
+  const lis = labels.map(txt => {
+    const li = document.createElement('li');
+    li.textContent = txt;
+    li.dataset.state = 'wait';
+    smSteps.appendChild(li);
+    return li;
+  });
+  try{
+    if(!await ensureChain()) throw new Error('chain declined');
+    sellStep(lis[0], 'run');
+    const h1 = await mineEth.request({ method: 'eth_sendTransaction',
+      params: [{ from: mineWallet, to: DAYEXIT_FACTORY, data: '0x' + SEL_CREATE_EXIT }] });
+    const r1 = await waitReceipt(h1);
+    const lg = (r1.logs || []).find(l => (l.topics || [])[0] === TOPIC_EXIT_CREATED);
+    if(!lg) throw new Error('no vault event');
+    const vault = '0x' + lg.data.slice(-40);
+    sellStep(lis[0], 'done');
+    sellStep(lis[1], 'run');
+    const h2 = await mineEth.request({ method: 'eth_sendTransaction',
+      params: [{ from: mineWallet, to: UDAY_ADDR,
+        data: '0x' + SEL_ITEM_TRANSFER + pad32(vault.slice(2)) + pad32(piece.id.toString(16)) }] });
+    await waitReceipt(h2);
+    sellStep(lis[1], 'done');
+    sellStep(lis[2], 'run');
+    const h3 = await mineEth.request({ method: 'eth_sendTransaction',
+      params: [{ from: mineWallet, to: vault, data: '0x' + SEL_EXECUTE + pad32('0') }] });
+    await waitReceipt(h3);
+    sellStep(lis[2], 'done');
+    smBody.textContent = '';
+    smSteps.textContent = '';
+    smBody.appendChild(sinkScene(key, piece));   // the piece sinks into the pool
+    const bless = document.createElement('p');
+    bless.className = 'giftmodal__bless';
+    bless.textContent = t('sell.done', { day: dayTxt });
+    smBody.appendChild(bless);
+    smState.textContent = '';
+    const a = document.createElement('a');
+    a.className = 'btn btn--ghost';
+    a.target = '_blank'; a.rel = 'noopener';
+    a.href = GIFT_TX_URL(h3);
+    a.textContent = t('gift.tx');
+    smState.appendChild(a);
+    tombAdd(piece.id);
+    va('event', { name: 'sell_done', data: { day: key, id: piece.id } });
+  }catch(err){
+    const p = document.createElement('p');
+    p.className = 'sellmodal__warn';
+    p.textContent = t('sell.fail');
+    smBody.appendChild(p);
+    goBtn.disabled = false;
+  }
+}
+
 (function initMineAddr(){
   let a = (HANDOFF && HANDOFF.addr) || new URLSearchParams(location.search).get('addr');
   if(!a){ try{ a = localStorage.getItem('uday.addr'); }catch(e){} }
@@ -2417,6 +2705,7 @@ async function loadIndex(){
     INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0,
                    owners: j.owners || 0, sealed: j.sealed || null,
                    embers: j.extinguished || {} };
+    tombPrune();                    // drop tombstones the fresh index absorbed
     renderLiveTags();
     renderDayStatus();
     renderYear();
