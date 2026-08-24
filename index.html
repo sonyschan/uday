@@ -729,6 +729,70 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   text-align:center; line-height:1.35;
 }
 
+/* ─── roadmap: the progress bar IS the timeline ─────────────────────── */
+.road__scroll{ overflow-x:auto; padding-bottom:8px; }
+.roadh{
+  list-style:none; margin:0; padding:8px 0 0;
+  display:grid; grid-template-columns:repeat(5, 1fr);
+  min-width:820px; position:relative;
+}
+/* the track runs behind the badges, from first stop center to last */
+.roadh__track{
+  position:absolute; left:10%; width:80%; top:50px; height:4px;
+  background:rgba(243,231,205,.08); border-radius:2px;
+}
+.roadh__fill{
+  display:block; height:100%; width:var(--road-fill, 0%); border-radius:2px;
+  background:linear-gradient(90deg, var(--gold-deep), var(--gold));
+  box-shadow:0 0 12px var(--gold-glow);
+  transition:width 1.2s cubic-bezier(.22,1,.36,1), height 1.2s cubic-bezier(.22,1,.36,1);
+}
+.roadh__stop{
+  display:flex; flex-direction:column; align-items:center; text-align:center;
+  padding:0 12px; position:relative; z-index:1;
+}
+.roadh__badge{
+  width:84px; height:84px; display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--rule); border-radius:12px; background:#100d20;
+}
+.roadh__badge canvas{ width:72px; height:72px; image-rendering:pixelated; }
+.roadh__stop--done .roadh__badge{ border-color:rgba(232,185,63,.55); box-shadow:0 0 16px rgba(232,185,63,.16); }
+.roadh__stop--active .roadh__badge{ border-color:rgba(232,185,63,.4); animation:yc-breathe 2.8s ease-in-out infinite; }
+.roadh__target{
+  font-family:var(--display); font-size:16px; letter-spacing:var(--ls-narrow);
+  color:var(--gold); line-height:1.35;
+}
+.roadh__stop--locked .roadh__target{ color:var(--muted); }
+.roadh__name{
+  margin-top:14px; font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--vellum); line-height:1.5;
+}
+.roadh__stop--done .roadh__name{ color:var(--gold); }
+.roadh__unlock{ margin:7px 0 0; font-size:var(--fs-micro); color:#dbcfb4; line-height:1.6; }
+.roadh__state{
+  margin:7px 0 0; font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-mid); color:var(--gold);
+}
+.roadh__stop--locked, .roadh__stop--mystery{ opacity:.55; }
+.roadh__stop--mystery .roadh__badge{ border-style:dashed; background:rgba(243,231,205,.02); }
+.roadh__q{ font-family:var(--display); font-size:30px; color:var(--muted); }
+/* narrow screens: the same DOM folds back to a vertical timeline — the
+   track becomes a left rail and the gold flows downward instead */
+@media (max-width:640px){
+  .road__scroll{ overflow-x:visible; }
+  .roadh{ display:block; min-width:0; }
+  .roadh__track{
+    left:40px; width:4px; top:42px; bottom:42px; height:auto;
+  }
+  .roadh__fill{ width:100%; height:var(--road-fill, 0%); }
+  .roadh__stop{
+    display:grid; grid-template-columns:84px 1fr; column-gap:18px;
+    text-align:left; padding:14px 0; align-items:start;
+  }
+  .roadh__badge{ grid-row:1 / span 4; }
+  .roadh__name{ margin-top:4px; }
+}
+
 /* ─── onchain facts ─────────────────────────────────────────────────── */
 .facts{ display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
 .fact{
@@ -990,6 +1054,23 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
     </div>
   </section>
 
+  <!-- ── roadmap: milestones unlock the story ─────────────────────── -->
+  <section class="band" id="roadmap">
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="road.kicker">The road</p>
+        <h2 data-i18n="road.title">Milestones unlock the story</h2>
+        <p data-i18n="road.blurb">Every milestone the collection reaches unlocks the next chapter of uDAY. Two are already history.</p>
+      </div>
+      <div class="road__scroll rise">
+        <ol class="roadh" id="road-list">
+          <div class="roadh__track" aria-hidden="true"><i class="roadh__fill" id="road-fill"></i></div>
+        </ol>
+      </div>
+    </div>
+  </section>
+
   <!-- ── onchain ──────────────────────────────────────────────────── -->
   <section class="band" id="chain">
     <div class="shell">
@@ -1104,6 +1185,18 @@ const I18N = {
     'sell.fail':'That step did not complete — nothing is lost. Retry, or the vault’s rescue can return everything.',
     'sold.badge':'BACK IN THE POOL',
     'sold.sync':'Sold just now — the calendar index catches up within ~15 minutes.',
+    'road.kicker':'The road','road.title':'Milestones unlock the story',
+    'road.blurb':'Every milestone the collection reaches unlocks the next chapter of uDAY. Two are already history.',
+    'road.done':'UNLOCKED',
+    'road.m1':'AUG 21 · Launched on uToken',
+    'road.m1.u':'Unlocked: the uDAY official site — uday.gift.',
+    'road.m2':'AUG 21 · Graduated on uToken',
+    'road.m2.u':'Unlocked: uDAY Gift — a daily present for the day’s holders.',
+    'road.m3':'100K market cap',
+    'road.m3.u':'Unlocks: Dynamic uDAY Gift — trading activity grows the gift.',
+    'road.m4':'1M market cap',
+    'road.m4.u':'Unlocks: uDAY Gift Drops — anyone can make your day special.',
+    'road.m5':'Next chapter — to be revealed',
     'modal.sub':'Every piece born on this day. Tap one to view it on uToken — or download it right here.',
     'modal.yours':'YOURS','modal.close':'Close',
     'modal.dl.96':'Download the on-chain original — 768×768 PNG',
@@ -1200,6 +1293,18 @@ const I18N = {
     'sell.fail':'这一步没有完成——没有任何资产丢失。可以重试，或用金库的救援功能取回一切。',
     'sold.badge':'已回到池中',
     'sold.sync':'刚刚卖出——日历索引约 15 分钟内同步。',
+    'road.kicker':'路线图','road.title':'里程碑，解锁下一章',
+    'road.blurb':'集合每抵达一个里程碑，就解锁 uDAY 的下一章。前两章已经写进历史。',
+    'road.done':'已解锁',
+    'road.m1':'8月21日 · 在 uToken 启动',
+    'road.m1.u':'解锁：uDAY 官方网站 — uday.gift。',
+    'road.m2':'8月21日 · 在 uToken 毕业',
+    'road.m2.u':'解锁：uDAY Gift — 属于当日持有者的每日礼物。',
+    'road.m3':'10 万美元市值',
+    'road.m3.u':'解锁：动态 uDAY Gift — 交易越活跃，礼物越丰厚。',
+    'road.m4':'100 万美元市值',
+    'road.m4.u':'解锁：uDAY Gift 空投 — 任何人都能让你的那一天变得特别。',
+    'road.m5':'下一章 — 待揭晓',
     'modal.sub':'这一天诞生的每一枚。点作品前往 uToken，或直接在这里下载 PNG。',
     'modal.yours':'你的','modal.close':'关闭',
     'modal.dl.96':'下载链上原版——768×768 PNG',
@@ -1284,6 +1389,7 @@ function applyLang(next){
   }
   if(typeof mineWalletUI === 'function') mineWalletUI();
   if(typeof yearLinkLabel === 'function') yearLinkLabel();
+  if(typeof renderRoad === 'function') renderRoad();
 }
 
 function setSub(valKey, subKey){
@@ -2657,6 +2763,89 @@ async function runSell(key, piece, goBtn){
     goBtn.disabled = false;
   }
 }
+/* ─── roadmap: completed milestones wear their date as on-chain glyph
+   montage; the active market-cap gate shows a live progress bar fed by the
+   15-minute index. Reaching a target flips it to UNLOCKED automatically. */
+const ROADMAP = [
+  { key: 'm1', done: true, glyph: { month: 8, date: 21, monthPlace: 'center', datePlace: 'corner' } },
+  { key: 'm2', done: true, glyph: { month: 8, date: 21, monthPlace: 'center', datePlace: 'center' } },
+  { key: 'm3', target: 100000,  label: '100K\nMCAP' },
+  { key: 'm4', target: 1000000, label: '1M\nMCAP' },
+  { key: 'm5', mystery: true }
+];
+const fmtUsd = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : '$' + (v / 1e3).toFixed(1) + 'K';
+
+function renderRoad(){
+  const list = document.getElementById('road-list');
+  if(!list) return;
+  [...list.querySelectorAll('.roadh__stop')].forEach(el => el.remove());
+  const mcap = (typeof INDEX_META === 'object' && INDEX_META && INDEX_META.mcapUsd) || 0;
+  let activeAssigned = false;
+  let doneCount = 0, frac = 0;
+  ROADMAP.forEach(m => {
+    let state = 'locked';
+    if(m.done || (m.target && mcap >= m.target)){ state = 'done'; doneCount++; }
+    else if(m.mystery) state = 'mystery';
+    else if(m.target && !activeAssigned){
+      state = 'active'; activeAssigned = true;
+      frac = Math.min(1, mcap / m.target);
+    }
+    const li = document.createElement('li');
+    li.className = 'roadh__stop roadh__stop--' + state;
+    const badge = document.createElement('div');
+    badge.className = 'roadh__badge';
+    if(m.glyph){
+      const c = document.createElement('canvas');
+      paint(c, { plate: null, frame: null, month: m.glyph.month, date: m.glyph.date,
+                 monthPlace: m.glyph.monthPlace, datePlace: m.glyph.datePlace, res: 'onchain' });
+      badge.appendChild(c);
+    }else if(m.mystery){
+      const q = document.createElement('span'); q.className = 'roadh__q'; q.textContent = '?';
+      badge.appendChild(q);
+    }else{
+      const s = document.createElement('span'); s.className = 'roadh__target';
+      m.label.split('\n').forEach((line, i) => {
+        if(i) s.appendChild(document.createElement('br'));
+        s.appendChild(document.createTextNode(line));
+      });
+      badge.appendChild(s);
+    }
+    const name = document.createElement('div');
+    name.className = 'roadh__name';
+    name.textContent = t('road.' + m.key);
+    li.append(badge, name);
+    if(!m.mystery){
+      const u = document.createElement('p');
+      u.className = 'roadh__unlock';
+      u.textContent = t('road.' + m.key + '.u');
+      li.appendChild(u);
+    }
+    if(state === 'done'){
+      const st = document.createElement('div');
+      st.className = 'roadh__state';
+      st.textContent = t('road.done');
+      li.appendChild(st);
+    }
+    if(state === 'active' && mcap > 0){
+      const lbl = document.createElement('div');
+      lbl.className = 'roadh__state';
+      lbl.textContent = fmtUsd(mcap) + ' / ' + fmtUsd(m.target);
+      li.appendChild(lbl);
+    }
+    list.appendChild(li);
+  });
+  // The track IS the progress bar: filled through completed stops, then a
+  // proportional reach into the active segment. 5 stops → 4 segments.
+  const fill = document.getElementById('road-fill');
+  if(fill){
+    const seg = 100 / (ROADMAP.length - 1);
+    // one custom property drives both orientations: width on the horizontal
+    // track, height on the mobile vertical rail
+    fill.style.setProperty('--road-fill',
+      Math.min(100, (doneCount - 1 + frac) * seg).toFixed(1) + '%');
+  }
+}
+renderRoad();
 
 (function initMineAddr(){
   let a = (HANDOFF && HANDOFF.addr) || new URLSearchParams(location.search).get('addr');
@@ -2704,7 +2893,8 @@ async function loadIndex(){
     DAYS = j.days || {};
     INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0,
                    owners: j.owners || 0, sealed: j.sealed || null,
-                   embers: j.extinguished || {} };
+                   embers: j.extinguished || {}, mcapUsd: j.mcapUsd || 0 };
+    renderRoad();
     tombPrune();                    // drop tombstones the fresh index absorbed
     renderLiveTags();
     renderDayStatus();
