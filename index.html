@@ -435,6 +435,11 @@ section{ position:relative; }
 }
 .daymodal__who{ font-family:ui-monospace, monospace; font-size:var(--fs-micro); color:var(--muted); }
 .daymodal__who--you{ color:var(--gold); }
+/* a just-sold ghost: the chain knows, the index is catching up */
+.daymodal__item--sold{ border-style:dashed; opacity:.75; }
+.daymodal__item--sold canvas{ filter:grayscale(.85) brightness(.7); opacity:.45; }
+.daymodal__item--sold .daymodal__link{ cursor:default; }
+.daymodal__who--sold{ color:#8a90c9; }
 /* the homepage gift modal rides the daymodal chrome, smaller and wordier */
 .giftmodal .daymodal__panel{ max-width:460px; position:relative; padding-top:26px; }
 .giftmodal .daymodal__close{ position:absolute; top:10px; right:12px; }
@@ -1097,6 +1102,8 @@ const I18N = {
     'sell.step3':'Sell and return the ETH',
     'sell.done':'{day} has returned to the pool, waiting for its next keeper. The ETH is in your wallet.',
     'sell.fail':'That step did not complete — nothing is lost. Retry, or the vault’s rescue can return everything.',
+    'sold.badge':'BACK IN THE POOL',
+    'sold.sync':'Sold just now — the calendar index catches up within ~15 minutes.',
     'modal.sub':'Every piece born on this day. Tap one to view it on uToken — or download it right here.',
     'modal.yours':'YOURS','modal.close':'Close',
     'modal.dl.96':'Download the on-chain original — 768×768 PNG',
@@ -1191,6 +1198,8 @@ const I18N = {
     'sell.step3':'卖出并取回 ETH',
     'sell.done':'{day} 回到了池子里，等待下一位主人。ETH 已在你的钱包。',
     'sell.fail':'这一步没有完成——没有任何资产丢失。可以重试，或用金库的救援功能取回一切。',
+    'sold.badge':'已回到池中',
+    'sold.sync':'刚刚卖出——日历索引约 15 分钟内同步。',
     'modal.sub':'这一天诞生的每一枚。点作品前往 uToken，或直接在这里下载 PNG。',
     'modal.yours':'你的','modal.close':'关闭',
     'modal.dl.96':'下载链上原版——768×768 PNG',
@@ -1831,12 +1840,17 @@ function openDayModal(key, kind, list){
   dayModalGrid.textContent = '';
   const me = mineIdentity();
   list.forEach(e => {
+    const sold = soldTombs.has(e.id);
     const item = document.createElement('div');
-    item.className = 'daymodal__item';
+    item.className = 'daymodal__item' + (sold ? ' daymodal__item--sold' : '');
     const a = document.createElement('a');
     a.className = 'daymodal__link';
-    a.href = UTOKEN_ITEM(e.id);
-    a.target = '_blank'; a.rel = 'noopener';
+    if(!sold){
+      a.href = UTOKEN_ITEM(e.id);
+      a.target = '_blank'; a.rel = 'noopener';
+    }else{
+      item.title = t('sold.sync');
+    }
     const c = document.createElement('canvas');
     paint(c, recipeSpec(key, e));
     const idEl = document.createElement('span');
@@ -1844,11 +1858,17 @@ function openDayModal(key, kind, list){
     idEl.textContent = '#' + e.id;
     const who = document.createElement('span');
     const yours = me && e.owner === me;
-    who.className = 'daymodal__who' + (yours ? ' daymodal__who--you' : '');
-    who.textContent = yours ? t('modal.yours') : shortAddr(e.owner);
-    a.addEventListener('click', () =>
+    who.className = sold ? 'daymodal__who daymodal__who--sold'
+                  : 'daymodal__who' + (yours ? ' daymodal__who--you' : '');
+    who.textContent = sold ? t('sold.badge') : (yours ? t('modal.yours') : shortAddr(e.owner));
+    if(!sold) a.addEventListener('click', () =>
       va('event', { name: 'calendar_click', data: { day: key, id: e.id } }));
     a.append(c, idEl, who);
+    if(sold){                       // a ghost keeps no doors: no links, no tools
+      item.appendChild(a);
+      dayModalGrid.appendChild(item);
+      return;
+    }
     // download row: the two resolutions ARE the choice — one tap, no submenu
     const dl = document.createElement('div');
     dl.className = 'daymodal__dl';
@@ -2460,6 +2480,28 @@ document.getElementById('day-status-btn').addEventListener('click', e => {
    Three signatures: clone an isolated vault, carry the piece in (its token
    rides along), sell the vault's only token — burning its only item — and
    the ETH lands in the seller's wallet. */
+/* Tombstones: pieces this browser just sold. The chain knows instantly; the
+   committed index takes ~15 minutes to catch up — until it does, a sold
+   piece renders as a ghost (faded, "back in the pool", no controls) instead
+   of pretending to still be alive. Pruned automatically once the refreshed
+   index no longer carries the id. */
+let soldTombs = new Set();
+try{ soldTombs = new Set(JSON.parse(localStorage.getItem('uday.sold') || '[]')); }catch(e){}
+function tombAdd(id){
+  soldTombs.add(id);
+  try{ localStorage.setItem('uday.sold', JSON.stringify([...soldTombs])); }catch(e){}
+}
+function tombPrune(){
+  if(!soldTombs.size || !DAYS) return;
+  const aliveIds = new Set();
+  for(const k in DAYS) DAYS[k].forEach(e => aliveIds.add(e.id));
+  let changed = false;
+  for(const id of [...soldTombs]){
+    if(!aliveIds.has(id)){ soldTombs.delete(id); changed = true; }   // index caught up
+  }
+  if(changed){ try{ localStorage.setItem('uday.sold', JSON.stringify([...soldTombs])); }catch(e){} }
+}
+
 const UDAY_ADDR = '0x359211bb6b8CAbcE02DCBEc1c55B50f2EC884146';
 const DAYEXIT_FACTORY = '0xb56B5f61C992b3a6CF9585909438B6f875ee4fEB';
 const SEL_CREATE_EXIT = 'fbae7ccd';
@@ -2605,6 +2647,7 @@ async function runSell(key, piece, goBtn){
     a.href = GIFT_TX_URL(h3);
     a.textContent = t('gift.tx');
     smState.appendChild(a);
+    tombAdd(piece.id);
     va('event', { name: 'sell_done', data: { day: key, id: piece.id } });
   }catch(err){
     const p = document.createElement('p');
@@ -2662,6 +2705,7 @@ async function loadIndex(){
     INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0,
                    owners: j.owners || 0, sealed: j.sealed || null,
                    embers: j.extinguished || {} };
+    tombPrune();                    // drop tombstones the fresh index absorbed
     renderLiveTags();
     renderDayStatus();
     renderYear();
