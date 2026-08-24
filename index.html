@@ -739,7 +739,7 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 }
 /* the track runs behind the badges, from first stop center to last */
 .roadh__track{
-  position:absolute; left:10%; width:80%; top:50px; height:4px;
+  position:absolute; left:10%; width:80%; top:62px; height:4px;
   background:rgba(243,231,205,.08); border-radius:2px;
 }
 .roadh__fill{
@@ -753,10 +753,11 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   padding:0 12px; position:relative; z-index:1;
 }
 .roadh__badge{
-  width:84px; height:84px; display:flex; align-items:center; justify-content:center;
-  border:1px solid var(--rule); border-radius:12px; background:#100d20;
+  width:112px; height:112px; display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--rule); border-radius:14px; background:#100d20;
 }
-.roadh__badge canvas{ width:72px; height:72px; image-rendering:pixelated; }
+/* 96px art at 96px — pixel art is NEVER downscaled (CLAUDE.md law) */
+.roadh__badge canvas{ width:96px; height:96px; image-rendering:pixelated; }
 .roadh__stop--done .roadh__badge{ border-color:rgba(232,185,63,.55); box-shadow:0 0 16px rgba(232,185,63,.16); }
 .roadh__stop--active .roadh__badge{ border-color:rgba(232,185,63,.4); animation:yc-breathe 2.8s ease-in-out infinite; }
 .roadh__target{
@@ -783,11 +784,11 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   .road__scroll{ overflow-x:visible; }
   .roadh{ display:block; min-width:0; }
   .roadh__track{
-    left:40px; width:4px; top:42px; bottom:42px; height:auto;
+    left:54px; width:4px; top:56px; bottom:56px; height:auto;
   }
   .roadh__fill{ width:100%; height:var(--road-fill, 0%); }
   .roadh__stop{
-    display:grid; grid-template-columns:84px 1fr; column-gap:18px;
+    display:grid; grid-template-columns:112px 1fr; column-gap:18px;
     text-align:left; padding:14px 0; align-items:start;
   }
   .roadh__badge{ grid-row:1 / span 4; }
