@@ -468,6 +468,7 @@ section{ position:relative; }
 .giftmodal .giftmodal__state:has(.btn--ghost){ align-items:center; }
 #gift-tx{ margin-top:10px; }
 .giftmodal__note{ margin:0; font-size:var(--fs-sub); color:var(--muted); }
+.giftmodal__snap{ font-size:var(--fs-micro) !important; color:var(--muted) !important; }
 /* ─── sell this day ─────────────────────────────────────────────────── */
 .daymodal__sell{
   margin:0 10px 10px; padding:7px 4px; cursor:pointer;
@@ -1163,6 +1164,7 @@ const I18N = {
     'gift.modal.p1':'Every uDAY is a calendar date. When the real calendar reaches that date, its holders share the day’s gift — today belongs to holders of {day}.',
     'gift.modal.p2':'The gift grows and changes with the uDAY ecosystem — today it is USDG; tomorrow it may be something more.',
     'gift.modal.connect':'CONNECT WALLET TO CLAIM',
+    'gift.snap':'The day’s list freezes at 00:00 (UTC+8). A piece revealed or moved after that claims when its day comes around again.',
     'gift.modal.nothave':'This day is not in your wallet yet.',
     'gift.connect':'A {n} USDG gift is waiting for this address — connect the wallet to claim it.',
     'gift.claimed':'Claimed — {n} USDG is yours. Come back with tomorrow’s date.',
@@ -1271,6 +1273,7 @@ const I18N = {
     'gift.modal.p1':'每枚 uDAY 都是一个日期。当现实的日历走到那一天，拥有它们的主人们就能分享当天的礼物——今天属于 {day} 的持有者。',
     'gift.modal.p2':'礼物会随 uDAY 生态一起成长变化——今天是 USDG，明天也许更有趣。',
     'gift.modal.connect':'连接钱包领取',
+    'gift.snap':'当日名单在 00:00（UTC+8）定格。此后才揭晓或转手的日期，等它的日子再次到来时领取。',
     'gift.modal.nothave':'这一天还不在你的钱包里。',
     'gift.connect':'这个地址有一份 {n} USDG 的礼物待领——连接钱包即可领取。',
     'gift.claimed':'已领取——{n} USDG 已是你的。明天带着明天的日期再来。',
@@ -2499,6 +2502,12 @@ async function openGiftModal(){
   [t('gift.modal.p1', { day: dayTxt, total }), t('gift.modal.p2')].forEach(txt => {
     const p = document.createElement('p'); p.textContent = txt; gmBody.appendChild(p);
   });
+  // snapshot semantics: the list froze at 00:00 — a piece revealed after
+  // that sees the wall count rise while the pot stays put; explain it
+  const snap = document.createElement('p');
+  snap.className = 'giftmodal__snap';
+  snap.textContent = t('gift.snap');
+  gmBody.appendChild(snap);
   gmState.textContent = '';
   const id = mineIdentity();
   const entry = id ? g.claims[id] : null;
