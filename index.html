@@ -680,10 +680,10 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   background:rgba(243,231,205,.08); border-radius:2px;
 }
 .roadh__fill{
-  display:block; height:100%; width:0; border-radius:2px;
+  display:block; height:100%; width:var(--road-fill, 0%); border-radius:2px;
   background:linear-gradient(90deg, var(--gold-deep), var(--gold));
   box-shadow:0 0 12px var(--gold-glow);
-  transition:width 1.2s cubic-bezier(.22,1,.36,1);
+  transition:width 1.2s cubic-bezier(.22,1,.36,1), height 1.2s cubic-bezier(.22,1,.36,1);
 }
 .roadh__stop{
   display:flex; flex-direction:column; align-items:center; text-align:center;
@@ -714,6 +714,22 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 .roadh__stop--locked, .roadh__stop--mystery{ opacity:.55; }
 .roadh__stop--mystery .roadh__badge{ border-style:dashed; background:rgba(243,231,205,.02); }
 .roadh__q{ font-family:var(--display); font-size:30px; color:var(--muted); }
+/* narrow screens: the same DOM folds back to a vertical timeline — the
+   track becomes a left rail and the gold flows downward instead */
+@media (max-width:640px){
+  .road__scroll{ overflow-x:visible; }
+  .roadh{ display:block; min-width:0; }
+  .roadh__track{
+    left:40px; width:4px; top:42px; bottom:42px; height:auto;
+  }
+  .roadh__fill{ width:100%; height:var(--road-fill, 0%); }
+  .roadh__stop{
+    display:grid; grid-template-columns:84px 1fr; column-gap:18px;
+    text-align:left; padding:14px 0; align-items:start;
+  }
+  .roadh__badge{ grid-row:1 / span 4; }
+  .roadh__name{ margin-top:4px; }
+}
 
 /* ─── onchain facts ─────────────────────────────────────────────────── */
 .facts{ display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
@@ -2536,7 +2552,10 @@ function renderRoad(){
   const fill = document.getElementById('road-fill');
   if(fill){
     const seg = 100 / (ROADMAP.length - 1);
-    fill.style.width = Math.min(100, (doneCount - 1 + frac) * seg).toFixed(1) + '%';
+    // one custom property drives both orientations: width on the horizontal
+    // track, height on the mobile vertical rail
+    fill.style.setProperty('--road-fill',
+      Math.min(100, (doneCount - 1 + frac) * seg).toFixed(1) + '%');
   }
 }
 renderRoad();
