@@ -223,6 +223,16 @@ def match_glyph(composite, candidates, exclude=None):
     return best
 
 
+def fetch_mcap():
+    """Market cap (USD) for the roadmap's live progress bar. Best-effort:
+    the roadmap simply hides its bar when this is absent."""
+    try:
+        with urlopen(API, timeout=20) as r:
+            return round(float(json.loads(r.read()).get("marketCapUsd", 0)))
+    except Exception:
+        return 0
+
+
 # ── uToken API: live asset list (ids + owners); burns fall out for free ──────
 def fetch_assets():
     items, page = [], 1
@@ -461,6 +471,7 @@ def build():
            # concludes they own nothing (85% of the collection is sealed)
            "sealed": _sealed_by_owner(ids, cache, owner),
            "extinguished": ext,
+           "mcapUsd": fetch_mcap(),
            "days": index}
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
     json.dump(out, open(INDEX_PATH, "w"), separators=(",", ":"), sort_keys=True)

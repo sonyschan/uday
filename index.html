@@ -667,6 +667,36 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   text-align:center; line-height:1.35;
 }
 
+/* ─── roadmap ───────────────────────────────────────────────────────── */
+.road{ list-style:none; margin:0; padding:0; max-width:620px; }
+.road__item{ display:grid; grid-template-columns:84px 1fr; gap:20px; padding:20px 0; align-items:center; }
+.road__item + .road__item{ border-top:1px solid var(--rule); }
+.road__badge{
+  width:84px; height:84px; display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--rule); border-radius:12px; background:rgba(243,231,205,.03);
+}
+.road__badge canvas{ width:72px; height:72px; image-rendering:pixelated; }
+.road__item--done .road__badge{ border-color:rgba(232,185,63,.55); box-shadow:0 0 16px rgba(232,185,63,.14); }
+.road__item--active .road__badge{ border-color:rgba(232,185,63,.4); animation:yc-breathe 2.8s ease-in-out infinite; }
+.road__target{ font-family:var(--display); font-size:17px; letter-spacing:var(--ls-narrow); color:var(--gold); text-align:center; line-height:1.3; }
+.road__item--locked .road__target{ color:var(--muted); }
+.road__name{ font-family:var(--display); font-size:var(--fs-small); letter-spacing:var(--ls-narrow); color:var(--vellum); }
+.road__item--done .road__name{ color:var(--gold); }
+.road__unlock{ margin:6px 0 0; font-size:var(--fs-sub); color:#dbcfb4; line-height:1.6; }
+.road__state{ margin:5px 0 0; font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid); color:var(--gold); }
+.road__item--locked{ opacity:.55; }
+.road__item--mystery{ opacity:.5; }
+.road__item--mystery .road__badge{ border-style:dashed; }
+.road__q{ font-family:var(--display); font-size:30px; color:var(--muted); }
+.road__bar{ margin-top:10px; height:6px; border-radius:3px; background:rgba(243,231,205,.08); overflow:hidden; max-width:340px; }
+.road__bar i{ display:block; height:100%; border-radius:3px; background:linear-gradient(90deg, var(--gold-deep), var(--gold)); }
+.road__barlabel{ margin-top:6px; font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow); color:var(--muted); }
+@media (max-width:520px){
+  .road__item{ grid-template-columns:64px 1fr; gap:14px; }
+  .road__badge{ width:64px; height:64px; border-radius:10px; }
+  .road__badge canvas{ width:56px; height:56px; }
+}
+
 /* ─── onchain facts ─────────────────────────────────────────────────── */
 .facts{ display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
 .fact{
@@ -928,6 +958,19 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
     </div>
   </section>
 
+  <!-- ── roadmap: milestones unlock the story ─────────────────────── -->
+  <section class="band" id="roadmap">
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="road.kicker">The road</p>
+        <h2 data-i18n="road.title">Milestones unlock the story</h2>
+        <p data-i18n="road.blurb">Every milestone the collection reaches unlocks the next chapter of uDAY. Two are already history.</p>
+      </div>
+      <ol class="road rise" id="road-list"></ol>
+    </div>
+  </section>
+
   <!-- ── onchain ──────────────────────────────────────────────────── -->
   <section class="band" id="chain">
     <div class="shell">
@@ -1030,6 +1073,18 @@ const I18N = {
     'gift.tx':'VIEW TRANSACTION',
     'gift.share':'SHARE ON X',
     'gift.share.text':'Just claimed today’s uDAY gift — {n} USDG! It’s my uDAY.',
+    'road.kicker':'The road','road.title':'Milestones unlock the story',
+    'road.blurb':'Every milestone the collection reaches unlocks the next chapter of uDAY. Two are already history.',
+    'road.done':'UNLOCKED',
+    'road.m1':'AUG 21 · Launched on uToken',
+    'road.m1.u':'Unlocked: the uDAY official site — uday.gift.',
+    'road.m2':'AUG 21 · Graduated on uToken',
+    'road.m2.u':'Unlocked: uDAY Gift — a daily present for the day’s holders.',
+    'road.m3':'100K market cap',
+    'road.m3.u':'Unlocks: Dynamic uDAY Gift — trading activity grows the gift.',
+    'road.m4':'1M market cap',
+    'road.m4.u':'Unlocks: uDAY Gift Drops — anyone can make your day special. Week of the Unicorn…',
+    'road.m5':'Next chapter — to be revealed',
     'modal.sub':'Every piece born on this day. Tap one to view it on uToken — or download it right here.',
     'modal.yours':'YOURS','modal.close':'Close',
     'modal.dl.96':'Download the on-chain original — 768×768 PNG',
@@ -1114,6 +1169,18 @@ const I18N = {
     'gift.tx':'查看交易',
     'gift.share':'分享到 X',
     'gift.share.text':'在 uDAY 领了今日礼物——{n} USDG！It’s my uDAY.',
+    'road.kicker':'路线图','road.title':'里程碑，解锁下一章',
+    'road.blurb':'集合每抵达一个里程碑，就解锁 uDAY 的下一章。前两章已经写进历史。',
+    'road.done':'已解锁',
+    'road.m1':'8月21日 · 在 uToken 启动',
+    'road.m1.u':'解锁：uDAY 官方网站 — uday.gift。',
+    'road.m2':'8月21日 · 在 uToken 毕业',
+    'road.m2.u':'解锁：uDAY Gift — 属于当日持有者的每日礼物。',
+    'road.m3':'10 万美元市值',
+    'road.m3.u':'解锁：动态 uDAY Gift — 交易越活跃，礼物越丰厚。',
+    'road.m4':'100 万美元市值',
+    'road.m4.u':'解锁：uDAY Gift 空投 — 任何人都能让你的那一天变得特别。独角兽之周…',
+    'road.m5':'下一章 — 待揭晓',
     'modal.sub':'这一天诞生的每一枚。点作品前往 uToken，或直接在这里下载 PNG。',
     'modal.yours':'你的','modal.close':'关闭',
     'modal.dl.96':'下载链上原版——768×768 PNG',
@@ -1198,6 +1265,7 @@ function applyLang(next){
   }
   if(typeof mineWalletUI === 'function') mineWalletUI();
   if(typeof yearLinkLabel === 'function') yearLinkLabel();
+  if(typeof renderRoad === 'function') renderRoad();
 }
 
 function setSub(valKey, subKey){
@@ -2370,6 +2438,83 @@ document.getElementById('day-status-btn').addEventListener('click', e => {
   if(e.currentTarget.dataset.gift === '1'){ e.preventDefault(); openGiftModal(); }
 });
 
+/* ─── roadmap: completed milestones wear their date as on-chain glyph
+   montage; the active market-cap gate shows a live progress bar fed by the
+   15-minute index. Reaching a target flips it to UNLOCKED automatically. */
+const ROADMAP = [
+  { key: 'm1', done: true, glyph: { month: 8, date: 21, monthPlace: 'center', datePlace: 'corner' } },
+  { key: 'm2', done: true, glyph: { month: 8, date: 21, monthPlace: 'center', datePlace: 'center' } },
+  { key: 'm3', target: 100000,  label: '100K\nMCAP' },
+  { key: 'm4', target: 1000000, label: '1M\nMCAP' },
+  { key: 'm5', mystery: true }
+];
+const fmtUsd = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : '$' + (v / 1e3).toFixed(1) + 'K';
+
+function renderRoad(){
+  const list = document.getElementById('road-list');
+  if(!list) return;
+  list.textContent = '';
+  const mcap = (typeof INDEX_META === 'object' && INDEX_META && INDEX_META.mcapUsd) || 0;
+  let activeAssigned = false;
+  ROADMAP.forEach(m => {
+    let state = 'locked';
+    if(m.done || (m.target && mcap >= m.target)) state = 'done';
+    else if(m.mystery) state = 'mystery';
+    else if(m.target && !activeAssigned){ state = 'active'; activeAssigned = true; }
+    const li = document.createElement('li');
+    li.className = 'road__item road__item--' + state;
+    const badge = document.createElement('div');
+    badge.className = 'road__badge';
+    if(m.glyph){
+      const c = document.createElement('canvas');
+      paint(c, { plate: null, frame: null, month: m.glyph.month, date: m.glyph.date,
+                 monthPlace: m.glyph.monthPlace, datePlace: m.glyph.datePlace, res: 'onchain' });
+      badge.appendChild(c);
+    }else if(m.mystery){
+      const q = document.createElement('span'); q.className = 'road__q'; q.textContent = '?';
+      badge.appendChild(q);
+    }else{
+      const s = document.createElement('span'); s.className = 'road__target';
+      m.label.split('\n').forEach((line, i) => {
+        if(i) s.appendChild(document.createElement('br'));
+        s.appendChild(document.createTextNode(line));
+      });
+      badge.appendChild(s);
+    }
+    const txt = document.createElement('div');
+    const name = document.createElement('div');
+    name.className = 'road__name';
+    name.textContent = t('road.' + m.key);
+    txt.appendChild(name);
+    if(!m.mystery){
+      const u = document.createElement('p');
+      u.className = 'road__unlock';
+      u.textContent = t('road.' + m.key + '.u');
+      txt.appendChild(u);
+    }
+    if(state === 'done'){
+      const st = document.createElement('div');
+      st.className = 'road__state';
+      st.textContent = t('road.done');
+      txt.appendChild(st);
+    }
+    if(state === 'active' && mcap > 0){
+      const bar = document.createElement('div');
+      bar.className = 'road__bar';
+      const fill = document.createElement('i');
+      fill.style.width = Math.max(2, Math.min(100, mcap / m.target * 100)).toFixed(1) + '%';
+      bar.appendChild(fill);
+      const lbl = document.createElement('div');
+      lbl.className = 'road__barlabel';
+      lbl.textContent = fmtUsd(mcap) + ' / ' + fmtUsd(m.target);
+      txt.append(bar, lbl);
+    }
+    li.append(badge, txt);
+    list.appendChild(li);
+  });
+}
+renderRoad();
+
 (function initMineAddr(){
   let a = (HANDOFF && HANDOFF.addr) || new URLSearchParams(location.search).get('addr');
   if(!a){ try{ a = localStorage.getItem('uday.addr'); }catch(e){} }
@@ -2416,7 +2561,8 @@ async function loadIndex(){
     DAYS = j.days || {};
     INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0,
                    owners: j.owners || 0, sealed: j.sealed || null,
-                   embers: j.extinguished || {} };
+                   embers: j.extinguished || {}, mcapUsd: j.mcapUsd || 0 };
+    renderRoad();
     renderLiveTags();
     renderDayStatus();
     renderYear();
