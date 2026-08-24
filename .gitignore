@@ -17,3 +17,9 @@ __pycache__/
 # foundry build artifacts (forge create run from repo root)
 out/
 cache/
+
+# local-only: strategy memory and gift operations (kept off the public repo)
+CLAUDE.md
+tools/build_gift_root.py
+tools/post-gift.sh
+tools/deploy-gift.sh
