@@ -929,11 +929,14 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
       </div>
       <div class="story rise">
         <blockquote class="story__quote" data-i18n="story.quote">A birthday. An anniversary. Or a day that changed who you are.</blockquote>
+        <!-- These four carry live onchain numbers, so renderStory() owns them
+             rather than the [data-i18n] walker (which would paint the raw
+             {placeholders}). The text below is the no-JS fallback. -->
         <div class="story__body">
-          <p class="drop" data-i18n="story.p1">Now they can live onchain. uDAY turns your days — and the days of people you care about — into onchain art assets, each one permanently crafted with its own provenance.</p>
-          <p data-i18n="story.p2">And they are not static. Their appearance can be dynamically regenerated through token trades.</p>
-          <p class="story__gift" data-i18n="story.gift">And your day gives back. When the calendar reaches your date, its holders claim that day’s gift at uday.gift — every year, on your day.</p>
-          <p data-i18n="story.p3">Keep one for yourself. Send one to someone who matters. Each uDAY represents a specific day.</p>
+          <p class="drop" id="story-p1">Pick one and it exists — not a picture of a date, but four layers the contract draws itself. Yours is settled the moment its last layer opens. Right now 3,740 pieces are still sealed: their dates are unknown even to the wallets holding them.</p>
+          <p id="story-p2">And a day can die. Selling burns the piece — 30,680 have burned already. Sell the last one carrying a date and that day goes dark on the calendar, waiting for someone to bring it back.</p>
+          <p class="story__gift" id="story-gift">Hold one, though, and it pays. When the calendar reaches your date, its holders claim that day’s gift at uday.gift — every year, on your day.</p>
+          <p id="story-p3">Keep one for yourself. Send one to someone who matters. 362 of the year’s 366 days are lit so far — the rest are still waiting to be born.</p>
         </div>
       </div>
     </div>
@@ -1157,7 +1160,7 @@ const I18N = {
     'status.btn.offer':'BRING IT HOME','status.btn.mint':'MINT A DAY',
     'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} DAYS BORN','live.sealed':'{n} STILL SEALED','live.owners':'{n} COLLECTORS',
     'year.kicker':'The year','year.title':'A year, lighting up',
-    'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.',
+    'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. A day whose last piece was just sold still glows faintly — an ember, for seven days. Tap a day to visit its earliest piece.',
     'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
     'year.glitch.cell':'A DAY THAT DOES NOT EXIST',
     'year.glitch.line':'{n} pieces are minted on days that do not exist \u2014 someone owns {day}.',
@@ -1234,10 +1237,10 @@ const I18N = {
     'story.kicker':'The idea',
     'story.title':'Which days mean something to you?',
     'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
-    'story.p1':'Now they can live onchain. uDAY turns your days — and the days of people you care about — into onchain art assets, each one permanently crafted with its own provenance.',
-    'story.p2':'And they are not static. Their appearance can be dynamically regenerated through token trades.',
-    'story.gift':'And your day gives back. When the calendar reaches your date, its holders claim that day’s gift at uday.gift — every year, on your day.',
-    'story.p3':'Keep one for yourself. Send one to someone who matters. Each uDAY represents a specific day.',
+    'story.p1':'Pick one and it exists — not a picture of a date, but four layers the contract draws itself. Yours is settled the moment its last layer opens. Right now {sealed} pieces are still sealed: their dates are unknown even to the wallets holding them.',
+    'story.p2':'And a day can die. Selling burns the piece — {burned} have burned already. Sell the last one carrying a date and that day goes dark on the calendar, waiting for someone to bring it back.',
+    'story.gift':'Hold one, though, and it pays. When the calendar reaches your date, its holders claim that day’s gift at uday.gift — every year, on your day.',
+    'story.p3':'Keep one for yourself. Send one to someone who matters. {lit} of the year’s 366 days are lit so far — the rest are still waiting to be born.',
     'forge.kicker':'The composer',
     'forge.title':'Four layers, two of them optional',
     'forge.blurb':'Every uDAY is a plate, a frame, a month and a date, painted one on top of the next. The month and the date are always drawn. The plate and the frame are not: a plate appears on 80% of pieces, a frame on only 20%. Eight states each, by twenty-four month tiles, by sixty-two date tiles — 95,232 ways for a day to look.',
@@ -1272,7 +1275,7 @@ const I18N = {
     'status.btn.offer':'把它带回家','status.btn.mint':'铸造一天',
     'live.lit':'全年点亮 {lit}/366 天','live.alive':'已诞生 {n} 枚','live.sealed':'{n} 枚待揭晓','live.owners':'收藏者 {n} 位',
     'year.kicker':'一整年','year.title':'一年，正在点亮',
-    'year.blurb':'每一格是一天。亮起代表这一天已在链上诞生，越亮代表这一天的 uDAY 越多。点一格，去看那一天诞生的每一枚。',
+    'year.blurb':'每一格是一天。亮起代表这一天已在链上诞生，越亮代表这一天的 uDAY 越多。刚被卖掉最后一枚的日子还会微微发光——那是余烬，会亮七天。点一格，去看那一天诞生的每一枚。',
     'year.note':'366 天已点亮 {lit} 天 · 每小时从 Robinhood Chain 更新',
     'year.glitch.cell':'不存在的日子',
     'year.glitch.line':'有 {n} 枚铸在不存在的日子上——有人真的拥有{day}。',
@@ -1349,10 +1352,10 @@ const I18N = {
     'story.kicker':'缘起',
     'story.title':'哪些日子对你有意义？',
     'story.quote':'一个生日。一个纪念日。或是那个改变了你的日子。',
-    'story.p1':'现在它们可以活在链上。uDAY 把你的日子，以及你在乎的人的日子，变成链上艺术资产——每一件都带着自己的来历，永久铸刻于链。',
-    'story.p2':'而且它们不是静止的。外观会随着代币交易动态重新生成。',
-    'story.gift':'而且你的日子会回报你。当现实的日历走到那一天，持有它的人就能领取当天的礼物——每一年，都在你的那一天。',
-    'story.p3':'留一个给自己。送一个给重要的人。每一枚 uDAY 都代表着特定的一天。',
+    'story.p1':'选一天，它就存在——不是一张日期的图片，而是合约自己画出的四个图层。最后一层揭开的那一刻，它才真正定下来。此刻还有 {sealed} 枚封着，连持有它们的钱包，都不知道自己拥有哪一天。',
+    'story.p2':'而一天是会消失的。卖出即销毁——已经有 {burned} 枚烧掉了。当最后一枚带着某个日期的作品被卖掉，那一天就会从日历上暗下去，等着有人把它带回来。',
+    'story.gift':'但只要留着它，它就会回报你。当现实的日历走到那一天，持有它的人就能在 uday.gift 领取当天的礼物——每一年，都在你的那一天。',
+    'story.p3':'留一个给自己。送一个给重要的人。一年 366 天，目前已点亮 {lit} 天——其余的还等着诞生。',
     'forge.kicker':'合成器',
     'forge.title':'四个图层，其中两层可有可无',
     'forge.blurb':'每一枚 uDAY 都由背板、外框、月份与日期四层依序绘成。月份与日期一定会画上；背板与外框不一定——背板出现在 80% 的作品上，外框只有 20%。两者各 8 种状态（7 样式 + 无）× 24 个月份砖 × 62 个日期砖——一个日子有 95,232 种长相。',
@@ -1411,6 +1414,7 @@ function applyLang(next){
   try{ localStorage.setItem('uday.lang', next); }catch(e){}
   renderChips();
   renderGallery();
+  if(typeof renderStory === 'function') renderStory();
   syncReadout();
   if(typeof fillHeroPicker === 'function'){ fillHeroPicker(); heroCap(); }
   if(typeof renderDayStatus === 'function' && DAYS){
@@ -1801,6 +1805,23 @@ function renderDayStatus(){
     va('event', { name: 'day_check', data: { state: 'free' } });
   }
   box.hidden = false;
+}
+
+/// The story's body carries live onchain numbers — how many pieces are
+/// still sealed, how many have burned, how many days are lit. They are the
+/// section's teeth: the same facts stated as prose instead of as a stat row.
+/// Fallbacks are the values true at the time of writing, used only if the
+/// index never loads (the static HTML says the same).
+function renderStory(){
+  const m = INDEX_META || { unrevealed: 3740, burned: 30680 };
+  const lit = DAYS ? Object.keys(DAYS).filter(isRealDate).length : 362;
+  const n = { sealed: (m.unrevealed || 0).toLocaleString(),
+              burned: (m.burned || 0).toLocaleString(), lit: lit };
+  [['story-p1', 'story.p1'], ['story-p2', 'story.p2'],
+   ['story-gift', 'story.gift'], ['story-p3', 'story.p3']].forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = t(key, n);
+  });
 }
 
 function renderLiveTags(){
@@ -2997,9 +3018,10 @@ async function loadIndex(){
     const j = await r.json();
     DAYS = j.days || {};
     INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0,
-                   owners: j.owners || 0, sealed: j.sealed || null,
+                   owners: j.owners || 0, sealed: j.sealed || null, burned: j.burned || 0,
                    embers: j.extinguished || {}, mcapUsd: j.mcapUsd || 0 };
     renderRoad();
+    renderStory();
     tombPrune();                    // drop tombstones the fresh index absorbed
     renderLiveTags();
     renderDayStatus();
