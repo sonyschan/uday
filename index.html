@@ -818,6 +818,22 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
    for a crypto reader is the same as not being on the page. Same facts,
    one scannable line, directly under the hero. The long explanations
    survive as title tooltips. */
+/* On a phone the seven plates stacked two-up into four rows — 800px of
+   scrolling for a gallery. One swipeable row instead, the same pattern the
+   year wall already uses. The plates keep their size; only the axis changes. */
+@media (max-width:720px){
+  .gallery{
+    display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch; padding-bottom:8px;
+  }
+  .gallery .plaque{ flex:0 0 47%; scroll-snap-align:start; }
+  .gallery .plaque:hover{ transform:none; }   /* no hover on touch; no lurch */
+}
+.yearwall__expand{ display:none; margin-top:16px; }
+@media (max-width:720px){
+  .yearwall__expand{ display:inline-block; }
+  .yearwall__grid--month .off{ display:none; }
+}
 .proofbar{ border-block:1px solid var(--rule); background:rgba(16,13,32,.55); }
 .proofbar__row{
   display:flex; flex-wrap:wrap; align-items:center; gap:10px 22px;
@@ -996,6 +1012,10 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         </div>
         <p class="yearwall__glitchline" id="year-glitch" hidden></p>
         <p class="yearwall__note" id="year-note"></p>
+        <!-- 366 cells is one row on a desktop and twelve on a phone. Narrow
+             screens open on the current month; the year is one tap away. -->
+        <button type="button" class="btn btn--ghost yearwall__expand" id="year-expand"
+                data-i18n="year.expand">SEE THE WHOLE YEAR</button>
       </div>
     </div>
   </section>
@@ -1160,6 +1180,7 @@ const I18N = {
     'status.free':'{date} has not been born yet. Every mint could be the one.',
     'status.btn.offer':'BRING IT HOME','status.btn.mint':'MINT A DAY',
     'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} DAYS BORN','live.sealed':'{n} STILL SEALED','live.owners':'{n} COLLECTORS',
+    'year.expand':'SEE THE WHOLE YEAR','year.collapse':'SHOW THIS MONTH ONLY',
     'year.kicker':'The year','year.title':'A year, lighting up',
     'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. A day whose last piece was just sold still glows faintly — an ember, for seven days. Tap a day to visit its earliest piece.',
     'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
@@ -1257,6 +1278,7 @@ const I18N = {
     'styles.kicker':'The seven',
     'styles.title':'Seven ways to hold a day',
     'styles.blurb':'Each style carries its own plate and its own frame. Hover a plate to bring its frame down over it.',
+    'styles.blurb.touch':'Each style carries its own plate and its own frame. Swipe through the seven.',
     'chain.kicker':'Onchain','chain.title':'Where it lives',
     'fact.contract':'Contract','fact.copy':'COPY','fact.copied':'COPIED','fact.chain':'Chain','fact.supply':'Supply',
     'fact.supply.sub':'maximum assets, one minted per whole token bought on the curve',
@@ -1277,6 +1299,7 @@ const I18N = {
     'status.free':'{date}还没诞生。每一次铸造，都可能是它。',
     'status.btn.offer':'把它带回家','status.btn.mint':'铸造一天',
     'live.lit':'全年点亮 {lit}/366 天','live.alive':'已诞生 {n} 枚','live.sealed':'{n} 枚待揭晓','live.owners':'收藏者 {n} 位',
+    'year.expand':'看整年','year.collapse':'只看本月',
     'year.kicker':'一整年','year.title':'一年，正在点亮',
     'year.blurb':'每一格是一天。亮起代表这一天已在链上诞生，越亮代表这一天的 uDAY 越多。刚被卖掉最后一枚的日子还会微微发光——那是余烬，会亮七天。点一格，去看那一天诞生的每一枚。',
     'year.note':'366 天已点亮 {lit} 天 · 每小时从 Robinhood Chain 更新',
@@ -1374,6 +1397,7 @@ const I18N = {
     'styles.kicker':'七种画风',
     'styles.title':'收藏一天的七种方式',
     'styles.blurb':'每种画风都有自己的背板与外框。把鼠标移到背板上，外框会落下来罩住它。',
+    'styles.blurb.touch':'每种画风都有自己的背板与外框。左右滑动，看完七种。',
     'chain.kicker':'链上','chain.title':'它住在哪里',
     'fact.contract':'合约地址','fact.copy':'复制','fact.copied':'已复制','fact.chain':'区块链','fact.supply':'发行量',
     'fact.supply.sub':'最多 10,000 件，曲线上每买进一整枚代币即铸造一件',
@@ -1426,6 +1450,7 @@ function applyLang(next){
   if(typeof yearLinkLabel === 'function') yearLinkLabel();
   const fo = document.getElementById('btn-forge-open'), fp = document.getElementById('forge-panel');
   if(fo && fp && !fp.hidden) fo.textContent = t('forge.close');
+  if(typeof applyYearCollapse === 'function') applyYearCollapse();
   if(typeof renderRoad === 'function') renderRoad();
 }
 
@@ -1725,6 +1750,9 @@ document.getElementById('btn-download').addEventListener('click', () =>
    gallery — the HD plates, with their frames on hover
    ───────────────────────────────────────────────────────────────────── */
 function renderGallery(){
+  // a touch device has no hover; do not tell it to hover
+  const sub = document.querySelector('[data-i18n="styles.blurb"]');
+  if(sub && !CAN_HOVER) sub.textContent = t('styles.blurb.touch');
   const g = document.getElementById('gallery');
   g.textContent = '';
   STYLES.forEach(s => {
@@ -2099,6 +2127,7 @@ function buildWall(grid, byDay, opts){
   for(let m = 1; m <= 12; m++){
     const lab = document.createElement('span');
     lab.className = 'yearwall__mon';
+    lab.dataset.m = m;
     lab.textContent = lang === 'zh' ? m + '\u6708' : MONTHS_EN[m-1];
     grid.appendChild(lab);
     for(let d = 1; d <= 31; d++){
@@ -2108,6 +2137,7 @@ function buildWall(grid, byDay, opts){
         if(gl.length){                            // an impossible date, minted anyway
           const g = document.createElement('button');
           g.className = 'yearcell yearcell--glitch';
+          g.dataset.m = m;
           g.style.animationDelay = (gi++ * 1.3) + 's';
           const glabel = dayLabel(m, d) + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gl.length;
           g.setAttribute('aria-label', glabel);
@@ -2115,7 +2145,9 @@ function buildWall(grid, byDay, opts){
           attachCellAction(g, gkey, 'glitch', gl.slice().sort((a,b) => a.id - b.id), gl.length);
           grid.appendChild(g);
         }else{
-          const v = document.createElement('span'); v.className = 'yearcell yearcell--void'; grid.appendChild(v);
+          const v = document.createElement('span');
+          v.className = 'yearcell yearcell--void'; v.dataset.m = m;
+          grid.appendChild(v);
         }
         continue;
       }
@@ -2124,6 +2156,7 @@ function buildWall(grid, byDay, opts){
       const ember = !n && opts.embers && opts.embers[key];
       const cell = document.createElement(n || ember ? 'button' : 'span');
       cell.className = 'yearcell' + (n ? ' yearcell--lit' : ember ? ' yearcell--ember' : '');
+      cell.dataset.m = m;
       if(opts.today && key === todayKey) cell.classList.add('yearcell--today');
       const label = dayLabel(m, d) +
         (n ? ' \u00b7 \u00d7' + n : ember ? ' \u00b7 ' + t('year.ember.cell') : '');
@@ -2142,12 +2175,28 @@ function buildWall(grid, byDay, opts){
   return { lit, pieces };
 }
 
+/// Narrow screens open the wall on the current month. The cells are all
+/// built either way — this only marks the other eleven months, and the CSS
+/// acts on the mark below 720px, so a rotation or a resize needs no rebuild.
+let yearMonthOnly = true;
+function applyYearCollapse(){
+  const grid = document.getElementById('year-grid');
+  if(!grid) return;
+  const m = today.getMonth() + 1;
+  grid.classList.toggle('yearwall__grid--month', yearMonthOnly);
+  grid.querySelectorAll('[data-m]').forEach(el =>
+    el.classList.toggle('off', yearMonthOnly && +el.dataset.m !== m));
+  const btn = document.getElementById('year-expand');
+  if(btn) btn.textContent = t(yearMonthOnly ? 'year.expand' : 'year.collapse');
+}
+
 function renderYear(){
   if(!DAYS) return;
   const sec = document.getElementById('year');
   const { lit } = buildWall(document.getElementById('year-grid'), DAYS,
                             { today: true, embers: INDEX_META.embers });
   document.getElementById('year-note').textContent = t('year.note', { lit });
+  applyYearCollapse();
   // The impossible days are the wall's most shareable fact \u2014 one loud line,
   // not a footnote. {day} names the first glitch day (FEB 30) as proof.
   const glitchDays = Object.keys(DAYS).filter(k => !isRealDate(k)).sort();
@@ -3044,6 +3093,12 @@ document.querySelectorAll('.langs button').forEach(b =>
 
 // The composer opens on request. Nothing inside it needs a first paint to
 // work — the chips and the 96x96 canvas were built at load, hidden or not.
+document.getElementById('year-expand').addEventListener('click', () => {
+  yearMonthOnly = !yearMonthOnly;
+  applyYearCollapse();
+  va('event', { name: 'year_expand', data: { open: yearMonthOnly ? 0 : 1 } });
+});
+
 document.getElementById('btn-forge-open').addEventListener('click', (e) => {
   const panel = document.getElementById('forge-panel');
   const open = panel.hidden;
