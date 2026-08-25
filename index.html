@@ -646,6 +646,9 @@ section{ position:relative; }
 .band__head{ max-width:64ch; margin-bottom:clamp(34px,4vw,56px); }
 .band__head h2{ margin:12px 0 0; }
 .band__head p{ margin-top:18px; color:#c6bba3; }
+/* the styles gallery lost its own heading when it moved inside the composer;
+   this one line introduces it without opening a second band */
+.band__sub{ max-width:64ch; margin:clamp(38px,4.4vw,62px) 0 20px; color:#c6bba3; }
 
 /* ─── story ─────────────────────────────────────────────────────────── */
 .story{
@@ -808,6 +811,25 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 }
 
 /* ─── onchain facts ─────────────────────────────────────────────────── */
+/* ─── proof bar ──────────────────────────────────────────────────────
+   The trust facts used to be a five-row table seven screens down, which
+   for a crypto reader is the same as not being on the page. Same facts,
+   one scannable line, directly under the hero. The long explanations
+   survive as title tooltips. */
+.proofbar{ border-block:1px solid var(--rule); background:rgba(16,13,32,.55); }
+.proofbar__row{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px 22px;
+  padding:13px 0; font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); text-transform:uppercase; color:var(--muted);
+}
+.proofbar__i{ white-space:nowrap; }
+.proofbar__i b{ color:var(--gold); font-weight:400; }
+.proofbar__addr{ display:flex; align-items:center; gap:0; margin-left:auto; }
+.proofbar__addr #addr{ white-space:nowrap; color:var(--vellum); }
+@media (max-width:720px){
+  .proofbar__row{ gap:8px 16px; }
+  .proofbar__addr{ margin-left:0; }
+}
 .facts{ display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
 .fact{
   display:grid; grid-template-columns:minmax(140px,.36fr) 1fr; gap:16px;
@@ -918,6 +940,20 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
       </div>
     </div>
   </section>
+
+  <!-- ── proof: what a crypto reader checks before reading anything ── -->
+  <div class="proofbar">
+    <div class="shell proofbar__row">
+      <span class="proofbar__i">Robinhood Chain <b>4663</b></span>
+      <span class="proofbar__i" data-i18n="proof.supply">10,000 max</span>
+      <span class="proofbar__i" data-i18n="proof.lp">LP burned</span>
+      <span class="proofbar__i" data-i18n="proof.art">Art onchain</span>
+      <span class="proofbar__addr">
+        <span id="addr" data-addr="0x359211bb6b8cabce02dcbec1c55b50f2ec884146">0x3592…4146</span>
+        <button class="copy" id="btn-copy" data-i18n="fact.copy">COPY</button>
+      </span>
+    </div>
+  </div>
 
   <!-- ── story ────────────────────────────────────────────────────── -->
   <section class="band" id="story">
@@ -1056,22 +1092,16 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <p class="note" data-i18n="forge.note">Exports at 768x768, pixel-perfect. This composer previews the art system — the piece you actually own is minted and rendered onchain.</p>
         </div>
       </div>
+
+      <!-- the seven styles were a section of their own: one heading and 36
+           words, sitting on the page's downslope. Same art, no new heading. -->
+      <p class="band__sub rise" data-i18n="styles.blurb">Each style carries its own plate and its own frame. Hover a plate to bring its frame down over it.</p>
+      <div class="gallery rise" id="gallery"></div>
     </div>
   </section>
 
   <!-- ── the year ─────────────────────────────────────────────────── -->
   <!-- ── styles ───────────────────────────────────────────────────── -->
-  <section class="band" id="styles">
-    <div class="shell">
-      <hr class="rule rule--gem">
-      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
-        <p class="kicker" data-i18n="styles.kicker">The seven</p>
-        <h2 data-i18n="styles.title">Seven ways to hold a day</h2>
-        <p data-i18n="styles.blurb">Each style carries its own plate and its own frame. Hover a plate to bring its frame down over it.</p>
-      </div>
-      <div class="gallery rise" id="gallery"></div>
-    </div>
-  </section>
 
   <!-- ── roadmap: milestones unlock the story ─────────────────────── -->
   <section class="band" id="roadmap">
@@ -1091,40 +1121,6 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
   </section>
 
   <!-- ── onchain ──────────────────────────────────────────────────── -->
-  <section class="band" id="chain">
-    <div class="shell">
-      <hr class="rule rule--gem">
-      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
-        <p class="kicker" data-i18n="chain.kicker">Onchain</p>
-        <h2 data-i18n="chain.title">Where it lives</h2>
-      </div>
-      <div class="facts rise">
-        <div class="fact">
-          <div class="fact__k" data-i18n="fact.contract">Contract</div>
-          <div class="fact__v">
-            <span id="addr">0x359211bb6b8cabce02dcbec1c55b50f2ec884146</span>
-            <button class="copy" id="btn-copy" data-i18n="fact.copy">COPY</button>
-          </div>
-        </div>
-        <div class="fact">
-          <div class="fact__k" data-i18n="fact.chain">Chain</div>
-          <div class="fact__v">Robinhood Chain <small>chain id 4663</small></div>
-        </div>
-        <div class="fact">
-          <div class="fact__k" data-i18n="fact.supply">Supply</div>
-          <div class="fact__v">10,000 <small data-i18n="fact.supply.sub">maximum assets, one minted per whole token bought on the curve</small></div>
-        </div>
-        <div class="fact">
-          <div class="fact__k" data-i18n="fact.market">Market</div>
-          <div class="fact__v" data-i18n="fact.market.v">Graduated to Uniswap v4<small>Liquidity moved into the pool and the LP key was burned, locking it permanently.</small></div>
-        </div>
-        <div class="fact">
-          <div class="fact__k" data-i18n="fact.art">Art</div>
-          <div class="fact__v" data-i18n="fact.art.v">Stored fully onchain<small>The layer set is written into contract storage at creation and is immutable afterwards.</small></div>
-        </div>
-      </div>
-    </div>
-  </section>
 
 </main>
 
@@ -1175,6 +1171,7 @@ const I18N = {
     'mine.disconnect':'LOG OUT','mine.wallet.back':'Back to my days',
     'mine.showyear':'SEE THE FULL YEAR','mine.hideyear':'HIDE THE FULL YEAR',
     'mine.btn.view':'VIEW YOUR PIECE',
+    'proof.supply':'10,000 max','proof.lp':'LP burned','proof.art':'Art onchain',
     'gift.title':'TODAY’S GIFT',
     'gift.not.yours':'Every uDAY is a calendar date — and when the real calendar reaches that date, that day’s holders share the day’s gift. Today, {total} USDG belongs to holders of {day}.',
     'gift.cta':'CLAIM THE GIFT',
@@ -1243,7 +1240,7 @@ const I18N = {
     'story.p3':'Keep one for yourself. Send one to someone who matters. {lit} of the year’s 366 days are lit so far — the rest are still waiting to be born.',
     'forge.kicker':'The composer',
     'forge.title':'Four layers, two of them optional',
-    'forge.blurb':'Every uDAY is a plate, a frame, a month and a date, painted one on top of the next. The month and the date are always drawn. The plate and the frame are not: a plate appears on 80% of pieces, a frame on only 20%. Eight states each, by twenty-four month tiles, by sixty-two date tiles — 95,232 ways for a day to look.',
+    'forge.blurb':'Plate, frame, month, date — painted in that order, the plate on 80% of pieces and the frame on only 20%. 95,232 ways for a day to look. Build one.',
     'forge.legend':'PLATE / FRAME / MONTH / DATE',
     'field.plate':'Plate (80% of pieces)','field.frame':'Frame (20% of pieces)','style.none':'NONE','field.month':'Month','field.date':'Date',
     'field.mplace':'Month placement','field.dplace':'Date placement',
@@ -1290,6 +1287,7 @@ const I18N = {
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日历',
     'mine.showyear':'看全年年历','mine.hideyear':'收起全年年历',
     'mine.btn.view':'查看你的这一枚',
+    'proof.supply':'上限 10,000','proof.lp':'流动性已烧毁','proof.art':'艺术全在链上',
     'gift.title':'今日礼物',
     'gift.not.yours':'每枚 uDAY 都是一个日期——当现实的日历走到那一天，这一天的主人们就能分享当天的礼物。今天共 {total} USDG，属于 {day} 的持有者。',
     'gift.cta':'领取礼物',
@@ -1358,7 +1356,7 @@ const I18N = {
     'story.p3':'留一个给自己。送一个给重要的人。一年 366 天，目前已点亮 {lit} 天——其余的还等着诞生。',
     'forge.kicker':'合成器',
     'forge.title':'四个图层，其中两层可有可无',
-    'forge.blurb':'每一枚 uDAY 都由背板、外框、月份与日期四层依序绘成。月份与日期一定会画上；背板与外框不一定——背板出现在 80% 的作品上，外框只有 20%。两者各 8 种状态（7 样式 + 无）× 24 个月份砖 × 62 个日期砖——一个日子有 95,232 种长相。',
+    'forge.blurb':'背板、外框、月份、日期——依序叠上。背板出现在 80% 的作品上，外框只有 20%。95,232 种可能。自己拼一个看看。',
     'forge.legend':'背板 / 外框 / 月份 / 日期',
     'field.plate':'背板（80% 的作品有）','field.frame':'外框（20% 的作品有）','style.none':'无','field.month':'月份','field.date':'日期',
     'field.mplace':'月份位置','field.dplace':'日期位置',
@@ -1405,10 +1403,6 @@ function applyLang(next){
   lang = next;
   document.documentElement.lang = next;
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
-  // sub-lines inside fact values are separate nodes
-  setSub('fact.market.v','fact.market.sub');
-  setSub('fact.art.v','fact.art.sub');
-  document.querySelector('[data-i18n="fact.supply.sub"]').textContent = t('fact.supply.sub');
   document.querySelectorAll('.langs button').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.lang === next)));
   try{ localStorage.setItem('uday.lang', next); }catch(e){}
@@ -1426,14 +1420,6 @@ function applyLang(next){
   if(typeof renderRoad === 'function') renderRoad();
 }
 
-function setSub(valKey, subKey){
-  const host = document.querySelector('[data-i18n="' + valKey + '"]');
-  if(!host) return;
-  host.textContent = t(valKey);
-  const small = document.createElement('small');
-  small.textContent = t(subKey);
-  host.appendChild(small);
-}
 
 /* ─────────────────────────────────────────────────────────────────────
    art layers
@@ -2992,7 +2978,8 @@ if(IS_PERSONAL){
   document.querySelector('.brand').href = 'https://uday.gift/';
   // the personal page IS the calendar: fold the marketing page away
   document.querySelector('.hero').hidden = true;
-  ['story','forge','styles','chain'].forEach(id => {
+  document.querySelector('.proofbar').hidden = true;
+  ['story','forge'].forEach(id => {
     const s = document.getElementById(id); if(s) s.hidden = true;
   });
   // the holder calendar leads; the global wall waits behind a toggle
@@ -3048,7 +3035,8 @@ document.querySelectorAll('.langs button').forEach(b =>
 
 document.getElementById('btn-copy').addEventListener('click', async (e) => {
   try{
-    await navigator.clipboard.writeText(document.getElementById('addr').textContent.trim());
+    const el = document.getElementById('addr');
+    await navigator.clipboard.writeText(el.dataset.addr || el.textContent.trim());
     e.target.textContent = t('fact.copied');
     setTimeout(() => { e.target.textContent = t('fact.copy'); }, 1600);
   }catch(err){ /* clipboard blocked — the address is selectable on the page */ }
