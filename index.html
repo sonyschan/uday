@@ -1166,6 +1166,8 @@ const I18N = {
     'gift.modal.p2':'The gift grows and changes with the uDAY ecosystem — today it is USDG; tomorrow it may be something more.',
     'gift.modal.connect':'CONNECT WALLET TO CLAIM',
     'gift.snap':'The day’s list freezes at 00:00 (UTC+8). A piece revealed or moved after that claims when its day comes around again.',
+    'gift.preparing':'Today’s gift is still being wrapped — the list froze at 00:00 (UTC+8). Come back in a little while to claim.',
+    'gift.preparing.you':'You hold {day} — once the gift is wrapped, it is yours to claim right here.',
     'gift.modal.nothave':'This day is not in your wallet yet.',
     'gift.modal.late':'Your {day} arrived after today’s 00:00 list froze — it missed this year’s gift, not you. When {day} comes around next year, it will be waiting.',
     'gift.connect':'A {n} USDG gift is waiting for this address — connect the wallet to claim it.',
@@ -1276,6 +1278,8 @@ const I18N = {
     'gift.modal.p2':'礼物会随 uDAY 生态一起成长变化——今天是 USDG，明天也许更有趣。',
     'gift.modal.connect':'连接钱包领取',
     'gift.snap':'当日名单在 00:00（UTC+8）定格。此后才揭晓或转手的日期，等它的日子再次到来时领取。',
+    'gift.preparing':'今日礼物正在打包——名单已在 00:00（UTC+8）定格。稍后回来即可领取。',
+    'gift.preparing.you':'你持有 {day}——礼物打包好后，回到这里领取就行。',
     'gift.modal.nothave':'这一天还不在你的钱包里。',
     'gift.modal.late':'你的 {day} 在今日 00:00 名单定格之后才到来——错过的是今年的礼物，不是你。明年 {day} 再来时，它会等你。',
     'gift.connect':'这个地址有一份 {n} USDG 的礼物待领——连接钱包即可领取。',
@@ -1753,8 +1757,10 @@ function renderDayStatus(){
       { date: '<b>' + date + '</b>', n: entries.length, id: first.id,
         owner: '<b>' + shortAddr(first.owner) + '</b>' });
     // On the gift day itself the CTA becomes the gift: every visitor learns
-    // the perk, and the modal routes each of them (connect / claim / offer).
-    if(GIFT_DATA && key === giftToday().key){
+    // the perk, and the modal routes each of them (connect / claim / offer /
+    // still-wrapping). The claim IS the hook, so it never falls back to
+    // "bring it home" just because the day's root is not on-chain yet.
+    if(key === giftToday().key){
       btn.textContent = t('gift.cta');
       btn.dataset.gift = '1';
       btn.removeAttribute('href');
@@ -2409,7 +2415,6 @@ async function renderGift(){
   const { key, dayId } = giftToday();
   const line = document.getElementById('gift-line');
   const btn  = document.getElementById('gift-claim');
-  if(!g){ card.hidden = true; return; }
   document.getElementById('gift-title').textContent = t('gift.title');
   card.hidden = false;
   btn.hidden = true;
@@ -2417,6 +2422,14 @@ async function renderGift(){
   document.getElementById('gift-share').hidden = true;
   const id = mineIdentity();
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  if(!g){
+    // the day's root is not on-chain yet — say so instead of hiding the card
+    const holdsToday = !!(id && DAYS && DAYS[key] && DAYS[key].some(e => e.owner === id));
+    line.textContent = holdsToday
+      ? t('gift.preparing.you', { day: dayTxt })
+      : t('gift.preparing');
+    return;
+  }
   const total = String(Math.floor(g.total / 1e6));
   const entry = id ? g.claims[id] : null;
   if(!entry){
@@ -2501,14 +2514,15 @@ function closeGiftModal(){
 async function openGiftModal(){
   ensureGiftModal();
   const g = await loadGiftData();
-  if(!g) return;
   const { key, dayId } = giftToday();
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
-  const total = String(Math.floor(g.total / 1e6));
   gmTitle.textContent = t('gift.modal.title', { day: dayTxt });
-  gmAmount.textContent = total + ' USDG';
+  // no root on-chain yet (the day's list froze at 00:00 but the gift is
+  // still being wrapped) — the perk still gets its full pitch, just no number
+  gmAmount.hidden = !g;
+  if(g) gmAmount.textContent = String(Math.floor(g.total / 1e6)) + ' USDG';
   gmBody.textContent = '';
-  [t('gift.modal.p1', { day: dayTxt, total }), t('gift.modal.p2')].forEach(txt => {
+  [t('gift.modal.p1', { day: dayTxt }), t('gift.modal.p2')].forEach(txt => {
     const p = document.createElement('p'); p.textContent = txt; gmBody.appendChild(p);
   });
   // snapshot semantics: the list froze at 00:00 — a piece revealed after
@@ -2519,9 +2533,15 @@ async function openGiftModal(){
   gmBody.appendChild(snap);
   gmState.textContent = '';
   const id = mineIdentity();
-  const entry = id ? g.claims[id] : null;
+  const entry = (g && id) ? g.claims[id] : null;
   if(!id || (!mineWallet && entry)){
     // anonymous (or an address-identity that cannot sign): guide to connect
+    if(!g){
+      const s = document.createElement('p');
+      s.className = 'giftmodal__note';
+      s.textContent = t('gift.preparing');
+      gmState.appendChild(s);
+    }
     if(mineEth){
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'btn btn--gold';
@@ -2577,15 +2597,18 @@ async function openGiftModal(){
       gmState.appendChild(b);
     }
   }else{
-    // Connected but not in today's list. Two very different people land
-    // here: a true non-holder — and someone whose piece revealed or arrived
-    // AFTER the 00:00 snapshot. The index knows the difference; telling a
-    // real holder "this day is not in your wallet" would be a slap.
+    // Connected but no claim entry. Three very different people land here:
+    // a true non-holder; someone whose piece revealed or arrived AFTER the
+    // 00:00 snapshot (only when a root exists to be late for); and a holder
+    // whose gift simply is not posted yet. The index knows who holds what;
+    // telling a real holder "this day is not in your wallet" would be a slap.
     const holdsToday = !!(DAYS && DAYS[key] && DAYS[key].some(e => e.owner === id));
     const s = document.createElement('p');
     s.className = 'giftmodal__note';
-    s.textContent = holdsToday ? t('gift.modal.late', { day: dayTxt })
-                               : t('gift.modal.nothave');
+    s.textContent = holdsToday
+      ? (g ? t('gift.modal.late', { day: dayTxt })
+           : t('gift.preparing.you', { day: dayTxt }))
+      : t('gift.modal.nothave');
     gmState.appendChild(s);
     if(!holdsToday){
       const list = (DAYS && DAYS[key]) ? DAYS[key].slice().sort((a, b) => a.id - b.id) : [];
