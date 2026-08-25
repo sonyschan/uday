@@ -18,9 +18,11 @@ __pycache__/
 out/
 cache/
 
-# local-only: strategy memory and gift operations (kept off the public repo)
+# local-only: strategy memory and owner-keystore scripts (kept off the public
+# repo). build_gift_root.py is COMMITTED since the GHA gift automation — its
+# formula was already public through every data/gift/*.json anyway.
 CLAUDE.md
-tools/build_gift_root.py
 tools/post-gift.sh
 tools/deploy-gift.sh
 tools/deploy-dayexit.sh
+.playwright-mcp/
