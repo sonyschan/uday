@@ -585,6 +585,13 @@ section{ position:relative; }
 }
 .giftcard__line{ margin:8px 0 0; font-size:var(--fs-sub); color:#e6dbc2; max-width:60ch; }
 #gift-claim{ margin-top:12px; }
+/* the countdown to the holder's own next payday — a quiet footer under the
+   card, separated by a rule so it reads as a promise, not as today's news */
+.giftcard__next{
+  margin:14px 0 0; padding-top:12px; font-size:var(--fs-sub); color:var(--muted);
+  border-top:1px solid rgba(232,185,63,.22);
+}
+.giftcard__next b{ color:var(--gold); font-family:var(--display); }
 /* sealed pieces as a mosaic of "?" tiles — jewel tints rotate so the strip
    reads as stained glass still waiting for light; each tile opens uToken */
 .mine__sealedwall{ display:flex; flex-wrap:wrap; gap:6px; margin-top:18px; }
@@ -967,6 +974,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <button type="button" class="btn btn--gold" id="gift-claim" hidden></button>
           <a class="btn btn--gold" id="gift-share" target="_blank" rel="noopener" hidden></a>
           <a class="btn btn--ghost" id="gift-tx" target="_blank" rel="noopener" hidden></a>
+          <p class="giftcard__next" id="gift-next" hidden></p>
         </div>
         <div class="yearwall__stats" id="mine-stats"></div>
         <p class="mine__empty" id="mine-empty" hidden></p>
@@ -1166,6 +1174,8 @@ const I18N = {
     'gift.modal.p2':'The gift grows and changes with the uDAY ecosystem — today it is USDG; tomorrow it may be something more.',
     'gift.modal.connect':'CONNECT WALLET TO CLAIM',
     'gift.snap':'The day’s list freezes at 00:00 (UTC+8). A piece revealed or moved after that claims when its day comes around again.',
+    'gift.next':'Your next gift arrives in {n} days — {day}.',
+    'gift.next.tomorrow':'Your next gift arrives tomorrow — {day}.',
     'gift.preparing':'Today’s gift is still being wrapped — the list froze at 00:00 (UTC+8). Come back in a little while to claim.',
     'gift.preparing.you':'You hold {day} — once the gift is wrapped, it is yours to claim right here.',
     'gift.modal.nothave':'This day is not in your wallet yet.',
@@ -1278,6 +1288,8 @@ const I18N = {
     'gift.modal.p2':'礼物会随 uDAY 生态一起成长变化——今天是 USDG，明天也许更有趣。',
     'gift.modal.connect':'连接钱包领取',
     'gift.snap':'当日名单在 00:00（UTC+8）定格。此后才揭晓或转手的日期，等它的日子再次到来时领取。',
+    'gift.next':'你的下一份礼物在 {n} 天后 · {day}。',
+    'gift.next.tomorrow':'你的下一份礼物就在明天 · {day}。',
     'gift.preparing':'今日礼物正在打包——名单已在 00:00（UTC+8）定格。稍后回来即可领取。',
     'gift.preparing.you':'你持有 {day}——礼物打包好后，回到这里领取就行。',
     'gift.modal.nothave':'这一天还不在你的钱包里。',
@@ -2372,6 +2384,41 @@ function giftToday(){
   return { year: y, key: pad2(m) + '-' + pad2(d), dayId: y * 10000 + m * 100 + d };
 }
 
+/// The holder's next payday: the soonest day they hold that has not arrived
+/// yet, wrapping into next year — a calendar always comes back around. Turns
+/// "some day this pays" into a date you can wait for. Impossible dates
+/// (02-30 and friends) are skipped: they never actually arrive. So is 02-29
+/// in a common year — Date.UTC would silently roll it to March 1.
+function nextGiftDay(id){
+  if(!DAYS || !id) return null;
+  const u = new Date(Date.now() + 8 * 3600 * 1000);
+  const today = Date.UTC(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+  let best = null;
+  for(const k in DAYS){
+    if(!isRealDate(k)) continue;
+    if(!DAYS[k].some(e => e.owner === id)) continue;
+    const m = +k.slice(0, 2), d = +k.slice(3);
+    for(let y = u.getUTCFullYear(); y <= u.getUTCFullYear() + 4; y++){
+      const ts = Date.UTC(y, m - 1, d);
+      if(new Date(ts).getUTCMonth() !== m - 1) continue;   // Feb 29, common year
+      if(ts <= today) continue;
+      const days = Math.round((ts - today) / 86400000);
+      if(!best || days < best.days) best = { key: k, days: days, m: m, d: d };
+      break;
+    }
+  }
+  return best;
+}
+function renderNextGift(id){
+  const el = document.getElementById('gift-next');
+  const n = nextGiftDay(id);
+  if(!n){ el.hidden = true; return; }
+  const day = '<b>' + dayLabel(n.m, n.d) + '</b>';
+  el.innerHTML = n.days === 1 ? t('gift.next.tomorrow', { day: day })
+                              : t('gift.next', { n: n.days, day: day });
+  el.hidden = false;
+}
+
 let GIFT_DATA;                        // undefined = not loaded yet, false = none today
 async function loadGiftData(){
   if(GIFT_DATA !== undefined) return GIFT_DATA;
@@ -2422,6 +2469,8 @@ async function renderGift(){
   document.getElementById('gift-share').hidden = true;
   const id = mineIdentity();
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  // every branch below ends with the same promise: when your next day comes
+  renderNextGift(id);
   if(!g){
     // the day's root is not on-chain yet — say so instead of hiding the card
     const holdsToday = !!(id && DAYS && DAYS[key] && DAYS[key].some(e => e.owner === id));
