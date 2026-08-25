@@ -26,3 +26,6 @@ tools/post-gift.sh
 tools/deploy-gift.sh
 tools/deploy-dayexit.sh
 .playwright-mcp/
+
+# the daily X card is regenerated every run; it is output, not source
+data/x-card.png

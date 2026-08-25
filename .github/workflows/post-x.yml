@@ -1,0 +1,51 @@
+# Posts the day's uDAY card to @udaygift.
+#
+# Runs after post-gift so the day's pot is already on-chain and its proof file
+# committed — the post quotes the frozen numbers, not the moving index.
+#
+# The card is the real best-dressed surviving piece of that date, rebuilt in
+# the runner from data/art-cache.json. Nothing here needs a server: it is a
+# scheduled, stateless outbound call, which is what CI is.
+#
+# Cost note: the post carries NO URL on purpose — X bills $0.200 for a post
+# containing a link against $0.015 without one, and ranks link posts lower.
+# uday.gift is painted into the image and lives in the profile bio.
+#
+# Until the four X_* secrets exist the script prints and exits 0, so this
+# workflow stays green rather than failing red every morning.
+#
+# NOTE: this file cannot be pushed by Claude Code (its token lacks the
+# `workflow` OAuth scope) — the owner pushes it.
+name: post-x
+on:
+  schedule:
+    - cron: '20 16 * * *'   # 00:20 UTC+8, after post-gift's 00:05
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: post-x
+  cancel-in-progress: false
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow requests-oauthlib
+      - name: Compose and post the day's card
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+        run: python3 tools/x_daily_post.py
+      - name: Keep the card as a run artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uday-card
+          path: data/x-card.png
+          retention-days: 7
