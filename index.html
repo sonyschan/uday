@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>uDAY — Onchain Days</title>
-<meta name="description" content="Some days are just dates. Some become part of your story. uDAY turns the days that matter into onchain pixel art, permanently crafted on Robinhood Chain.">
+<meta name="description" content="A date. An artwork. A gift. uDAY turns the days that matter into onchain art on Robinhood Chain — and when the calendar reaches your date, its holders claim that day’s gift.">
 <meta property="og:title" content="uDAY — Onchain Days">
-<meta property="og:description" content="Some days are just dates. Some become part of your story. Now they can live onchain.">
+<meta property="og:description" content="Make your days rewarding. A date. An artwork. A gift — every year, on your day.">
 <meta property="og:url" content="https://uday.gift/">
 <meta property="og:image" content="https://uday.gift/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -660,6 +660,9 @@ section{ position:relative; }
 }
 html[lang="zh"] .story__quote{ font-style:normal; font-weight:500; }
 .story__body p:last-child{ margin-bottom:0; }
+/* the promise both acquisition channels make: the only paragraph in the
+   story that states a mechanism, so it is the only one wearing gold */
+.story__gift{ color:var(--gold); }
 .story__body .drop::first-letter{
   font-family:var(--display); font-size:2.9em; line-height:.82;
   float:left; padding:6px 12px 0 0; color:var(--gold);
@@ -929,6 +932,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         <div class="story__body">
           <p class="drop" data-i18n="story.p1">Now they can live onchain. uDAY turns your days — and the days of people you care about — into onchain art assets, each one permanently crafted with its own provenance.</p>
           <p data-i18n="story.p2">And they are not static. Their appearance can be dynamically regenerated through token trades.</p>
+          <p class="story__gift" data-i18n="story.gift">And your day gives back. When the calendar reaches your date, its holders claim that day’s gift at uday.gift — every year, on your day.</p>
           <p data-i18n="story.p3">Keep one for yourself. Send one to someone who matters. Each uDAY represents a specific day.</p>
         </div>
       </div>
@@ -1144,7 +1148,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
 const I18N = {
   en: {
     'hero.kicker':'Onchain art on Robinhood Chain',
-    'hero.lede':'Some days are just dates. Some become part of your story.',
+    'hero.lede':'Some days are just dates. Some become part of your story. And when the calendar comes back around, your day gives back.',
     'cta.year':'SEE WHICH DAYS ARE LIT',
     'pick.q':'Which day is yours?',
     'status.taken':'{date} has been born — {n} of them exist. The earliest, #{id}, lives in {owner}\u2019s wallet.',
@@ -1232,6 +1236,7 @@ const I18N = {
     'story.quote':'A birthday. An anniversary. Or a day that changed who you are.',
     'story.p1':'Now they can live onchain. uDAY turns your days — and the days of people you care about — into onchain art assets, each one permanently crafted with its own provenance.',
     'story.p2':'And they are not static. Their appearance can be dynamically regenerated through token trades.',
+    'story.gift':'And your day gives back. When the calendar reaches your date, its holders claim that day’s gift at uday.gift — every year, on your day.',
     'story.p3':'Keep one for yourself. Send one to someone who matters. Each uDAY represents a specific day.',
     'forge.kicker':'The composer',
     'forge.title':'Four layers, two of them optional',
@@ -1258,7 +1263,7 @@ const I18N = {
   },
   zh: {
     'hero.kicker':'Robinhood Chain 上的链上艺术',
-    'hero.lede':'有些日子只是日期。有些日子成为你的一部分。',
+    'hero.lede':'有些日子只是日期。有些日子成为你的一部分。而当日历再次走到那一天，你的日子会回报你。',
     'cta.year':'看看哪些日子亮了',
     'pick.q':'哪一天是你的？',
     'status.taken':'{date}已经诞生——共 {n} 枚。最早的 #{id} 在 {owner} 的钱包里。',
@@ -1346,6 +1351,7 @@ const I18N = {
     'story.quote':'一个生日。一个纪念日。或是那个改变了你的日子。',
     'story.p1':'现在它们可以活在链上。uDAY 把你的日子，以及你在乎的人的日子，变成链上艺术资产——每一件都带着自己的来历，永久铸刻于链。',
     'story.p2':'而且它们不是静止的。外观会随着代币交易动态重新生成。',
+    'story.gift':'而且你的日子会回报你。当现实的日历走到那一天，持有它的人就能领取当天的礼物——每一年，都在你的那一天。',
     'story.p3':'留一个给自己。送一个给重要的人。每一枚 uDAY 都代表着特定的一天。',
     'forge.kicker':'合成器',
     'forge.title':'四个图层，其中两层可有可无',
