@@ -649,6 +649,8 @@ section{ position:relative; }
 /* the styles gallery lost its own heading when it moved inside the composer;
    this one line introduces it without opening a second band */
 .band__sub{ max-width:64ch; margin:clamp(38px,4.4vw,62px) 0 20px; color:#c6bba3; }
+.forge__open{ margin-top:clamp(30px,3.4vw,46px); }
+#forge-panel[hidden]{ display:none; }
 
 /* ─── story ─────────────────────────────────────────────────────────── */
 .story{
@@ -924,7 +926,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
              numbers live with the year wall; the mint/offer CTA is the day
              status's answer. This single quiet link is the bridge down. -->
         <div class="hero__cta">
-          <a class="btn btn--ghost" href="#year" data-i18n="cta.year">SEE WHICH DAYS ARE LIT</a>
+          <a class="btn btn--ghost" href="#year" data-i18n="cta.year">FIND YOUR DAY</a>
         </div>
       </div>
       <div class="stage">
@@ -1034,6 +1036,23 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
     </div>
   </section>
 
+  <!-- ── roadmap: milestones unlock the story ─────────────────────── -->
+  <section class="band" id="roadmap">
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="road.kicker">The road</p>
+        <h2 data-i18n="road.title">Milestones unlock the story</h2>
+        <p data-i18n="road.blurb">Every milestone the collection reaches unlocks the next chapter of uDAY. Two are already history.</p>
+      </div>
+      <div class="road__scroll rise">
+        <ol class="roadh" id="road-list">
+          <div class="roadh__track" aria-hidden="true"><i class="roadh__fill" id="road-fill"></i></div>
+        </ol>
+      </div>
+    </div>
+  </section>
+
   <!-- ── forge ────────────────────────────────────────────────────── -->
   <section class="band" id="forge">
     <div class="shell">
@@ -1044,7 +1063,16 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         <p data-i18n="forge.blurb">Every uDAY is a plate, a frame, a month and a date, painted one on top of the next. Pick a day and watch it assemble — the same order the contract uses.</p>
       </div>
 
-      <div class="forge rise">
+      <!-- the seven styles lead: they are the art. The composer is a tool,
+           and a tool that duplicates the hero's day picker does not deserve
+           1.2 screens of the page before anyone has asked for it. -->
+      <p class="band__sub rise" data-i18n="styles.blurb">Each style carries its own plate and its own frame. Hover a plate to bring its frame down over it.</p>
+      <div class="gallery rise" id="gallery"></div>
+      <div class="forge__open rise">
+        <button type="button" class="btn btn--gold" id="btn-forge-open" data-i18n="forge.open">BUILD YOUR OWN</button>
+      </div>
+
+      <div class="forge" id="forge-panel" hidden>
         <div class="forge__viewer">
           <div class="forge__canvas-wrap">
             <canvas id="forge-canvas" width="96" height="96" role="img" aria-label="Composed uDAY preview"></canvas>
@@ -1093,34 +1121,11 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         </div>
       </div>
 
-      <!-- the seven styles were a section of their own: one heading and 36
-           words, sitting on the page's downslope. Same art, no new heading. -->
-      <p class="band__sub rise" data-i18n="styles.blurb">Each style carries its own plate and its own frame. Hover a plate to bring its frame down over it.</p>
-      <div class="gallery rise" id="gallery"></div>
     </div>
   </section>
 
-  <!-- ── the year ─────────────────────────────────────────────────── -->
-  <!-- ── styles ───────────────────────────────────────────────────── -->
 
-  <!-- ── roadmap: milestones unlock the story ─────────────────────── -->
-  <section class="band" id="roadmap">
-    <div class="shell">
-      <hr class="rule rule--gem">
-      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
-        <p class="kicker" data-i18n="road.kicker">The road</p>
-        <h2 data-i18n="road.title">Milestones unlock the story</h2>
-        <p data-i18n="road.blurb">Every milestone the collection reaches unlocks the next chapter of uDAY. Two are already history.</p>
-      </div>
-      <div class="road__scroll rise">
-        <ol class="roadh" id="road-list">
-          <div class="roadh__track" aria-hidden="true"><i class="roadh__fill" id="road-fill"></i></div>
-        </ol>
-      </div>
-    </div>
-  </section>
 
-  <!-- ── onchain ──────────────────────────────────────────────────── -->
 
 </main>
 
@@ -1148,7 +1153,7 @@ const I18N = {
   en: {
     'hero.kicker':'Onchain art on Robinhood Chain',
     'hero.lede':'Some days are just dates. Some become part of your story. And when the calendar comes back around, your day gives back.',
-    'cta.year':'SEE WHICH DAYS ARE LIT',
+    'cta.year':'FIND YOUR DAY',
     'pick.q':'Which day is yours?',
     'status.taken':'{date} has been born — {n} of them exist. The earliest, #{id}, lives in {owner}\u2019s wallet.',
     'status.taken.one':'{date} has been born. #{id} lives in {owner}\u2019s wallet.',
@@ -1244,6 +1249,7 @@ const I18N = {
     'forge.legend':'PLATE / FRAME / MONTH / DATE',
     'field.plate':'Plate (80% of pieces)','field.frame':'Frame (20% of pieces)','style.none':'NONE','field.month':'Month','field.date':'Date',
     'field.mplace':'Month placement','field.dplace':'Date placement',
+    'forge.open':'BUILD YOUR OWN','forge.close':'HIDE THE COMPOSER',
     'forge.download':'DOWNLOAD PNG','forge.random':'SURPRISE ME',
     'forge.note':'ON-CHAIN 96 is exactly what the contract renders, exported at 768x768. HD 300 is the same four layers redrawn at higher density, exported at 1200x1200. Both are pixel-exact integer scales.',
     'place.corner':'CORNER','place.center':'CENTER',
@@ -1264,7 +1270,7 @@ const I18N = {
   zh: {
     'hero.kicker':'Robinhood Chain 上的链上艺术',
     'hero.lede':'有些日子只是日期。有些日子成为你的一部分。而当日历再次走到那一天，你的日子会回报你。',
-    'cta.year':'看看哪些日子亮了',
+    'cta.year':'找到你的那一天',
     'pick.q':'哪一天是你的？',
     'status.taken':'{date}已经诞生——共 {n} 枚。最早的 #{id} 在 {owner} 的钱包里。',
     'status.taken.one':'{date}已经诞生。#{id} 在 {owner} 的钱包里。',
@@ -1360,6 +1366,7 @@ const I18N = {
     'forge.legend':'背板 / 外框 / 月份 / 日期',
     'field.plate':'背板（80% 的作品有）','field.frame':'外框（20% 的作品有）','style.none':'无','field.month':'月份','field.date':'日期',
     'field.mplace':'月份位置','field.dplace':'日期位置',
+    'forge.open':'自己拼一个','forge.close':'收起拼图台',
     'forge.download':'下载 PNG','forge.random':'随机一天',
     'forge.note':'「链上原版 96」就是合约实际绘制的内容，输出 768x768。「高清 300」是同样四层以更高密度重绘，输出 1200x1200。两者都是整数倍放大，像素精准。',
     'place.corner':'角落','place.center':'居中',
@@ -1417,6 +1424,8 @@ function applyLang(next){
   }
   if(typeof mineWalletUI === 'function') mineWalletUI();
   if(typeof yearLinkLabel === 'function') yearLinkLabel();
+  const fo = document.getElementById('btn-forge-open'), fp = document.getElementById('forge-panel');
+  if(fo && fp && !fp.hidden) fo.textContent = t('forge.close');
   if(typeof renderRoad === 'function') renderRoad();
 }
 
@@ -3032,6 +3041,19 @@ async function loadIndex(){
    ───────────────────────────────────────────────────────────────────── */
 document.querySelectorAll('.langs button').forEach(b =>
   b.addEventListener('click', () => applyLang(b.dataset.lang)));
+
+// The composer opens on request. Nothing inside it needs a first paint to
+// work — the chips and the 96x96 canvas were built at load, hidden or not.
+document.getElementById('btn-forge-open').addEventListener('click', (e) => {
+  const panel = document.getElementById('forge-panel');
+  const open = panel.hidden;
+  panel.hidden = !open;
+  e.currentTarget.textContent = t(open ? 'forge.close' : 'forge.open');
+  if(open){
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    va('event', { name: 'forge_open' });
+  }
+});
 
 document.getElementById('btn-copy').addEventListener('click', async (e) => {
   try{
