@@ -1211,6 +1211,8 @@ const I18N = {
     'gift.snap':'The day’s list freezes at 00:00 (UTC+8). A piece revealed or moved after that claims when its day comes around again.',
     'gift.next':'Your next gift arrives in {n} days — {day}.',
     'gift.next.tomorrow':'Your next gift arrives tomorrow — {day}.',
+    'gift.late.title':'STILL YOURS · {day}',
+    'gift.late.line':'You did not claim {day} on the day itself — {n} USDG is still waiting, for about {h} more hours. Take it before the window closes.',
     'gift.preparing':'Today’s gift is still being wrapped — the list froze at 00:00 (UTC+8). Come back in a little while to claim.',
     'gift.preparing.you':'You hold {day} — once the gift is wrapped, it is yours to claim right here.',
     'gift.modal.nothave':'This day is not in your wallet yet.',
@@ -1330,6 +1332,8 @@ const I18N = {
     'gift.snap':'当日名单在 00:00（UTC+8）定格。此后才揭晓或转手的日期，等它的日子再次到来时领取。',
     'gift.next':'你的下一份礼物在 {n} 天后 · {day}。',
     'gift.next.tomorrow':'你的下一份礼物就在明天 · {day}。',
+    'gift.late.title':'仍然属于你 · {day}',
+    'gift.late.line':'{day} 当天你没有领取——{n} USDG 还等着你，大约还有 {h} 小时。趁窗口关上之前拿走它。',
     'gift.preparing':'今日礼物正在打包——名单已在 00:00（UTC+8）定格。稍后回来即可领取。',
     'gift.preparing.you':'你持有 {day}——礼物打包好后，回到这里领取就行。',
     'gift.modal.nothave':'这一天还不在你的钱包里。',
@@ -2499,12 +2503,71 @@ let GIFT_DATA;                        // undefined = not loaded yet, false = non
 async function loadGiftData(){
   if(GIFT_DATA !== undefined) return GIFT_DATA;
   const { year, key } = giftToday();
-  GIFT_DATA = false;
-  try{
-    const r = await fetch('data/gift/' + year + '-' + key + '.json', { cache: 'no-cache' });
-    if(r.ok) GIFT_DATA = await r.json();
-  }catch(e){}
+  GIFT_DATA = await loadGiftFile(year, key);
   return GIFT_DATA;
+}
+
+const GIFT_FILES = {};
+async function loadGiftFile(year, key){
+  const k = year + '-' + key;
+  if(k in GIFT_FILES) return GIFT_FILES[k];
+  GIFT_FILES[k] = false;
+  try{
+    const r = await fetch('data/gift/' + k + '.json', { cache: 'no-cache' });
+    if(r.ok) GIFT_FILES[k] = await r.json();
+  }catch(e){}
+  return GIFT_FILES[k];
+}
+
+/// A gift day N days before today, in the same UTC+8 calendar the roots use.
+function giftDayAt(back){
+  const u = new Date(Date.now() + 8 * 3600 * 1000 - back * 86400000);
+  const y = u.getUTCFullYear(), m = u.getUTCMonth() + 1, d = u.getUTCDate();
+  return { year: y, key: pad2(m) + '-' + pad2(d), dayId: y * 10000 + m * 100 + d };
+}
+
+const GIFT_SEL_ROOTS = '081dc681', GIFT_SEL_WINDOW = 'c5d37ae1';
+
+/// Seconds left to claim `dayId`, or 0 when the window has closed or the root
+/// was never posted. The contract has always allowed 48 hours; the site only
+/// ever looked at today, which threw that grace away and left a holder who
+/// missed their own day with no way to reach a gift that was still open.
+async function giftWindowLeft(dayId){
+  try{
+    const [rootRes, winRes] = await Promise.all([
+      mineEth.request({ method: 'eth_call', params: [{
+        to: GIFT_ADDR, data: '0x' + GIFT_SEL_ROOTS + pad32(dayId.toString(16)) }, 'latest'] }),
+      mineEth.request({ method: 'eth_call', params: [{
+        to: GIFT_ADDR, data: '0x' + GIFT_SEL_WINDOW }, 'latest'] }),
+    ]);
+    if(!rootRes || rootRes === '0x') return 0;
+    const body = rootRes.slice(2);
+    if(/^0+$/.test(body.slice(0, 64))) return 0;             // no root posted
+    const postedAt = parseInt(body.slice(64, 128), 16);
+    const win = parseInt((winRes || '0x0').slice(2), 16);
+    const left = postedAt + win - Math.floor(Date.now() / 1000);
+    return left > 0 ? left : 0;
+  }catch(e){ return 0; }
+}
+
+/// Today first, then the days behind it that are still inside their window.
+/// Returns the one the wallet can still claim, preferring the one that
+/// expires soonest — an older gift is the urgent one, not today's.
+async function pendingGift(id){
+  if(!id) return null;
+  const found = [];
+  for(let back = 0; back <= 2; back++){
+    const d = giftDayAt(back);
+    const g = await loadGiftFile(d.year, d.key);
+    if(!g || !g.claims || !g.claims[id]) continue;
+    if(await giftClaimedCheck(d.dayId, id)) continue;
+    const left = back === 0 ? Infinity : await giftWindowLeft(d.dayId);
+    if(left <= 0) continue;
+    found.push({ day: d, entry: g.claims[id], gift: g, left: left, back: back });
+  }
+  if(!found.length) return null;
+  found.sort((a, b) => a.left - b.left);
+  return found[0];
 }
 async function giftClaimedCheck(dayId, id){
   try{
@@ -2547,6 +2610,46 @@ async function renderGift(){
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
   // every branch below ends with the same promise: when your next day comes
   renderNextGift(id);
+
+  // A gift the wallet missed but can still take comes FIRST — it expires, and
+  // today's does not for many hours yet. Without this the site only ever
+  // showed today and quietly wasted the contract's 48-hour grace.
+  if(id && mineWallet){
+    const late = await pendingGift(id);
+    if(late && late.back > 0){
+      const amt = String(Math.floor(late.entry.amount / 1e6));
+      const lateTxt = dayLabel(+late.day.key.slice(0, 2), +late.day.key.slice(3));
+      const hrs = Math.max(1, Math.round(late.left / 3600));
+      document.getElementById('gift-title').textContent = t('gift.late.title', { day: lateTxt });
+      line.textContent = t('gift.late.line', { day: lateTxt, n: amt, h: hrs });
+      btn.hidden = false;
+      btn.disabled = false;
+      btn.textContent = t('gift.btn', { n: amt });
+      btn.onclick = async () => {
+        if(giftBusy) return;
+        giftBusy = true; btn.disabled = true;
+        btn.textContent = t('gift.pending');
+        try{
+          const hash = await sendGiftClaim(late.day.dayId, id, late.entry);
+          document.getElementById('gift-title').textContent =
+            t('gift.modal.claimed.title', { day: lateTxt });
+          line.textContent = t('gift.bless', { day: lateTxt });
+          btn.hidden = true;
+          const sh = document.getElementById('gift-share');
+          sh.href = giftShareUrl(amt); sh.textContent = t('gift.share'); sh.hidden = false;
+          const txa = document.getElementById('gift-tx');
+          txa.href = GIFT_TX_URL(hash); txa.textContent = t('gift.tx'); txa.hidden = false;
+          va('event', { name: 'gift_claim', data: { day: late.day.key, late: 1 } });
+        }catch(e){
+          btn.textContent = t('gift.btn', { n: amt });
+          btn.disabled = false;
+        }
+        giftBusy = false;
+      };
+      return;
+    }
+  }
+
   if(!g){
     // the day's root is not on-chain yet — say so instead of hiding the card
     const holdsToday = !!(id && DAYS && DAYS[key] && DAYS[key].some(e => e.owner === id));
