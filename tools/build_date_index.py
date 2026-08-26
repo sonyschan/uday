@@ -85,11 +85,15 @@ INDEX_PATH = os.path.join(ROOT, "data", "date-index.json")
 LAYER_DIR  = os.path.join(ROOT, "assets", "layers")
 
 # ── JSON-RPC with retries (the public RPC flaps; a builder just retries) ──────
-def rpc(payload, tries=10):
+def rpc(payload, tries=10, urls=None):
+    """urls overrides the Robinhood endpoints — a community may gate on a
+    token that lives on another chain, and that balance is only readable
+    there."""
+    pool = urls or RPCS
     body = json.dumps(payload).encode()
     last = None
     for attempt in range(tries):
-        url = RPCS[attempt % len(RPCS)]
+        url = pool[attempt % len(pool)]
         try:
             req = urllib.request.Request(url, body, {"Content-Type": "application/json", **UA})
             with urlopen(req) as r:
@@ -104,15 +108,15 @@ def rpc(payload, tries=10):
     raise SystemExit(f"RPC dead after {tries} tries: {last}")
 
 
-def eth_call(to, data):
+def eth_call(to, data, urls=None):
     out = rpc({"jsonrpc": "2.0", "id": 1, "method": "eth_call",
-               "params": [{"to": to, "data": data}, "latest"]})
+               "params": [{"to": to, "data": data}, "latest"]}, urls=urls)
     if "error" in out:
         raise RuntimeError(out["error"])
     return out["result"]
 
 
-def eth_call_batch(calls):
+def eth_call_batch(calls, urls=None):
     """calls: [(to, data)] -> [result_hex|None], packed through ONE Multicall3
     aggregate3 eth_call — the public node rate-limits per REQUEST, so N reads
     must cost one request, not N. (JSON-RPC batching counted per sub-call and
@@ -132,7 +136,7 @@ def eth_call_batch(calls):
     for t in tuples:
         offs.append(u256(pos)); pos += len(t) // 2
     payload = SEL_AGG3 + u256(0x20) + u256(n) + "".join(offs) + "".join(tuples)
-    raw = eth_call(MULTICALL, "0x" + payload)
+    raw = eth_call(MULTICALL, "0x" + payload, urls=urls)   # canonical on every chain
     blob = bytes.fromhex(raw[2:])
     # ── decode (bool success, bytes returnData)[] ──
     arr = int.from_bytes(blob[0:32], "big")            # offset of array

@@ -31,7 +31,7 @@ contract UdayCommunityTest is Test {
     }
 
     function _make(uint256 min) internal returns (bytes32) {
-        return c.createCommunity("unipeg", "Unipeg", address(gate), min);
+        return c.createCommunity("unipeg", "Unipeg", uint32(block.chainid), address(gate), min);
     }
 
     // ── communities ───────────────────────────────────────────────────
@@ -54,11 +54,11 @@ contract UdayCommunityTest is Test {
     function testSlugIsUniqueAndLowercaseOnly() public {
         _make(1);
         vm.expectRevert(UdayCommunity.SlugTaken.selector);
-        c.createCommunity("unipeg", "Copy", address(gate), 1);
+        c.createCommunity("unipeg", "Copy", uint32(block.chainid), address(gate), 1);
         vm.expectRevert(UdayCommunity.BadSlug.selector);
-        c.createCommunity("Unipeg", "Caps", address(gate), 1);
+        c.createCommunity("Unipeg", "Caps", uint32(block.chainid), address(gate), 1);
         vm.expectRevert(UdayCommunity.BadSlug.selector);
-        c.createCommunity("uni peg", "Space", address(gate), 1);
+        c.createCommunity("uni peg", "Space", uint32(block.chainid), address(gate), 1);
     }
 
     /// The whole point of the design: nobody can rewrite the rules or evict
@@ -70,7 +70,7 @@ contract UdayCommunityTest is Test {
         vm.prank(alice);
         c.join(id);
 
-        (address token, uint256 min,,,,) = c.communities(id);
+        (, address token, uint256 min,,,,) = c.communities(id);
         assertEq(token, address(gate));
         assertEq(min, 5 ether);
 
@@ -201,9 +201,48 @@ contract UdayCommunityTest is Test {
 
     function testSlugIsReadableBack() public {
         bytes32 id = _make(1);
-        (,,,, string memory slug, string memory name) = c.communities(id);
+        (,,,,, string memory slug, string memory name) = c.communities(id);
         assertEq(slug, "unipeg");
         assertEq(name, "Unipeg");
+    }
+
+    /// An ERC-721 gate must work through the same code path: balanceOf has the
+    /// same selector and return type in both standards, which is the whole
+    /// reason one contract serves both.
+    function testErc721GateWorksUnchanged() public {
+        MockToken nft = new MockToken();          // balanceOf returns a count
+        bytes32 id = c.createCommunity("holders", "Holders", uint32(block.chainid), address(nft), 1);
+        vm.prank(alice);
+        vm.expectRevert(UdayCommunity.BelowThreshold.selector);
+        c.join(id);
+        nft.set(alice, 1);                        // one NFT, not 1e18 wei
+        vm.prank(alice);
+        c.join(id);
+        assertTrue(c.isMember(id, alice));
+    }
+
+    /// Rules are frozen forever, so a room whose gate cannot be called would be
+    /// broken forever and would burn its slug with it. The contract refuses.
+    function testUncallableGateIsRefused() public {
+        vm.expectRevert(UdayCommunity.TokenNotGateable.selector);
+        c.createCommunity("dead", "Dead", uint32(block.chainid), address(0xDEAD), 1);
+        assertEq(c.communityCount(), 0);          // the slug stays free
+    }
+
+    /// A token on another chain has no code here, so the contract cannot check
+    /// the gate and says so rather than pretending.
+    function testForeignChainCommunityIsJoinableButNotGatedOnchain() public {
+        address ethToken = 0x44b28991B167582F18BA0259e0173176ca125505;   // uPEG on mainnet
+        bytes32 id = c.createCommunity("upeg", "Unipeg", 1, ethToken, 1 ether);
+        assertFalse(c.gatedOnchain(id));
+        vm.prank(alice);
+        c.join(id);                               // recorded; the index enforces
+        assertTrue(c.isMember(id, alice));
+    }
+
+    function testSameChainCommunityIsGatedOnchain() public {
+        bytes32 id = _make(1 ether);
+        assertTrue(c.gatedOnchain(id));
     }
 
     function testJoinUnknownCommunityReverts() public {

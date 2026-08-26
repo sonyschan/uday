@@ -37,8 +37,9 @@ contract UdayCommunity {
     address public constant UDAY = 0x359211bb6b8CAbcE02DCBEc1c55B50f2EC884146;
 
     struct Community {
-        address token;        // gating token (phase 1: a uToken on this chain)
-        uint256 minBalance;   // wei of that token needed to join
+        uint32  chainId;      // where the gating token lives
+        address token;        // gating token: ERC-20 or ERC-721, both work
+        uint256 minBalance;   // raw units — wei for ERC-20, a count for ERC-721
         address creator;      // recorded for provenance only — grants nothing
         uint64  createdAt;
         string  slug;
@@ -58,7 +59,7 @@ contract UdayCommunity {
     mapping(bytes32 => address[]) private _seen;
     mapping(bytes32 => mapping(address => bool)) private _everSeen;
 
-    event CommunityCreated(bytes32 indexed id, address indexed token,
+    event CommunityCreated(bytes32 indexed id, uint32 chainId, address indexed token,
                            uint256 minBalance, address indexed creator, string slug, string name);
     event Joined(bytes32 indexed id, address indexed member);
     event Left(bytes32 indexed id, address indexed member);
@@ -66,6 +67,7 @@ contract UdayCommunity {
     event SpecialDayCleared(address indexed who, uint16 day);
 
     error SlugTaken();
+    error TokenNotGateable();
     error NoSuchCommunity();
     error BadSlug();
     error BelowThreshold();
@@ -79,7 +81,8 @@ contract UdayCommunity {
     // ── communities ───────────────────────────────────────────────────
     /// Anyone may create one. Its rules are frozen the moment it exists.
     function createCommunity(string calldata slug, string calldata name,
-                             address token, uint256 minBalance) external returns (bytes32 id) {
+                             uint32 chainId, address token, uint256 minBalance)
+                             external returns (bytes32 id) {
         bytes memory s = bytes(slug);
         if (s.length == 0 || s.length > 32) revert BadSlug();
         for (uint256 i = 0; i < s.length; i++) {
@@ -89,10 +92,15 @@ contract UdayCommunity {
         }
         id = keccak256(s);
         if (communities[id].token != address(0)) revert SlugTaken();
-        communities[id] = Community(token, minBalance, msg.sender,
+        // A room's rules can never be edited, so a room whose gate cannot be
+        // called is broken FOREVER and its slug is burned with it. For a token
+        // on this chain the contract refuses outright; for a foreign one only
+        // the creating client can check, so it must.
+        if (chainId == block.chainid && !_gateable(token)) revert TokenNotGateable();
+        communities[id] = Community(chainId, token, minBalance, msg.sender,
                                     uint64(block.timestamp), slug, name);
         _all.push(id);
-        emit CommunityCreated(id, token, minBalance, msg.sender, slug, name);
+        emit CommunityCreated(id, chainId, token, minBalance, msg.sender, slug, name);
     }
 
     function joinWith(bytes32 id, uint16 day) external {
@@ -106,7 +114,12 @@ contract UdayCommunity {
         Community memory c = communities[id];
         if (c.token == address(0)) revert NoSuchCommunity();
         if (isMember[id][msg.sender]) revert AlreadyMember();
-        if (IERC20Bal(c.token).balanceOf(msg.sender) < c.minBalance) revert BelowThreshold();
+        // Same chain: the gate is enforced here and nobody can fake it. Foreign
+        // chain: this contract cannot see that balance at all, so the join is
+        // recorded and the published index enforces the gate. The two are told
+        // apart by gatedOnchain(), and the page says which one applies.
+        if (c.chainId == block.chainid &&
+            IERC20Bal(c.token).balanceOf(msg.sender) < c.minBalance) revert BelowThreshold();
         isMember[id][msg.sender] = true;
         if (!_everSeen[id][msg.sender]) {
             _everSeen[id][msg.sender] = true;
@@ -159,6 +172,20 @@ contract UdayCommunity {
     }
 
     function daysOf(address who) external view returns (uint16[] memory) { return _days[who]; }
+
+    /// True when this contract itself enforces the community's gate.
+    function gatedOnchain(bytes32 id) external view returns (bool) {
+        return communities[id].chainId == block.chainid;
+    }
+
+    /// balanceOf(address) is identical in ERC-20 and ERC-721 — same selector,
+    /// same return type — which is why one gate serves both. ERC-1155 takes
+    /// two arguments and fails here, which is exactly the point.
+    function _gateable(address token) internal view returns (bool) {
+        (bool ok, bytes memory ret) =
+            token.staticcall(abi.encodeWithSelector(IERC20Bal.balanceOf.selector, address(this)));
+        return ok && ret.length >= 32;
+    }
 
     // ── enumeration, for the off-chain index ──────────────────────────
     function allCommunities() external view returns (bytes32[] memory) { return _all; }

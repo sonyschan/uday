@@ -18,7 +18,15 @@ usage: python3 tools/build_communities.py [--addr 0x...]
 import json, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build_date_index import eth_call, eth_call_batch, u256, ROOT  # noqa: E402
+from build_date_index import eth_call, eth_call_batch, u256, ROOT, rpc  # noqa: E402
+
+# A community may gate on a token that lives on another chain. That balance is
+# unreachable from Robinhood, so the contract records the join and the gate is
+# enforced HERE — which is why the page must say which mode a room is in.
+FOREIGN_RPC = {
+    1: os.environ.get("ETHEREUM_RPC_URL") or "https://ethereum-rpc.publicnode.com",
+}
+HOME_CHAIN = 4663
 
 OUT = os.path.join(ROOT, "data", "communities.json")
 INDEX = os.path.join(ROOT, "data", "date-index.json")
@@ -42,6 +50,35 @@ def contract_addr():
     if not a and os.path.exists(ADDR_FILE):
         a = open(ADDR_FILE).read().strip()
     return a.lower() if a else None
+
+
+def balances_of(chain_id, token, addrs):
+    """balanceOf for every candidate, on whichever chain the token lives.
+
+    ERC-20 and ERC-721 share this selector and return type, which is why one
+    gate serves both; the numbers just mean different things (wei vs a count)
+    and the threshold was stored in the same raw units.
+
+    An unreachable foreign chain returns {} — publishing nobody is correct,
+    because publishing a member whose gate we never checked is the one thing
+    the index must not do.
+    """
+    if not addrs:
+        return {}
+    calls = [(token, SEL_BALANCE + u256(int(a, 16))) for a in addrs]
+    urls = None
+    if chain_id != HOME_CHAIN:
+        u = FOREIGN_RPC.get(chain_id)
+        if not u:
+            print("  ! chain %d has no endpoint — that community publishes nobody" % chain_id)
+            return {}
+        urls = [u]
+    try:
+        res = eth_call_batch(calls, urls=urls)
+    except Exception as e:
+        print("  ! chain %d unreachable (%s) — that community publishes nobody" % (chain_id, e))
+        return {}
+    return {a: (dec_uint(r) if r else 0) for a, r in zip(addrs, res)}
 
 
 def dec_addr(word):     return "0x" + word[-40:]
@@ -90,31 +127,36 @@ def main():
             continue
         blob = meta[2:]
         w = words(meta)
-        token = dec_addr(w[0])
+        token = dec_addr(w[1])
+        chain = dec_uint(w[0])
         comm = {
             "id": "0x" + cid,
+            "chainId": chain,
             "token": token,
-            "minBalance": str(dec_uint(w[1])),
-            "creator": dec_addr(w[2]),
-            "createdAt": dec_uint(w[3]),
-            "slug": dec_str(blob, dec_uint(w[4])),
-            "name": dec_str(blob, dec_uint(w[5])),
+            # the page must say which mode a room is in: on its own chain the
+            # contract enforces the gate, elsewhere this file does
+            "gatedOnchain": chain == HOME_CHAIN,
+            "minBalance": str(dec_uint(w[2])),
+            "creator": dec_addr(w[3]),
+            "createdAt": dec_uint(w[4]),
+            "slug": dec_str(blob, dec_uint(w[5])),
+            "name": dec_str(blob, dec_uint(w[6])),
         }
         seen = [dec_addr(x) for x in dec_array(eth_call(C, SEL_SEEN + cid))]
         if seen:
             # one batch answers all three questions for every candidate
             checks = ([(C, SEL_ISMEMBER + cid + u256(int(a, 16))) for a in seen] +
-                      [(token, SEL_BALANCE + u256(int(a, 16))) for a in seen] +
                       [(C, SEL_DAYSOF + u256(int(a, 16))) for a in seen])
             res = eth_call_batch(checks)
             n = len(seen)
-            still, bals, dayss = res[:n], res[n:2 * n], res[2 * n:]
-            floor = dec_uint(w[1])
+            still, dayss = res[:n], res[n:2 * n]
+            bal = balances_of(comm["chainId"], token, seen)      # maybe another chain
+            floor = dec_uint(w[2])
             members = []
-            for a, m, b, d in zip(seen, still, bals, dayss):
+            for a, m, d in zip(seen, still, dayss):
                 if not m or dec_uint(m) != 1:
                     continue                                    # left
-                if not b or dec_uint(b) < floor:
+                if bal.get(a, 0) < floor:
                     continue                                    # sold below the gate
                 declared = [dec_uint(x) for x in dec_array(d or "0x")]
                 held = []
@@ -130,9 +172,10 @@ def main():
         else:
             comm["members"] = []
         out.append(comm)
-        print("  %-16s %d member%s  gate %s @ %s" %
+        print("  %-16s %d member%s  gate %s @ %s  chain %d%s" %
               (comm["slug"], len(comm["members"]), "" if len(comm["members"]) == 1 else "s",
-               comm["minBalance"], comm["token"][:10]))
+               comm["minBalance"], comm["token"][:10], comm["chainId"],
+               "" if comm["gatedOnchain"] else "  (gate checked here, not on chain)"))
 
     json.dump({"contract": C, "communities": out}, open(OUT, "w"), indent=1, sort_keys=True)
     print("wrote %s (%d communities)" % (OUT, len(out)))

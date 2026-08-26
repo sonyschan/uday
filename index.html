@@ -858,6 +858,7 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 .cnew__slug{ display:flex; align-items:center; gap:2px; color:var(--muted); font-size:var(--fs-sub); }
 .cnew__slug input{ flex:1; min-width:0; }
 .cnew__actions{ margin-top:20px; }
+.cnew__kind{ display:block; margin-top:5px; font-size:var(--fs-micro); color:var(--muted); }
 .cnew__msg{ margin-top:14px; font-size:var(--fs-sub); color:var(--gold); word-break:break-all; }
 .sel__opt[aria-disabled="true"]{ opacity:.38; cursor:not-allowed; }
 @media (max-width:560px){ .cnew__row{ grid-template-columns:1fr; gap:6px; } }
@@ -1079,9 +1080,11 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           </div>
         </div>
         <label class="cnew__row"><span data-i18n="cnew.f.token">Token</span>
-          <input id="cnew-token" placeholder="0x…" spellcheck="false" autocomplete="off"></label>
+          <span><input id="cnew-token" placeholder="0x…" spellcheck="false" autocomplete="off">
+            <small class="cnew__kind" id="cnew-kind"></small></span></label>
         <label class="cnew__row"><span data-i18n="cnew.f.min">Minimum held</span>
-          <input id="cnew-min" inputmode="decimal" placeholder="100" autocomplete="off"></label>
+          <span><input id="cnew-min" inputmode="decimal" placeholder="100" autocomplete="off">
+            <small class="cnew__kind" id="cnew-unit"></small></span></label>
         <div class="cnew__actions">
           <button type="button" class="btn btn--gold" id="cnew-go" data-i18n="cnew.go">CREATE</button>
         </div>
@@ -1295,6 +1298,11 @@ const I18N = {
     'cnew.err.nowallet':'No wallet found in this browser.',
     'cnew.err.chain':'Switch to Robinhood Chain to continue.',
     'cnew.err.tx':'The transaction did not go through.',
+    'cnew.err.gate':'That address does not answer balanceOf on the chosen chain — a community gated on it could never be joined, and its rules could never be fixed.',
+    'cnew.checking':'checking…',
+    'cnew.kind.20':'ERC-20, {d} decimals','cnew.kind.721':'ERC-721 — the threshold is a number of items',
+    'cnew.kind.bad':'This address does not answer balanceOf here.',
+    'cnew.unit.tokens':'in whole tokens','cnew.unit.items':'in items',
     'year.kicker':'The year','year.title':'A year, lighting up',
     'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. A day whose last piece was just sold still glows faintly — an ember, for seven days. Tap a day to visit its earliest piece.',
     'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
@@ -1436,6 +1444,11 @@ const I18N = {
     'cnew.err.nowallet':'这个浏览器里找不到钱包。',
     'cnew.err.chain':'请切换到 Robinhood Chain。',
     'cnew.err.tx':'交易没有送出。',
+    'cnew.err.gate':'这个地址在所选的链上不回应 balanceOf——以它为门槛的社群将永远没有人能加入，而规则也永远无法修复。',
+    'cnew.checking':'检查中…',
+    'cnew.kind.20':'ERC-20，{d} 位小数','cnew.kind.721':'ERC-721——门槛以「件」计',
+    'cnew.kind.bad':'这个地址在这里不回应 balanceOf。',
+    'cnew.unit.tokens':'以整枚代币计','cnew.unit.items':'以件计',
     'year.kicker':'一整年','year.title':'一年，正在点亮',
     'year.blurb':'每一格是一天。亮起代表这一天已在链上诞生，越亮代表这一天的 uDAY 越多。刚被卖掉最后一枚的日子还会微微发光——那是余烬，会亮七天。点一格，去看那一天诞生的每一枚。',
     'year.note':'366 天已点亮 {lit} 天 · 每小时从 Robinhood Chain 更新',
@@ -2442,17 +2455,54 @@ function commLayout(){
    native <select>: wallet in-app browsers cannot open those, and wallet
    browsers are exactly where this button gets pressed. ───────────────── */
 const CHAINS = [
-  { id: 4663, label: 'Robinhood Chain', on: true },
-  { id: 1, label: 'Ethereum', on: false },
+  { id: 4663, label: 'Robinhood Chain', on: true, rpc: 'https://rpc.mainnet.chain.robinhood.com/rpc' },
+  { id: 1, label: 'Ethereum', on: true, rpc: 'https://ethereum-rpc.publicnode.com' },
   { id: 8453, label: 'Base', on: false },
   { id: 42161, label: 'Arbitrum', on: false },
   { id: 10, label: 'Optimism', on: false },
 ];
+let cnewChain = CHAINS[0];
+
+/// What kind of token is this, and can it gate at all?
+///
+/// A room's rules are frozen forever, so a token whose balanceOf cannot be
+/// called produces a community nobody can EVER join and a slug burned with
+/// it. The contract refuses that for its own chain; for a foreign one only
+/// this check stands between the creator and a permanent mistake.
+///
+/// ERC-20 and ERC-721 share balanceOf's selector and return type — that is
+/// why one gate serves both — so the type only changes what a threshold
+/// MEANS: wei against a plain count.
+///
+/// This is the one place the page talks to an RPC. Everywhere else it reads
+/// the committed index, because a page load must not depend on a node; a
+/// single probe behind a button press is a different thing.
+async function probeToken(chain, addr){
+  const call = async (data) => {
+    const r = await fetch(chain.rpc, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
+        params: [{ to: addr, data: data }, 'latest'] }) });
+    const j = await r.json();
+    return (j && j.result && j.result !== '0x') ? j.result : null;
+  };
+  const me = '0x' + '0'.repeat(24) + 'dead'.repeat(2) + '0'.repeat(8);
+  const bal = await call('0x70a08231' + pad32('dead'));
+  if(!bal) return { kind: 'bad' };
+  // ERC-721 announces itself through ERC-165; ERC-20 answers decimals()
+  const is721 = await call('0x01ffc9a7' + '80ac58cd' + '0'.repeat(56));
+  if(is721 && /1$/.test(is721)) return { kind: 'erc721', decimals: 0 };
+  const dec = await call('0x313ce567');
+  return { kind: 'erc20', decimals: dec ? parseInt(dec.slice(-2), 16) : 18 };
+}
 const COMM_ADDR_FILE = '/data/community-contract.txt';
 let COMM_CONTRACT = null;
 // computed with `cast sig`, not recalled — a hand-copied selector has cost
 // this project a debugging session before
-const SEL_CREATE = '83278cd3';
+const SEL_CREATE = '719e1544';   // createCommunity(string,string,uint32,address,uint256)
+// Changing the signature changes this. It was missed once already when
+// chainId was added, and the only reason it did not ship is that the
+// calldata gets diffed against `cast calldata` before every release.
 
 function cnewMenu(){
   const btn = document.getElementById('cnew-chain');
@@ -2469,12 +2519,18 @@ function cnewMenu(){
       o.setAttribute('aria-disabled', 'true');
       o.textContent = c.label + ' \u00b7 ' + t('cnew.soon');
     }else o.textContent = c.label;
-    o.addEventListener('click', () => { if(c.on) closeMenus(); });
+    o.addEventListener('click', () => {
+      if(!c.on) return;
+      cnewChain = c; btn.textContent = c.label;
+      menu.querySelectorAll('.sel__opt').forEach(x =>
+        x.setAttribute('aria-selected', String(x === o)));
+      closeMenus(); cnewProbe();
+    });
     menu.appendChild(o);
   });
 }
 
-function cnewCalldata(slug, name, token, minWei){
+function cnewCalldata(slug, name, chainId, token, minRaw){
   const head = '0x' + SEL_CREATE;   // stored bare, like the other selectors
   const enc = [];
   const sBytes = new TextEncoder().encode(slug);
@@ -2483,15 +2539,33 @@ function cnewCalldata(slug, name, token, minWei){
     let h = ''; b.forEach(x => h += x.toString(16).padStart(2, '0'));
     return h.padEnd(Math.ceil(h.length / 64) * 64, '0');
   };
-  const off1 = 4 * 32;
+  const off1 = 5 * 32;
   const off2 = off1 + 32 + Math.ceil(sBytes.length / 32) * 32;
   enc.push(pad32(off1.toString(16)));
   enc.push(pad32(off2.toString(16)));
+  enc.push(pad32(chainId.toString(16)));
   enc.push(pad32(token.replace('0x', '').toLowerCase()));
-  enc.push(pad32(minWei.toString(16)));
+  enc.push(pad32(minRaw.toString(16)));
   enc.push(pad32(sBytes.length.toString(16)) + hexPad(sBytes));
   enc.push(pad32(nBytes.length.toString(16)) + hexPad(nBytes));
   return head + enc.join('');
+}
+
+let cnewProbed = null;
+async function cnewProbe(){
+  const el = document.getElementById('cnew-token');
+  const out = document.getElementById('cnew-kind');
+  const addr = (el.value || '').trim().toLowerCase();
+  if(!out) return;
+  if(!/^0x[0-9a-f]{40}$/.test(addr)){ out.textContent = ''; cnewProbed = null; return; }
+  out.textContent = t('cnew.checking');
+  const p = await probeToken(cnewChain, addr);
+  p.addr = addr; cnewProbed = p;
+  out.textContent = p.kind === 'bad' ? t('cnew.kind.bad')
+                  : p.kind === 'erc721' ? t('cnew.kind.721')
+                  : t('cnew.kind.20', { d: p.decimals });
+  const unit = document.getElementById('cnew-unit');
+  if(unit) unit.textContent = p.kind === 'erc721' ? t('cnew.unit.items') : t('cnew.unit.tokens');
 }
 
 async function cnewInit(){
@@ -2503,6 +2577,8 @@ async function cnewInit(){
   }catch(e){}
   const msg = document.getElementById('cnew-msg');
   const go = document.getElementById('cnew-go');
+  document.getElementById('cnew-token').addEventListener('change', cnewProbe);
+  document.getElementById('cnew-token').addEventListener('blur', cnewProbe);
   go.addEventListener('click', async () => {
     const slug = document.getElementById('cnew-slug').value.trim().toLowerCase();
     const name = document.getElementById('cnew-name').value.trim();
@@ -2519,11 +2595,17 @@ async function cnewInit(){
     try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
     catch(e){ return; }
     if(!await ensureChain()) return show('cnew.err.chain');
-    const wei = BigInt(Math.round(Number(min) * 1e6)) * (10n ** 12n);
+    // the probe decides the unit: an NFT gate of "1" is 1, not 1e18
+    const probe = cnewProbed && cnewProbed.addr === token.toLowerCase()
+                ? cnewProbed : await probeToken(cnewChain, token);
+    if(probe.kind === 'bad') return show('cnew.err.gate');
+    const dp = probe.decimals || 0;
+    const raw = dp === 0 ? BigInt(Math.floor(Number(min)))
+              : BigInt(Math.round(Number(min) * 1e6)) * (10n ** BigInt(Math.max(0, dp - 6)));
     try{
       const hash = await mineEth.request({ method: 'eth_sendTransaction', params: [{
         from: acc[0], to: COMM_CONTRACT,
-        data: cnewCalldata(slug, name, token, wei) }] });
+        data: cnewCalldata(slug, name, cnewChain.id, token, raw) }] });
       msg.innerHTML = t('cnew.sent', { slug: slug }) +
         ' <a href="' + GIFT_TX_URL(hash) + '" target="_blank" rel="noopener">' + t('gift.tx') + '</a>';
       msg.hidden = false;
