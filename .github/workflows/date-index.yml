@@ -29,6 +29,12 @@ jobs:
         env:
           ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
         run: python3 tools/build_date_index.py build
+      - name: Build communities
+        # a no-op until data/community-contract.txt exists, so this stays green
+        # from the moment it is added rather than from the moment it is used
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+        run: python3 tools/build_communities.py
       - name: Snapshot fee ledger
         env:
           ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
@@ -39,6 +45,7 @@ jobs:
         # would flicker back to unrevealed next run if only the index landed.
         run: |
           git add data/date-index.json data/art-cache.json data/gift-ledger.json
+          git add data/communities.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "nothing changed"; exit 0
           fi

@@ -41,9 +41,7 @@ def contract_addr():
             a = sys.argv[i + 1]
     if not a and os.path.exists(ADDR_FILE):
         a = open(ADDR_FILE).read().strip()
-    if not a:
-        sys.exit("no community contract address (--addr, or data/community-contract.txt)")
-    return a.lower()
+    return a.lower() if a else None
 
 
 def dec_addr(word):     return "0x" + word[-40:]
@@ -72,6 +70,10 @@ def dec_array(hexstr):
 
 def main():
     C = contract_addr()
+    if not C:
+        # not deployed yet — CI runs this every cycle and must stay green
+        print("no community contract yet (data/community-contract.txt absent) — nothing to do")
+        return
     idx = json.load(open(INDEX))
     days = idx["days"]
 

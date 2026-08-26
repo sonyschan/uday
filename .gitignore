@@ -23,6 +23,7 @@ cache/
 # formula was already public through every data/gift/*.json anyway.
 CLAUDE.md
 tools/post-gift.sh
+tools/deploy-community.sh
 tools/deploy-gift.sh
 tools/deploy-dayexit.sh
 .playwright-mcp/
