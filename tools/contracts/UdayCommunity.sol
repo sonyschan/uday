@@ -71,6 +71,7 @@ contract UdayCommunity {
     error NoSuchCommunity();
     error BadSlug();
     error BelowThreshold();
+    error NoUday();
     error AlreadyMember();
     error NotMember();
     error BadDay();
@@ -114,6 +115,12 @@ contract UdayCommunity {
         Community memory c = communities[id];
         if (c.token == address(0)) revert NoSuchCommunity();
         if (isMember[id][msg.sender]) revert AlreadyMember();
+        // Every member of every room holds at least one uDAY. On a community
+        // gated by a foreign token this is the ONLY half of the gate consensus
+        // can enforce, and it turns a free false membership claim into a
+        // purchase. It is also simply true of the product: the page is a
+        // calendar, and someone with no uDAY has no day to put on it.
+        if (slotsOf(msg.sender) == 0) revert NoUday();
         // Same chain: the gate is enforced here and nobody can fake it. Foreign
         // chain: this contract cannot see that balance at all, so the join is
         // recorded and the published index enforces the gate. The two are told

@@ -81,6 +81,32 @@ def balances_of(chain_id, token, addrs):
     return {a: (dec_uint(r) if r else 0) for a, r in zip(addrs, res)}
 
 
+def _one_call(chain_id, to, data):
+    urls = None
+    if chain_id != HOME_CHAIN:
+        u = FOREIGN_RPC.get(chain_id)
+        if not u:
+            return None
+        urls = [u]
+    try:
+        r = eth_call(to, data, urls=urls)
+        return r if r and r != "0x" else None
+    except Exception:
+        return None
+
+
+def _is721(chain_id, token):
+    r = _one_call(chain_id, token, "0x01ffc9a7" + "80ac58cd" + "0" * 56)
+    return bool(r) and r.rstrip("0").endswith("1")
+
+
+def _decimals(chain_id, token):
+    r = _one_call(chain_id, token, "0x313ce567")
+    if not r:
+        return 0 if _is721(chain_id, token) else 18
+    return int(r[-2:], 16)
+
+
 def dec_addr(word):     return "0x" + word[-40:]
 def dec_uint(word):     return int(word, 16)
 
@@ -137,6 +163,10 @@ def main():
             # contract enforces the gate, elsewhere this file does
             "gatedOnchain": chain == HOME_CHAIN,
             "minBalance": str(dec_uint(w[2])),
+            # ERC-20 and ERC-721 share balanceOf, so the raw threshold means
+            # different things; the page cannot render it without knowing which
+            "tokenKind": "erc721" if _is721(chain, token) else "erc20",
+            "tokenDecimals": _decimals(chain, token),
             "creator": dec_addr(w[3]),
             "createdAt": dec_uint(w[4]),
             "slug": dec_str(blob, dec_uint(w[5])),

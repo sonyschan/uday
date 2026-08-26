@@ -245,6 +245,32 @@ contract UdayCommunityTest is Test {
         assertTrue(c.gatedOnchain(id));
     }
 
+    /// The floor consensus CAN enforce, even when the gating token is on a
+    /// chain this contract cannot see.
+    function testJoinRequiresAtLeastOneUday() public {
+        bytes32 id = _make(1 ether);
+        gate.set(alice, 1 ether);
+        _setUday(alice, 0);
+        vm.prank(alice);
+        vm.expectRevert(UdayCommunity.NoUday.selector);
+        c.join(id);
+        _setUday(alice, 1 ether);
+        vm.prank(alice);
+        c.join(id);
+        assertTrue(c.isMember(id, alice));
+    }
+
+    /// A wallet holding none of a foreign gating token could otherwise join for
+    /// free and point at the explorer. Now it costs a uDAY.
+    function testForeignGateStillNeedsAUday() public {
+        bytes32 id = c.createCommunity("upeg", "Unipeg", 1,
+                                       0x44b28991B167582F18BA0259e0173176ca125505, 1 ether);
+        _setUday(bob, 0);
+        vm.prank(bob);
+        vm.expectRevert(UdayCommunity.NoUday.selector);
+        c.join(id);
+    }
+
     function testJoinUnknownCommunityReverts() public {
         vm.prank(alice);
         vm.expectRevert(UdayCommunity.NoSuchCommunity.selector);

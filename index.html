@@ -1285,6 +1285,9 @@ const I18N = {
     'comm.next.today':'Today belongs to {who}.',
     'comm.note':'A day shows here only if the person still holds a uDAY of that date.',
     'comm.gate':'Anyone holding {min} of {token} can join. These rules were fixed when the community was created and can never be changed.',
+    'comm.gate.onchain':'The contract itself checks that balance every time someone joins — nobody can get past it.',
+    'comm.gate.index':'That token lives on {chain}, which this contract cannot read, so the check runs in the published index instead: the same balance, reread every cycle, against code anyone can rerun.',
+    'comm.gate.floor':'Holding a uDAY is required either way, and that part is enforced onchain.',
     'comm.missing':'No community here yet.',
     'cnew.kicker':'Start a community','cnew.title':'A room nobody runs',
     'cnew.blurb':'Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.',
@@ -1431,6 +1434,9 @@ const I18N = {
     'comm.next.today':'今天属于 {who}。',
     'comm.note':'一天只有在那个人仍然持有该日期的 uDAY 时才会出现在这里。',
     'comm.gate':'持有 {min} 枚 {token} 即可加入。这些规则在社群创建时就已固定，永远无法更改。',
+    'comm.gate.onchain':'每一次有人加入，合约本身都会检查那个余额——没有人绕得过去。',
+    'comm.gate.index':'这个代币在 {chain} 上，本合约读不到，所以检查改由公开索引执行：同样的余额、每一轮重读一次，程式码任何人都能自己重跑。',
+    'comm.gate.floor':'无论哪一种，持有 uDAY 都是必要条件，而那一半是链上强制的。',
     'comm.missing':'这里还没有社群。',
     'cnew.kicker':'创建社群','cnew.title':'一个没有管理员的房间',
     'cnew.blurb':'选一个代币和一个门槛。持有足够数量的人都能加入，而没有任何人——包括你、包括我们——能把他们移出去。这些规则在创建的那一刻就永久固定。',
@@ -2392,6 +2398,9 @@ function commNextDay(by){
   return best;
 }
 
+const chainName = id => ({ 4663: 'Robinhood Chain', 1: 'Ethereum', 8453: 'Base',
+                           42161: 'Arbitrum', 10: 'Optimism' })[id] || ('chain ' + id);
+
 let commMonthOnly = true;
 function renderCommunity(){
   if(!COMM) return;
@@ -2419,9 +2428,20 @@ function renderCommunity(){
   }else nx.hidden = true;
 
   document.getElementById('comm-note').textContent = t('comm.note');
-  // the rules are frozen at creation, so showing them IS the trust statement
-  document.getElementById('comm-gate').textContent = t('comm.gate', {
-    min: (Number(COMM.minBalance) / 1e18).toLocaleString(), token: COMM.token });
+  // The rules are frozen at creation, so showing them IS the trust statement —
+  // and the room must say WHO checks them. On this chain the contract enforces
+  // the gate and nobody can get past it. On another chain it cannot see that
+  // balance at all, so the published index enforces it instead: the same check,
+  // rerunnable by anyone against open code, but ours to run. Saying "onchain"
+  // for both would be the one dishonest sentence on this page.
+  const gate = document.getElementById('comm-gate');
+  const unit = COMM.tokenKind === 'erc721' ? '' : ' ';
+  const amount = COMM.tokenDecimals === 0
+    ? Number(COMM.minBalance).toLocaleString()
+    : (Number(COMM.minBalance) / Math.pow(10, COMM.tokenDecimals || 18)).toLocaleString();
+  gate.textContent = t('comm.gate', { min: amount, token: COMM.token }) + ' ' +
+    t(COMM.gatedOnchain ? 'comm.gate.onchain' : 'comm.gate.index',
+      { chain: chainName(COMM.chainId) }) + ' ' + t('comm.gate.floor');
   applyCommCollapse();
   document.getElementById('community').hidden = false;
 }
