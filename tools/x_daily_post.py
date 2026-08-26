@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from x_daily_card import build, today_key, ROOT
 from x_daily_line import line_for
 
+LOG = os.path.join(ROOT, "data", "x-posts.json")
 MEDIA_URL = "https://api.x.com/2/media/upload"
 TWEET_URL = "https://api.x.com/2/tweets"
 KEYS = ("X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_SECRET")
@@ -61,6 +62,25 @@ def compose_text(meta, gift):
     return "\n".join(lines), src
 
 
+def already_posted(day):
+    """A day is posted at most once. Cheap and free: the committed log, not a
+    timeline read (5 post reads cost more than the post itself). It doubles
+    as the record of every line the account has published."""
+    if not os.path.exists(LOG):
+        return None
+    for row in json.load(open(LOG)):
+        if row.get("day") == day:
+            return row
+    return None
+
+
+def record(day, tweet_id, text, src):
+    rows = json.load(open(LOG)) if os.path.exists(LOG) else []
+    rows.append({"day": day, "id": tweet_id, "at": datetime.now(timezone.utc)
+                 .strftime("%Y-%m-%dT%H:%M:%SZ"), "source": src or "", "text": text})
+    json.dump(rows[-400:], open(LOG, "w"), indent=1, ensure_ascii=False)
+
+
 def main():
     argv = sys.argv[1:]
     if "--line" in argv:
@@ -68,6 +88,11 @@ def main():
     argv = [a for a in argv if not a.startswith("-")]
     day = argv[0] if argv else today_key()
     dry = "--dry-run" in sys.argv and "--check" not in sys.argv
+
+    seen = already_posted(day)
+    if seen and "--force" not in sys.argv:
+        sys.exit("%s already posted (%s) — refusing to repeat. --force overrides."
+                 % (day, seen.get("id")))
 
     card = os.path.join(ROOT, "data", "x-card.png")
     meta = build(day, card)
@@ -102,7 +127,9 @@ def main():
     r = x.post(TWEET_URL, json={"text": text, "media": {"media_ids": [media_id]}})
     if r.status_code >= 300:
         sys.exit("post failed %d: %s" % (r.status_code, r.text[:400]))
-    print("posted: https://x.com/udaygift/status/%s" % r.json()["data"]["id"])
+    tid = r.json()["data"]["id"]
+    record(day, tid, text, src)
+    print("posted: https://x.com/udaygift/status/%s" % tid)
 
 
 if __name__ == "__main__":

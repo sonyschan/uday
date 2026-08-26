@@ -22,7 +22,7 @@ on:
     - cron: '20 16 * * *'   # 00:20 UTC+8, after post-gift's 00:05
   workflow_dispatch: {}
 permissions:
-  contents: read
+  contents: write        # the run commits data/x-posts.json
 concurrency:
   group: post-x
   cancel-in-progress: false
@@ -47,6 +47,20 @@ jobs:
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
         run: python3 tools/x_daily_post.py
+      - name: Record what went out
+        # data/x-posts.json is both the duplicate guard and the log of every
+        # line the account has published; a rerun reads it and refuses.
+        run: |
+          git add data/x-posts.json
+          if git diff --cached --quiet; then echo "nothing posted"; exit 0; fi
+          git config user.name  "uday-index-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "x: posted the day's card"
+          for i in 1 2 3; do
+            git push && exit 0
+            git pull --rebase -X ours
+          done
+          git push
       - name: Keep the card as a run artifact
         uses: actions/upload-artifact@v4
         with:
