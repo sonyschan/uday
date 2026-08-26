@@ -19,7 +19,7 @@ from datetime import datetime, timezone, timedelta
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mkglyphs import glyph, MONTHS, F, CREAM, DARK    # the on-chain pixel font
+from mkglyphs import MONTHS, F                        # the on-chain glyph table
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HD = os.path.join(ROOT, "assets", "hd")
@@ -28,44 +28,46 @@ ART = 900                       # 3x the 300px HD layers — integer, never resa
 GROUND = (11, 9, 24, 255)       # the site's midnight indigo
 
 
+WORDMARK = (232, 185, 63, 255)   # the site's gold
+
+
 def word_w(word, scale, gap=1):
     ws = [len(F[c][0]) for c in word if c in F]
     return (sum(ws) + gap * (len(ws) - 1)) * scale
 
 
-def draw_text(card, text, scale, cy, space=3, dot=1):
-    """Render a string in the on-chain font. F covers 0-9 and A-Z only, so
-    spaces and periods are placed here rather than looked up."""
-    toks, buf = [], ""
-    for ch in text:
-        if ch in ".  ":
-            if buf: toks.append(("w", buf)); buf = ""
-            toks.append(("dot" if ch == "." else "sp", ch))
-        else:
-            buf += ch
-    if buf: toks.append(("w", buf))
+def draw_text(card, text, scale, cy, space=3, gap=1):
+    """Flat pixel lettering, one solid colour, no outline.
 
-    widths = [word_w(t[1], scale) if t[0] == "w" else
-              (dot + 2) * scale if t[0] == "dot" else space * scale for t in toks]
-    total = sum(widths)
-    x = (SIZE - total) / 2
-    for (kind, val), w in zip(toks, widths):
-        if kind == "w":
-            card.alpha_composite(glyph(val, scale, "blue", 8, SIZE,
-                                       cx=(x + w / 2) / SIZE, cy=cy))
-        elif kind == "dot":
-            # a period the font does not have: one cell, with the same
-            # cream-then-dark outline every glyph wears
-            px = card.load()
-            y0 = round(cy * SIZE + (5 * scale) / 2) - dot * scale
-            x0 = round(x + scale)
-            for dy in range(-2, dot * scale + 2):
-                for dx in range(-2, dot * scale + 2):
-                    X, Y = x0 + dx, y0 + dy
-                    if not (0 <= X < SIZE and 0 <= Y < SIZE): continue
-                    inside = 0 <= dx < dot * scale and 0 <= dy < dot * scale
-                    edge = -1 <= dx <= dot * scale and -1 <= dy <= dot * scale
-                    px[X, Y] = (60, 92, 130, 255) if inside else CREAM if edge else DARK
+    Not glyph() from mkglyphs: that paints every block a different shade and
+    wraps it in cream-then-dark contours, which is what makes the month and
+    date read as mosaic on a plate. At wordmark size those same touches are
+    just noise — the piece is the art, the wordmark only has to be legible.
+    F covers 0-9 and A-Z, so the space and the period are placed here."""
+    widths, toks = [], []
+    for ch in text:
+        if ch == " ":
+            toks.append((" ", None)); widths.append(space * scale)
+        elif ch == ".":
+            toks.append((".", None)); widths.append(2 * scale)
+        elif ch in F:
+            toks.append((ch, F[ch])); widths.append(len(F[ch][0]) * scale + gap * scale)
+    total = sum(widths) - gap * scale
+    x = round((SIZE - total) / 2)
+    y = round(cy * SIZE - (5 * scale) / 2)
+    px = card.load()
+    def block(bx, by, w, h):
+        for dy in range(h):
+            for dx in range(w):
+                X, Y = bx + dx, by + dy
+                if 0 <= X < SIZE and 0 <= Y < SIZE: px[X, Y] = WORDMARK
+    for (ch, g), w in zip(toks, widths):
+        if ch == ".":
+            block(x, y + 4 * scale, scale, scale)      # sits on the baseline
+        elif g:
+            for ry, row in enumerate(g):
+                for rx, c in enumerate(row):
+                    if c == "#": block(x + rx * scale, y + ry * scale, scale, scale)
         x += w
 
 
