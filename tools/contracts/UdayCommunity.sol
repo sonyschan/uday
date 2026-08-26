@@ -46,7 +46,15 @@ contract UdayCommunity {
         string  name;
     }
 
+    /// Where a room can be found off this chain. Deliberately NOT part of the
+    /// frozen rules: an account gets banned, a project moves, and an immutable
+    /// link is a guaranteed dead end. The creator maintains these and only
+    /// these — they touch nothing about the gate, membership, or who is in the
+    /// room, and the page says out loud that a person maintains them.
+    struct Links { string x; string telegram; string other; }
+
     mapping(bytes32 => Community) public communities;      // id = keccak(slug)
+    mapping(bytes32 => Links) public links;
     mapping(bytes32 => mapping(address => bool)) public isMember;
     mapping(address => uint16[]) private _days;            // MMDD, recurring yearly
 
@@ -61,6 +69,7 @@ contract UdayCommunity {
 
     event CommunityCreated(bytes32 indexed id, uint32 chainId, address indexed token,
                            uint256 minBalance, address indexed creator, string slug, string name);
+    event LinksSet(bytes32 indexed id, string x, string telegram, string other);
     event Joined(bytes32 indexed id, address indexed member);
     event Left(bytes32 indexed id, address indexed member);
     event SpecialDaySet(address indexed who, uint16 day);
@@ -68,6 +77,7 @@ contract UdayCommunity {
 
     error SlugTaken();
     error TokenNotGateable();
+    error NotCreator();
     error NoSuchCommunity();
     error BadSlug();
     error BelowThreshold();
@@ -84,6 +94,25 @@ contract UdayCommunity {
     function createCommunity(string calldata slug, string calldata name,
                              uint32 chainId, address token, uint256 minBalance)
                              external returns (bytes32 id) {
+        return _create(slug, name, chainId, token, minBalance);
+    }
+
+    /// One transaction for the whole thing — a room nobody can find is not
+    /// much of a room.
+    /// Links arrive as a struct rather than three more arguments: eight
+    /// parameters overflow the stack without viaIR, and changing how the
+    /// bytecode is generated is not a trade worth making for a contract that
+    /// can never be redeployed.
+    function createCommunityWithLinks(string calldata slug, string calldata name,
+                                      uint32 chainId, address token, uint256 minBalance,
+                                      Links calldata l) external returns (bytes32 id) {
+        id = _create(slug, name, chainId, token, minBalance);
+        links[id] = l;
+        emit LinksSet(id, l.x, l.telegram, l.other);
+    }
+
+    function _create(string calldata slug, string calldata name, uint32 chainId,
+                     address token, uint256 minBalance) internal returns (bytes32 id) {
         bytes memory s = bytes(slug);
         if (s.length == 0 || s.length > 32) revert BadSlug();
         for (uint256 i = 0; i < s.length; i++) {
@@ -102,6 +131,17 @@ contract UdayCommunity {
                                     uint64(block.timestamp), slug, name);
         _all.push(id);
         emit CommunityCreated(id, chainId, token, minBalance, msg.sender, slug, name);
+    }
+
+    /// The creator maintains a room's links. This is the ONLY thing about a
+    /// community its creator can ever change, and it is not one of its rules.
+    function setLinks(bytes32 id, string calldata x, string calldata telegram,
+                      string calldata other) external {
+        Community memory c = communities[id];
+        if (c.token == address(0)) revert NoSuchCommunity();
+        if (msg.sender != c.creator) revert NotCreator();
+        links[id] = Links(x, telegram, other);
+        emit LinksSet(id, x, telegram, other);
     }
 
     function joinWith(bytes32 id, uint16 day) external {

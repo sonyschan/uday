@@ -864,6 +864,7 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 @media (max-width:560px){ .cnew__row{ grid-template-columns:1fr; gap:6px; } }
 .yearcell--member{ cursor:pointer; }
 .commfaces{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+.comm__linknote{ align-self:center; color:var(--muted); font-size:var(--fs-micro); }
 .commface{
   display:inline-flex; align-items:center; gap:6px; padding:5px 9px;
   border:1px solid var(--rule); border-radius:4px; background:rgba(232,185,63,.05);
@@ -1046,6 +1047,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         <p id="comm-blurb"></p>
       </div>
       <div class="yearwall__stats rise" id="comm-stats"></div>
+      <div class="commfaces rise" id="comm-links" hidden></div>
       <p class="comm__next rise" id="comm-next" hidden></p>
       <div class="yearwall rise">
         <div class="yearwall__scroll">
@@ -1288,6 +1290,8 @@ const I18N = {
     'comm.gate.onchain':'The contract itself checks that balance every time someone joins — nobody can get past it.',
     'comm.gate.index':'That token lives on {chain}, which this contract cannot read, so the check runs in the published index instead: the same balance, reread every cycle, against code anyone can rerun.',
     'comm.gate.floor':'Holding a uDAY is required either way, and that part is enforced onchain.',
+    'comm.link.site':'Website',
+    'comm.link.note':'links maintained by whoever created this room',
     'comm.missing':'No community here yet.',
     'cnew.kicker':'Start a community','cnew.title':'A room nobody runs',
     'cnew.blurb':'Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.',
@@ -1437,6 +1441,8 @@ const I18N = {
     'comm.gate.onchain':'每一次有人加入，合约本身都会检查那个余额——没有人绕得过去。',
     'comm.gate.index':'这个代币在 {chain} 上，本合约读不到，所以检查改由公开索引执行：同样的余额、每一轮重读一次，程式码任何人都能自己重跑。',
     'comm.gate.floor':'无论哪一种，持有 uDAY 都是必要条件，而那一半是链上强制的。',
+    'comm.link.site':'网站',
+    'comm.link.note':'连结由开设这个房间的人维护',
     'comm.missing':'这里还没有社群。',
     'cnew.kicker':'创建社群','cnew.title':'一个没有管理员的房间',
     'cnew.blurb':'选一个代币和一个门槛。持有足够数量的人都能加入，而没有任何人——包括你、包括我们——能把他们移出去。这些规则在创建的那一刻就永久固定。',
@@ -2442,6 +2448,34 @@ function renderCommunity(){
   gate.textContent = t('comm.gate', { min: amount, token: COMM.token }) + ' ' +
     t(COMM.gatedOnchain ? 'comm.gate.onchain' : 'comm.gate.index',
       { chain: chainName(COMM.chainId) }) + ' ' + t('comm.gate.floor');
+  // Links are the ONE thing about a room its creator can still change, so the
+  // page attributes them rather than presenting them as part of the rules.
+  // The index only ever publishes https:// strings — these are written by
+  // strangers and opened by other strangers.
+  const lw = document.getElementById('comm-links');
+  lw.textContent = '';
+  const L = COMM.links || {};
+  // Checked HERE as well as in the index, not instead of it. These strings are
+  // written by strangers, and a single filter is one edit away from being no
+  // filter — a javascript: url rendered on this page is XSS. (It did render,
+  // once, before this line existed.)
+  const safe = u => typeof u === 'string' && /^https:\/\//i.test(u) && u.length <= 200;
+  [['x', 'X'], ['telegram', 'Telegram'], ['other', t('comm.link.site')]].forEach(([k, label]) => {
+    if(!safe(L[k])) return;
+    const a = document.createElement('a');
+    a.className = 'commface';
+    a.href = L[k]; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = label;
+    lw.appendChild(a);
+  });
+  if(lw.children.length){
+    const note = document.createElement('small');
+    note.className = 'comm__linknote';
+    note.textContent = t('comm.link.note');
+    lw.appendChild(note);
+  }
+  lw.hidden = !lw.children.length;
+
   applyCommCollapse();
   document.getElementById('community').hidden = false;
 }

@@ -39,6 +39,7 @@ SEL_COMM     = "0xbd6a7a82"   # communities(bytes32)
 SEL_SEEN     = "0x217d5a01"   # seenMembers(bytes32)
 SEL_ISMEMBER = "0x10ad56b3"   # isMember(bytes32,address)
 SEL_DAYSOF   = "0xd98ceee6"   # daysOf(address)
+SEL_LINKS    = "0xb2fccc7f"   # links(bytes32)
 SEL_BALANCE  = "0x70a08231"   # balanceOf(address)
 
 
@@ -107,6 +108,24 @@ def _decimals(chain_id, token):
     return int(r[-2:], 16)
 
 
+def _links(contract, cid):
+    try:
+        raw = eth_call(contract, SEL_LINKS + cid)
+    except Exception:
+        return {}
+    if not raw or raw == "0x":
+        return {}
+    blob, w = raw[2:], words(raw)
+    out = {}
+    for i, k in enumerate(("x", "telegram", "other")):
+        v = dec_str(blob, dec_uint(w[i])).strip()
+        # only https, and never javascript: — these strings are written by
+        # strangers and rendered as links on a page other strangers open
+        if v.startswith("https://") and len(v) <= 200:
+            out[k] = v
+    return out
+
+
 def dec_addr(word):     return "0x" + word[-40:]
 def dec_uint(word):     return int(word, 16)
 
@@ -171,6 +190,9 @@ def main():
             "createdAt": dec_uint(w[4]),
             "slug": dec_str(blob, dec_uint(w[5])),
             "name": dec_str(blob, dec_uint(w[6])),
+            # maintained by the creator, and the only thing about a room that
+            # can ever change — the page has to say so
+            "links": _links(C, cid),
         }
         seen = [dec_addr(x) for x in dec_array(eth_call(C, SEL_SEEN + cid))]
         if seen:

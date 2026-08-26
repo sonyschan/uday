@@ -271,6 +271,54 @@ contract UdayCommunityTest is Test {
         c.join(id);
     }
 
+    // ── links: the one thing a creator can change, and not a rule ──────
+    function testCreatorMaintainsLinksAndNobodyElseCan() public {
+        bytes32 id = _make(1 ether);            // creator is this test contract
+        c.setLinks(id, "https://x.com/unipegv4", "https://t.me/unipeg", "");
+        (string memory x,,) = c.links(id);
+        assertEq(x, "https://x.com/unipegv4");
+
+        vm.prank(alice);
+        vm.expectRevert(UdayCommunity.NotCreator.selector);
+        c.setLinks(id, "https://x.com/imposter", "", "");
+
+        c.setLinks(id, "https://x.com/moved", "", "");   // and they can change
+        (string memory x2,,) = c.links(id);
+        assertEq(x2, "https://x.com/moved");
+    }
+
+    /// Links must not become a back door: changing them may not touch the gate,
+    /// the membership, or who created the room.
+    function testSettingLinksChangesNothingElse() public {
+        bytes32 id = _make(5 ether);
+        gate.set(alice, 5 ether);
+        vm.prank(alice);
+        c.join(id);
+        (uint32 ch, address tk, uint256 min, address cr,,,) = c.communities(id);
+        c.setLinks(id, "a", "b", "c");
+        (uint32 ch2, address tk2, uint256 min2, address cr2,,,) = c.communities(id);
+        assertEq(ch, ch2); assertEq(tk, tk2); assertEq(min, min2); assertEq(cr, cr2);
+        assertTrue(c.isMember(id, alice));
+    }
+
+    function testCreateWithLinksIsOneTransaction() public {
+        bytes32 id = c.createCommunityWithLinks("upeg", "Unipeg", 1,
+            0x44b28991B167582F18BA0259e0173176ca125505, 1 ether,
+            UdayCommunity.Links("https://x.com/unipegv4", "https://t.me/unipeg",
+                                "https://unipeg.art"));
+        (,,, address creator,,,) = c.communities(id);
+        assertEq(creator, address(this));      // not the contract itself
+        (string memory x, string memory tg, string memory o) = c.links(id);
+        assertEq(x, "https://x.com/unipegv4");
+        assertEq(tg, "https://t.me/unipeg");
+        assertEq(o, "https://unipeg.art");
+    }
+
+    function testLinksOnUnknownCommunityRevert() public {
+        vm.expectRevert(UdayCommunity.NoSuchCommunity.selector);
+        c.setLinks(keccak256("nope"), "a", "b", "c");
+    }
+
     function testJoinUnknownCommunityReverts() public {
         vm.prank(alice);
         vm.expectRevert(UdayCommunity.NoSuchCommunity.selector);
