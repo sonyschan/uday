@@ -1737,9 +1737,15 @@ const menuDay   = document.getElementById('hero-day-menu');
    (This also retires the iOS live-`change` rebuild hazard entirely: an
    option pick closes the menu before any rebuild happens.) */
 let openSel = null;
+/// Walks every .sel on the page rather than a hard-coded pair: the chain
+/// picker was added later, was not in that list, and so could neither open
+/// nor close. A listbox that only some listboxes belong to is a bug waiting
+/// for the next one.
 function closeMenus(){
-  [[selMonth, menuMonth], [selDay, menuDay]].forEach(([b, m]) => {
-    m.hidden = true; b.setAttribute('aria-expanded', 'false');
+  document.querySelectorAll('.sel__menu').forEach(m => {
+    m.hidden = true;
+    const b = m.parentElement && m.parentElement.querySelector('.sel__btn');
+    if(b) b.setAttribute('aria-expanded', 'false');
   });
   openSel = null;
 }
@@ -1756,6 +1762,12 @@ function toggleMenu(btn, menu){
 }
 selMonth.addEventListener('click', () => toggleMenu(selMonth, menuMonth));
 selDay.addEventListener('click', () => toggleMenu(selDay, menuDay));
+// every other .sel on the page gets the same behaviour without being listed
+document.querySelectorAll('.sel').forEach(sel => {
+  const b = sel.querySelector('.sel__btn'), m = sel.querySelector('.sel__menu');
+  if(!b || !m || b === selMonth || b === selDay) return;
+  b.addEventListener('click', () => toggleMenu(b, m));
+});
 addEventListener('pointerdown', e => {
   if(openSel && !e.target.closest('.sel')) closeMenus();
 }, { passive: true, capture: true });
@@ -2551,13 +2563,15 @@ async function probeToken(chain, addr){
     const j = await r.json();
     return (j && j.result && j.result !== '0x') ? j.result : null;
   };
-  const me = '0x' + '0'.repeat(24) + 'dead'.repeat(2) + '0'.repeat(8);
-  const bal = await call('0x70a08231' + pad32('dead'));
+  // All three at once. Run in sequence against a public Ethereum node this
+  // took nine seconds, which reads as a page that has stopped working.
+  const [bal, is721, dec] = await Promise.all([
+    call('0x70a08231' + pad32('dead')),                    // balanceOf — can it gate?
+    call('0x01ffc9a7' + '80ac58cd' + '0'.repeat(56)),      // ERC-165: is it a 721?
+    call('0x313ce567'),                                     // decimals: what does 1 mean?
+  ]);
   if(!bal) return { kind: 'bad' };
-  // ERC-721 announces itself through ERC-165; ERC-20 answers decimals()
-  const is721 = await call('0x01ffc9a7' + '80ac58cd' + '0'.repeat(56));
   if(is721 && /1$/.test(is721)) return { kind: 'erc721', decimals: 0 };
-  const dec = await call('0x313ce567');
   return { kind: 'erc20', decimals: dec ? parseInt(dec.slice(-2), 16) : 18 };
 }
 const COMM_ADDR_FILE = '/data/community-contract.txt';
@@ -2630,7 +2644,7 @@ const linkOf = id => {
   return /^https:\/\//i.test(v) && v.length <= 200 ? v : '';
 };
 
-let cnewProbed = null;
+let cnewProbed = null, cnewProbeWant = null;
 async function cnewProbe(){
   const el = document.getElementById('cnew-token');
   const out = document.getElementById('cnew-kind');
@@ -2638,7 +2652,12 @@ async function cnewProbe(){
   if(!out) return;
   if(!/^0x[0-9a-f]{40}$/.test(addr)){ out.textContent = ''; cnewProbed = null; return; }
   out.textContent = t('cnew.checking');
+  // Keyed by what was being checked: an earlier, slower answer must not land
+  // on top of a later one and label the wrong address.
+  const want = cnewChain.id + ':' + addr;
+  cnewProbeWant = want;
   const pr = await probeToken(cnewChain, addr);
+  if(cnewProbeWant !== want) return;
   pr.addr = addr; cnewProbed = pr;
   out.textContent = pr.kind === 'bad' ? t('cnew.kind.bad')
                   : pr.kind === 'erc721' ? t('cnew.kind.721')
@@ -2656,8 +2675,18 @@ async function cnewInit(){
   }catch(e){}
   const msg = document.getElementById('cnew-msg');
   const go = document.getElementById('cnew-go');
-  document.getElementById('cnew-token').addEventListener('change', cnewProbe);
-  document.getElementById('cnew-token').addEventListener('blur', cnewProbe);
+  // `change` on a text input only fires on blur, so a pasted address sat there
+  // looking ignored until the user clicked elsewhere. `input` fires on paste
+  // and on every keystroke, so it is debounced.
+  const tok = document.getElementById('cnew-token');
+  let probeTimer = null;
+  const queueProbe = () => {
+    clearTimeout(probeTimer);
+    probeTimer = setTimeout(cnewProbe, 350);
+  };
+  tok.addEventListener('input', queueProbe);
+  tok.addEventListener('paste', () => setTimeout(queueProbe, 0));
+  tok.addEventListener('blur', cnewProbe);
   go.addEventListener('click', async () => {
     const slug = document.getElementById('cnew-slug').value.trim().toLowerCase();
     const name = document.getElementById('cnew-name').value.trim();
