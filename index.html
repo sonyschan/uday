@@ -1085,8 +1085,15 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <span><input id="cnew-token" placeholder="0x…" spellcheck="false" autocomplete="off">
             <small class="cnew__kind" id="cnew-kind"></small></span></label>
         <label class="cnew__row"><span data-i18n="cnew.f.min">Minimum held</span>
-          <span><input id="cnew-min" inputmode="decimal" placeholder="100" autocomplete="off">
+          <span><input id="cnew-min" inputmode="decimal" value="1" autocomplete="off">
             <small class="cnew__kind" id="cnew-unit"></small></span></label>
+        <label class="cnew__row"><span data-i18n="cnew.f.x">X</span>
+          <input id="cnew-x" placeholder="https://x.com/…" spellcheck="false" autocomplete="off"></label>
+        <label class="cnew__row"><span data-i18n="cnew.f.tg">Telegram</span>
+          <input id="cnew-tg" placeholder="https://t.me/…" spellcheck="false" autocomplete="off"></label>
+        <label class="cnew__row"><span data-i18n="cnew.f.other">Website</span>
+          <span><input id="cnew-other" placeholder="https://…" spellcheck="false" autocomplete="off">
+            <small class="cnew__kind" data-i18n="cnew.links.note">Optional, https only.</small></span></label>
         <div class="cnew__actions">
           <button type="button" class="btn btn--gold" id="cnew-go" data-i18n="cnew.go">CREATE</button>
         </div>
@@ -1295,7 +1302,9 @@ const I18N = {
     'comm.missing':'No community here yet.',
     'cnew.kicker':'Start a community','cnew.title':'A room nobody runs',
     'cnew.blurb':'Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.',
-    'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held',
+    'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'Website',
+    'cnew.links.note':'Optional, https only. You can change these later; nothing else about the room can change.',
+    'cnew.err.link':'Links must start with https://',
     'cnew.go':'CREATE','cnew.soon':'soon',
     'cnew.sent':'Creating uday.gift/c/{slug} — it appears once the index catches up.',
     'cnew.err.slug':'The URL can use a-z, 0-9 and dashes only.',
@@ -1446,7 +1455,9 @@ const I18N = {
     'comm.missing':'这里还没有社群。',
     'cnew.kicker':'创建社群','cnew.title':'一个没有管理员的房间',
     'cnew.blurb':'选一个代币和一个门槛。持有足够数量的人都能加入，而没有任何人——包括你、包括我们——能把他们移出去。这些规则在创建的那一刻就永久固定。',
-    'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛',
+    'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'网站',
+    'cnew.links.note':'选填，只接受 https。这些之后可以改；房间的其他一切都不能改。',
+    'cnew.err.link':'连结必须以 https:// 开头。',
     'cnew.go':'创建','cnew.soon':'即将支持',
     'cnew.sent':'正在创建 uday.gift/c/{slug}——索引跟上后就会出现。',
     'cnew.err.slug':'网址只能用 a-z、0-9 和连字号。',
@@ -2553,7 +2564,7 @@ const COMM_ADDR_FILE = '/data/community-contract.txt';
 let COMM_CONTRACT = null;
 // computed with `cast sig`, not recalled — a hand-copied selector has cost
 // this project a debugging session before
-const SEL_CREATE = '719e1544';   // createCommunity(string,string,uint32,address,uint256)
+const SEL_CREATE = '9b3d91f1';   // createCommunityWithLinks(...,(string,string,string))
 // Changing the signature changes this. It was missed once already when
 // chainId was added, and the only reason it did not ship is that the
 // calldata gets diffed against `cast calldata` before every release.
@@ -2584,26 +2595,40 @@ function cnewMenu(){
   });
 }
 
-function cnewCalldata(slug, name, chainId, token, minRaw){
+function cnewCalldata(slug, name, chainId, token, minRaw, links){
   const head = '0x' + SEL_CREATE;   // stored bare, like the other selectors
-  const enc = [];
-  const sBytes = new TextEncoder().encode(slug);
-  const nBytes = new TextEncoder().encode(name);
+  const bytesOf = t => new TextEncoder().encode(t || '');
   const hexPad = b => {
     let h = ''; b.forEach(x => h += x.toString(16).padStart(2, '0'));
     return h.padEnd(Math.ceil(h.length / 64) * 64, '0');
   };
-  const off1 = 5 * 32;
-  const off2 = off1 + 32 + Math.ceil(sBytes.length / 32) * 32;
-  enc.push(pad32(off1.toString(16)));
-  enc.push(pad32(off2.toString(16)));
-  enc.push(pad32(chainId.toString(16)));
-  enc.push(pad32(token.replace('0x', '').toLowerCase()));
-  enc.push(pad32(minRaw.toString(16)));
-  enc.push(pad32(sBytes.length.toString(16)) + hexPad(sBytes));
-  enc.push(pad32(nBytes.length.toString(16)) + hexPad(nBytes));
-  return head + enc.join('');
+  const tail = b => pad32(b.length.toString(16)) + hexPad(b);
+  const sT = tail(bytesOf(slug)), nT = tail(bytesOf(name));
+
+  // Links are a STRUCT of three dynamic strings: the outer list points at a
+  // tuple whose own offsets are relative to the TUPLE's start, not the call's.
+  // Get that wrong and a node accepts the calldata and decodes it into
+  // garbage, which is why every release diffs this against cast.
+  const inner = [], innerHeads = [];
+  let ip = 3 * 32;
+  [links.x, links.telegram, links.other].forEach(v => {
+    innerHeads.push(pad32(ip.toString(16)));
+    const t = tail(bytesOf(v)); inner.push(t); ip += t.length / 2;
+  });
+  const tuple = innerHeads.join('') + inner.join('');
+
+  const h1 = 6 * 32, h2 = h1 + sT.length / 2, h3 = h2 + nT.length / 2;
+  const enc = [pad32(h1.toString(16)), pad32(h2.toString(16)),
+               pad32(chainId.toString(16)),
+               pad32(token.replace('0x', '').toLowerCase()),
+               pad32(minRaw.toString(16)), pad32(h3.toString(16))];
+  return head + enc.join('') + sT + nT + tuple;
 }
+
+const linkOf = id => {
+  const v = (document.getElementById(id).value || '').trim();
+  return /^https:\/\//i.test(v) && v.length <= 200 ? v : '';
+};
 
 let cnewProbed = null;
 async function cnewProbe(){
@@ -2613,13 +2638,13 @@ async function cnewProbe(){
   if(!out) return;
   if(!/^0x[0-9a-f]{40}$/.test(addr)){ out.textContent = ''; cnewProbed = null; return; }
   out.textContent = t('cnew.checking');
-  const p = await probeToken(cnewChain, addr);
-  p.addr = addr; cnewProbed = p;
-  out.textContent = p.kind === 'bad' ? t('cnew.kind.bad')
-                  : p.kind === 'erc721' ? t('cnew.kind.721')
-                  : t('cnew.kind.20', { d: p.decimals });
+  const pr = await probeToken(cnewChain, addr);
+  pr.addr = addr; cnewProbed = pr;
+  out.textContent = pr.kind === 'bad' ? t('cnew.kind.bad')
+                  : pr.kind === 'erc721' ? t('cnew.kind.721')
+                  : t('cnew.kind.20', { d: pr.decimals });
   const unit = document.getElementById('cnew-unit');
-  if(unit) unit.textContent = p.kind === 'erc721' ? t('cnew.unit.items') : t('cnew.unit.tokens');
+  if(unit) unit.textContent = pr.kind === 'erc721' ? t('cnew.unit.items') : t('cnew.unit.tokens');
 }
 
 async function cnewInit(){
@@ -2643,6 +2668,11 @@ async function cnewInit(){
     if(!name) return show('cnew.err.name');
     if(!/^0x[0-9a-fA-F]{40}$/.test(token)) return show('cnew.err.token');
     if(!(Number(min) >= 0)) return show('cnew.err.min');
+    // refused, not silently dropped: a dead string in a room that can never be
+    // edited is permanent clutter
+    if(['cnew-x','cnew-tg','cnew-other'].some(id => {
+      const v = (document.getElementById(id).value || '').trim();
+      return v && !/^https:\/\//i.test(v); })) return show('cnew.err.link');
     if(!COMM_CONTRACT) return show('cnew.err.nocontract');
     if(!mineEth) return show('cnew.err.nowallet');
     let acc;
@@ -2659,7 +2689,8 @@ async function cnewInit(){
     try{
       const hash = await mineEth.request({ method: 'eth_sendTransaction', params: [{
         from: acc[0], to: COMM_CONTRACT,
-        data: cnewCalldata(slug, name, cnewChain.id, token, raw) }] });
+        data: cnewCalldata(slug, name, cnewChain.id, token, raw, {
+          x: linkOf('cnew-x'), telegram: linkOf('cnew-tg'), other: linkOf('cnew-other') }) }] });
       msg.innerHTML = t('cnew.sent', { slug: slug }) +
         ' <a href="' + GIFT_TX_URL(hash) + '" target="_blank" rel="noopener">' + t('gift.tx') + '</a>';
       msg.hidden = false;

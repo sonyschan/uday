@@ -82,6 +82,7 @@ contract UdayCommunity {
     error BadSlug();
     error BelowThreshold();
     error NoUday();
+    error NotEnoughUdayToCreate();
     error AlreadyMember();
     error NotMember();
     error BadDay();
@@ -122,6 +123,12 @@ contract UdayCommunity {
         }
         id = keccak256(s);
         if (communities[id].token != address(0)) revert SlugTaken();
+        // Slugs are first-come and PERMANENT: no admin can reclaim one, and the
+        // room behind it can never be edited. Free creation means uday.gift/c/
+        // gets squatted flat by anyone willing to pay gas. Ten whole uDAY is
+        // nothing to someone opening a real room and $12 a name to someone
+        // grabbing fifty.
+        if (slotsOf(msg.sender) < 2) revert NotEnoughUdayToCreate();
         // A room's rules can never be edited, so a room whose gate cannot be
         // called is broken FOREVER and its slug is burned with it. For a token
         // on this chain the contract refuses outright; for a foreign one only

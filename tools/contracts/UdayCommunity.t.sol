@@ -21,6 +21,7 @@ contract UdayCommunityTest is Test {
         // uDAY's balanceOf is read from a constant address, so mock code there
         MockToken uday = new MockToken();
         vm.etch(c.UDAY(), address(uday).code);
+        _setUday(address(this), 10 ether);      // this contract creates the rooms
         _setUday(alice, 1 ether);
         _setUday(bob, 1 ether);
     }
@@ -317,6 +318,33 @@ contract UdayCommunityTest is Test {
     function testLinksOnUnknownCommunityRevert() public {
         vm.expectRevert(UdayCommunity.NoSuchCommunity.selector);
         c.setLinks(keccak256("nope"), "a", "b", "c");
+    }
+
+    /// A permanent, unreclaimable slug must not be free, or uday.gift/c/ gets
+    /// squatted flat by anyone willing to pay gas.
+    function testCreatingNeedsTenUday() public {
+        _setUday(alice, 9 ether);
+        vm.prank(alice);
+        vm.expectRevert(UdayCommunity.NotEnoughUdayToCreate.selector);
+        c.createCommunity("squat", "Squat", uint32(block.chainid), address(gate), 1);
+        _setUday(alice, 10 ether);
+        vm.prank(alice);
+        c.createCommunity("squat", "Squat", uint32(block.chainid), address(gate), 1);
+        assertEq(c.communityCount(), 1);
+    }
+
+    /// Creating is a higher bar than joining on purpose: one is permanent and
+    /// exclusive, the other is neither.
+    function testCreatingIsHarderThanJoining() public {
+        bytes32 id = _make(1 ether);
+        gate.set(alice, 1 ether);
+        _setUday(alice, 1 ether);               // enough to join, not to create
+        vm.prank(alice);
+        c.join(id);
+        assertTrue(c.isMember(id, alice));
+        vm.prank(alice);
+        vm.expectRevert(UdayCommunity.NotEnoughUdayToCreate.selector);
+        c.createCommunity("another", "Another", uint32(block.chainid), address(gate), 1);
     }
 
     function testJoinUnknownCommunityReverts() public {
