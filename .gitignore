@@ -29,3 +29,6 @@ tools/deploy-dayexit.sh
 
 # the daily X card is regenerated every run; it is output, not source
 data/x-card.png
+
+# local test route for /c/<slug> (Vercel rewrites this in production)
+/c/

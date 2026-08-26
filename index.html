@@ -16,8 +16,8 @@
 <meta name="twitter:site" content="@udaygift">
 <meta name="twitter:creator" content="@udaygift">
 <meta name="twitter:image" content="https://uday.gift/assets/og.png">
-<link rel="icon" href="assets/favicon.png">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <script>window.va = window.va || function(){(window.vaq = window.vaq || []).push(arguments);};</script>
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -832,6 +832,43 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   .gallery .plaque{ flex:0 0 47%; scroll-snap-align:start; }
   .gallery .plaque:hover{ transform:none; }   /* no hover on touch; no lurch */
 }
+/* ─── community calendar ─────────────────────────────────────────────
+   The wall builder already takes any byDay map, so a community's calendar
+   is the same grid fed a different source: its members' declared days. */
+.comm__next{
+  margin:0 0 18px; font-size:var(--fs-sub); color:var(--gold);
+  font-family:var(--display); letter-spacing:var(--ls-narrow);
+}
+.comm__gate{
+  margin-top:26px; padding-top:14px; border-top:1px solid var(--rule);
+  font-size:var(--fs-micro); color:var(--muted); word-break:break-all;
+}
+.cnew{ max-width:56ch; }
+.cnew__row{ display:grid; grid-template-columns:minmax(120px,.34fr) 1fr; gap:14px;
+  align-items:center; margin-bottom:14px; }
+.cnew__row > span:first-child{
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid);
+  text-transform:uppercase; color:var(--muted);
+}
+.cnew input{
+  width:100%; padding:10px 12px; font:inherit; font-size:var(--fs-sub);
+  color:var(--vellum); background:rgba(243,231,205,.04);
+  border:1px solid var(--rule); border-radius:4px;
+}
+.cnew__slug{ display:flex; align-items:center; gap:2px; color:var(--muted); font-size:var(--fs-sub); }
+.cnew__slug input{ flex:1; min-width:0; }
+.cnew__actions{ margin-top:20px; }
+.cnew__msg{ margin-top:14px; font-size:var(--fs-sub); color:var(--gold); word-break:break-all; }
+.sel__opt[aria-disabled="true"]{ opacity:.38; cursor:not-allowed; }
+@media (max-width:560px){ .cnew__row{ grid-template-columns:1fr; gap:6px; } }
+.yearcell--member{ cursor:pointer; }
+.commfaces{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+.commface{
+  display:inline-flex; align-items:center; gap:6px; padding:5px 9px;
+  border:1px solid var(--rule); border-radius:4px; background:rgba(232,185,63,.05);
+  font-family:var(--display); font-size:var(--fs-micro); color:var(--vellum);
+  text-decoration:none;
+}
 .yearwall__expand{ display:none; margin-top:16px; }
 @media (max-width:720px){
   .yearwall__expand{ display:inline-block; }
@@ -995,6 +1032,60 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <p class="story__gift" id="story-gift">Hold one, though, and it pays. When the calendar reaches your date, its holders claim that day’s gift at uday.gift — every year, on your day.</p>
           <p id="story-p3">Keep one for yourself. Send one to someone who matters. 362 of the year’s 366 days are lit so far — the rest are still waiting to be born.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── a community's calendar: /c/<slug>, everything else folds away ── -->
+  <section class="band" id="community" hidden>
+    <div class="shell">
+      <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
+        <p class="kicker" id="comm-kicker"></p>
+        <h2 id="comm-title"></h2>
+        <p id="comm-blurb"></p>
+      </div>
+      <div class="yearwall__stats rise" id="comm-stats"></div>
+      <p class="comm__next rise" id="comm-next" hidden></p>
+      <div class="yearwall rise">
+        <div class="yearwall__scroll">
+          <div class="yearwall__grid" id="comm-grid"></div>
+        </div>
+        <p class="yearwall__note" id="comm-note"></p>
+        <button type="button" class="btn btn--ghost yearwall__expand" id="comm-expand"
+                data-i18n="year.expand">SEE THE WHOLE YEAR</button>
+      </div>
+      <p class="comm__gate rise" id="comm-gate"></p>
+    </div>
+  </section>
+
+  <!-- ── /c — start a room. Nobody needs permission, including from us. ── -->
+  <section class="band" id="commnew" hidden>
+    <div class="shell">
+      <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
+        <p class="kicker" data-i18n="cnew.kicker">Start a community</p>
+        <h2 data-i18n="cnew.title">A room nobody runs</h2>
+        <p data-i18n="cnew.blurb">Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.</p>
+      </div>
+      <div class="cnew rise">
+        <label class="cnew__row"><span data-i18n="cnew.f.slug">URL</span>
+          <span class="cnew__slug">uday.gift/c/<input id="cnew-slug" maxlength="32" placeholder="unipeg" spellcheck="false" autocomplete="off"></span></label>
+        <label class="cnew__row"><span data-i18n="cnew.f.name">Name</span>
+          <input id="cnew-name" maxlength="48" placeholder="Unipeg" autocomplete="off"></label>
+        <div class="cnew__row"><span data-i18n="cnew.f.chain">Chain</span>
+          <div class="sel">
+            <button type="button" class="sel__btn" id="cnew-chain" aria-haspopup="listbox" aria-expanded="false"></button>
+            <span class="sel__chev" aria-hidden="true"></span>
+            <div class="sel__menu" id="cnew-chain-menu" role="listbox" hidden></div>
+          </div>
+        </div>
+        <label class="cnew__row"><span data-i18n="cnew.f.token">Token</span>
+          <input id="cnew-token" placeholder="0x…" spellcheck="false" autocomplete="off"></label>
+        <label class="cnew__row"><span data-i18n="cnew.f.min">Minimum held</span>
+          <input id="cnew-min" inputmode="decimal" placeholder="100" autocomplete="off"></label>
+        <div class="cnew__actions">
+          <button type="button" class="btn btn--gold" id="cnew-go" data-i18n="cnew.go">CREATE</button>
+        </div>
+        <p class="cnew__msg" id="cnew-msg" hidden></p>
       </div>
     </div>
   </section>
@@ -1184,6 +1275,26 @@ const I18N = {
     'status.btn.offer':'BRING IT HOME','status.btn.mint':'MINT A DAY',
     'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} DAYS BORN','live.sealed':'{n} STILL SEALED','live.owners':'{n} COLLECTORS',
     'year.expand':'SEE THE WHOLE YEAR','year.collapse':'SHOW THIS MONTH ONLY',
+    'comm.kicker':'A community','comm.blurb':'Every lit cell is a day someone here claimed as theirs. Nobody runs this room: you are in it while you hold the token, and only you can leave.',
+    'comm.stat.members':'{n} MEMBERS','comm.stat.days':'{n} DAYS CLAIMED',
+    'comm.next':'Next up in {n} days — {day} belongs to {who}.',
+    'comm.next.tomorrow':'Tomorrow — {day} belongs to {who}.',
+    'comm.next.today':'Today belongs to {who}.',
+    'comm.note':'A day shows here only if the person still holds a uDAY of that date.',
+    'comm.gate':'Anyone holding {min} of {token} can join. These rules were fixed when the community was created and can never be changed.',
+    'comm.missing':'No community here yet.',
+    'cnew.kicker':'Start a community','cnew.title':'A room nobody runs',
+    'cnew.blurb':'Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.',
+    'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held',
+    'cnew.go':'CREATE','cnew.soon':'soon',
+    'cnew.sent':'Creating uday.gift/c/{slug} — it appears once the index catches up.',
+    'cnew.err.slug':'The URL can use a-z, 0-9 and dashes only.',
+    'cnew.err.name':'Give it a name.','cnew.err.token':'That is not a contract address.',
+    'cnew.err.min':'The minimum must be a number.',
+    'cnew.err.nocontract':'Communities are not live on this network yet.',
+    'cnew.err.nowallet':'No wallet found in this browser.',
+    'cnew.err.chain':'Switch to Robinhood Chain to continue.',
+    'cnew.err.tx':'The transaction did not go through.',
     'year.kicker':'The year','year.title':'A year, lighting up',
     'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. A day whose last piece was just sold still glows faintly — an ember, for seven days. Tap a day to visit its earliest piece.',
     'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
@@ -1305,6 +1416,26 @@ const I18N = {
     'status.btn.offer':'把它带回家','status.btn.mint':'铸造一天',
     'live.lit':'全年点亮 {lit}/366 天','live.alive':'已诞生 {n} 枚','live.sealed':'{n} 枚待揭晓','live.owners':'收藏者 {n} 位',
     'year.expand':'看整年','year.collapse':'只看本月',
+    'comm.kicker':'一个社群','comm.blurb':'每一格亮起的日子，都是这里的某个人认定属于自己的一天。这个房间没有管理员：持有代币你就在里面，也只有你自己能离开。',
+    'comm.stat.members':'{n} 位成员','comm.stat.days':'{n} 天已被认领',
+    'comm.next':'下一个在 {n} 天后——{day} 属于 {who}。',
+    'comm.next.tomorrow':'就在明天——{day} 属于 {who}。',
+    'comm.next.today':'今天属于 {who}。',
+    'comm.note':'一天只有在那个人仍然持有该日期的 uDAY 时才会出现在这里。',
+    'comm.gate':'持有 {min} 枚 {token} 即可加入。这些规则在社群创建时就已固定，永远无法更改。',
+    'comm.missing':'这里还没有社群。',
+    'cnew.kicker':'创建社群','cnew.title':'一个没有管理员的房间',
+    'cnew.blurb':'选一个代币和一个门槛。持有足够数量的人都能加入，而没有任何人——包括你、包括我们——能把他们移出去。这些规则在创建的那一刻就永久固定。',
+    'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛',
+    'cnew.go':'创建','cnew.soon':'即将支持',
+    'cnew.sent':'正在创建 uday.gift/c/{slug}——索引跟上后就会出现。',
+    'cnew.err.slug':'网址只能用 a-z、0-9 和连字号。',
+    'cnew.err.name':'给它一个名字。','cnew.err.token':'这不是一个合约地址。',
+    'cnew.err.min':'门槛必须是数字。',
+    'cnew.err.nocontract':'社群功能尚未在这条链上启用。',
+    'cnew.err.nowallet':'这个浏览器里找不到钱包。',
+    'cnew.err.chain':'请切换到 Robinhood Chain。',
+    'cnew.err.tx':'交易没有送出。',
     'year.kicker':'一整年','year.title':'一年，正在点亮',
     'year.blurb':'每一格是一天。亮起代表这一天已在链上诞生，越亮代表这一天的 uDAY 越多。刚被卖掉最后一枚的日子还会微微发光——那是余烬，会亮七天。点一格，去看那一天诞生的每一枚。',
     'year.note':'366 天已点亮 {lit} 天 · 每小时从 Robinhood Chain 更新',
@@ -1457,6 +1588,7 @@ function applyLang(next){
   if(typeof yearLinkLabel === 'function') yearLinkLabel();
   const fo = document.getElementById('btn-forge-open'), fp = document.getElementById('forge-panel');
   if(fo && fp && !fp.hidden) fo.textContent = t('forge.close');
+  if(typeof renderCommunity === 'function' && COMM) renderCommunity();
   if(typeof applyYearCollapse === 'function') applyYearCollapse();
   if(typeof renderRoad === 'function') renderRoad();
 }
@@ -1469,8 +1601,8 @@ function applyLang(next){
 // higher-density redraw of the same four layers, generated by tools/mkglyphs.py
 // (which reproduces the 96px layers byte-for-byte, so the two cannot drift).
 const SRC = {
-  onchain: { dir:'assets/layers', size: 96,  scale: 8 },   //  96 * 8 = 768
-  hd:      { dir:'assets/hd',     size: 300, scale: 4 }    // 300 * 4 = 1200
+  onchain: { dir:'/assets/layers', size: 96,  scale: 8 },   //  96 * 8 = 768
+  hd:      { dir:'/assets/hd',     size: 300, scale: 4 }    // 300 * 4 = 1200
 };
 const pad2 = n => String(n).padStart(2,'0');
 const cache = new Map();
@@ -1767,8 +1899,8 @@ function renderGallery(){
     card.className = 'plaque';
     card.innerHTML =
       '<div class="plaque__art">' +
-        '<img src="assets/hd/plate/' + s + '.png" alt="" loading="lazy">' +
-        '<img class="frame" src="assets/hd/frame/' + s + '.png" alt="" loading="lazy">' +
+        '<img src="/assets/hd/plate/' + s + '.png" alt="" loading="lazy">' +
+        '<img class="frame" src="/assets/hd/frame/' + s + '.png" alt="" loading="lazy">' +
       '</div>' +
       '<div class="plaque__name">' + STYLE_LABEL[lang][s] + '</div>';
     g.appendChild(card);
@@ -2197,6 +2329,208 @@ function applyYearCollapse(){
   if(btn) btn.textContent = t(yearMonthOnly ? 'year.expand' : 'year.collapse');
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+   communities — /c/<slug>. A community's calendar is the SAME wall the
+   year uses, fed its members' declared days instead of the whole
+   collection. Everything is read from the committed JSON; the browser
+   never touches an RPC.
+   ───────────────────────────────────────────────────────────────────── */
+const COMM_SLUG = (location.pathname.match(/^\/c\/([a-z0-9-]{1,32})\/?$/) || [])[1] || null;
+const COMM_NEW = /^\/c\/?$/.test(location.pathname);
+let COMM = null;
+
+async function loadCommunity(){
+  if(!COMM_SLUG) return null;
+  try{
+    const r = await fetch('/data/communities.json', { cache: 'no-cache' });
+    if(!r.ok) return null;
+    const j = await r.json();
+    return (j.communities || []).find(c => c.slug === COMM_SLUG) || null;
+  }catch(e){ return null; }
+}
+
+/// members[] -> { "MM-DD": [{owner}] } so buildWall can draw it unchanged
+function commByDay(c){
+  const by = {};
+  (c.members || []).forEach(m => (m.days || []).forEach(k => {
+    (by[k] = by[k] || []).push({ owner: m.addr, id: 0 });
+  }));
+  return by;
+}
+
+/// The next member birthday from today, wrapping into next year. This is
+/// the reason to come back: a community page that cannot say "whose day is
+/// next" is just a grid.
+function commNextDay(by){
+  const u = new Date(Date.now() + 8 * 3600 * 1000);
+  const today = Date.UTC(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+  let best = null;
+  for(const k in by){
+    const m = +k.slice(0, 2), d = +k.slice(3);
+    for(let y = u.getUTCFullYear(); y <= u.getUTCFullYear() + 4; y++){
+      const ts = Date.UTC(y, m - 1, d);
+      if(new Date(ts).getUTCMonth() !== m - 1) continue;      // Feb 29, common year
+      if(ts < today) continue;
+      const days = Math.round((ts - today) / 86400000);
+      if(!best || days < best.days) best = { key: k, days: days, m: m, d: d, who: by[k] };
+      break;
+    }
+  }
+  return best;
+}
+
+let commMonthOnly = true;
+function renderCommunity(){
+  if(!COMM) return;
+  const by = commByDay(COMM);
+  document.getElementById('comm-kicker').textContent = t('comm.kicker');
+  document.getElementById('comm-title').textContent = COMM.name || COMM.slug;
+  document.getElementById('comm-blurb').textContent = t('comm.blurb');
+
+  const { lit } = buildWall(document.getElementById('comm-grid'), by, { today: true });
+  const host = document.getElementById('comm-stats');
+  host.textContent = '';
+  const mk = txt => { const el = document.createElement('span'); el.className = 'tag'; el.textContent = txt; host.appendChild(el); };
+  mk(t('comm.stat.members', { n: (COMM.members || []).length }));
+  mk(t('comm.stat.days', { n: lit }));
+
+  const nx = document.getElementById('comm-next');
+  const n = commNextDay(by);
+  if(n){
+    const who = n.who.map(e => shortAddr(e.owner)).slice(0, 3).join(', ') +
+                (n.who.length > 3 ? ' +' + (n.who.length - 3) : '');
+    nx.textContent = n.days === 0 ? t('comm.next.today', { who: who })
+                   : n.days === 1 ? t('comm.next.tomorrow', { who: who, day: dayLabel(n.m, n.d) })
+                   : t('comm.next', { n: n.days, who: who, day: dayLabel(n.m, n.d) });
+    nx.hidden = false;
+  }else nx.hidden = true;
+
+  document.getElementById('comm-note').textContent = t('comm.note');
+  // the rules are frozen at creation, so showing them IS the trust statement
+  document.getElementById('comm-gate').textContent = t('comm.gate', {
+    min: (Number(COMM.minBalance) / 1e18).toLocaleString(), token: COMM.token });
+  applyCommCollapse();
+  document.getElementById('community').hidden = false;
+}
+
+function applyCommCollapse(){
+  const grid = document.getElementById('comm-grid');
+  if(!grid) return;
+  const m = today.getMonth() + 1;
+  grid.classList.toggle('yearwall__grid--month', commMonthOnly);
+  grid.querySelectorAll('[data-m]').forEach(el =>
+    el.classList.toggle('off', commMonthOnly && +el.dataset.m !== m));
+  const b = document.getElementById('comm-expand');
+  if(b) b.textContent = t(commMonthOnly ? 'year.expand' : 'year.collapse');
+}
+
+/// On a community URL the marketing page folds away entirely, the same way
+/// my.uday.gift does — you followed a link to see one room, not the pitch.
+function commLayout(){
+  if(!COMM_SLUG && !COMM_NEW) return;
+  document.querySelector('.hero').hidden = true;
+  const bar = document.querySelector('.proofbar'); if(bar) bar.hidden = true;
+  // the whole collection's wall belongs on the main page; this room is
+  // about these people, and two 366-cell grids on one screen read as noise
+  ['story','forge','roadmap','year'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.hidden = true;
+  });
+  document.querySelector('.brand').href = 'https://uday.gift/';
+}
+
+/* ── /c — creating a community. The chain picker is a DOM listbox, never a
+   native <select>: wallet in-app browsers cannot open those, and wallet
+   browsers are exactly where this button gets pressed. ───────────────── */
+const CHAINS = [
+  { id: 4663, label: 'Robinhood Chain', on: true },
+  { id: 1, label: 'Ethereum', on: false },
+  { id: 8453, label: 'Base', on: false },
+  { id: 42161, label: 'Arbitrum', on: false },
+  { id: 10, label: 'Optimism', on: false },
+];
+const COMM_ADDR_FILE = '/data/community-contract.txt';
+let COMM_CONTRACT = null;
+// computed with `cast sig`, not recalled — a hand-copied selector has cost
+// this project a debugging session before
+const SEL_CREATE = '83278cd3';
+
+function cnewMenu(){
+  const btn = document.getElementById('cnew-chain');
+  const menu = document.getElementById('cnew-chain-menu');
+  if(!btn) return;
+  btn.textContent = CHAINS[0].label;
+  menu.textContent = '';
+  CHAINS.forEach(c => {
+    const o = document.createElement('button');
+    o.type = 'button'; o.className = 'sel__opt';
+    o.setAttribute('role', 'option');
+    o.setAttribute('aria-selected', String(c.on));
+    if(!c.on){
+      o.setAttribute('aria-disabled', 'true');
+      o.textContent = c.label + ' \u00b7 ' + t('cnew.soon');
+    }else o.textContent = c.label;
+    o.addEventListener('click', () => { if(c.on) closeMenus(); });
+    menu.appendChild(o);
+  });
+}
+
+function cnewCalldata(slug, name, token, minWei){
+  const head = '0x' + SEL_CREATE;   // stored bare, like the other selectors
+  const enc = [];
+  const sBytes = new TextEncoder().encode(slug);
+  const nBytes = new TextEncoder().encode(name);
+  const hexPad = b => {
+    let h = ''; b.forEach(x => h += x.toString(16).padStart(2, '0'));
+    return h.padEnd(Math.ceil(h.length / 64) * 64, '0');
+  };
+  const off1 = 4 * 32;
+  const off2 = off1 + 32 + Math.ceil(sBytes.length / 32) * 32;
+  enc.push(pad32(off1.toString(16)));
+  enc.push(pad32(off2.toString(16)));
+  enc.push(pad32(token.replace('0x', '').toLowerCase()));
+  enc.push(pad32(minWei.toString(16)));
+  enc.push(pad32(sBytes.length.toString(16)) + hexPad(sBytes));
+  enc.push(pad32(nBytes.length.toString(16)) + hexPad(nBytes));
+  return head + enc.join('');
+}
+
+async function cnewInit(){
+  if(!document.getElementById('commnew')) return;
+  cnewMenu();
+  try{
+    const r = await fetch(COMM_ADDR_FILE, { cache: 'no-cache' });
+    if(r.ok) COMM_CONTRACT = (await r.text()).trim();
+  }catch(e){}
+  const msg = document.getElementById('cnew-msg');
+  const go = document.getElementById('cnew-go');
+  go.addEventListener('click', async () => {
+    const slug = document.getElementById('cnew-slug').value.trim().toLowerCase();
+    const name = document.getElementById('cnew-name').value.trim();
+    const token = document.getElementById('cnew-token').value.trim();
+    const min = document.getElementById('cnew-min').value.trim();
+    const show = k => { msg.textContent = t(k); msg.hidden = false; };
+    if(!/^[a-z0-9-]{1,32}$/.test(slug)) return show('cnew.err.slug');
+    if(!name) return show('cnew.err.name');
+    if(!/^0x[0-9a-fA-F]{40}$/.test(token)) return show('cnew.err.token');
+    if(!(Number(min) >= 0)) return show('cnew.err.min');
+    if(!COMM_CONTRACT) return show('cnew.err.nocontract');
+    if(!mineEth) return show('cnew.err.nowallet');
+    let acc;
+    try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
+    catch(e){ return; }
+    if(!await ensureChain()) return show('cnew.err.chain');
+    const wei = BigInt(Math.round(Number(min) * 1e6)) * (10n ** 12n);
+    try{
+      const hash = await mineEth.request({ method: 'eth_sendTransaction', params: [{
+        from: acc[0], to: COMM_CONTRACT,
+        data: cnewCalldata(slug, name, token, wei) }] });
+      msg.innerHTML = t('cnew.sent', { slug: slug }) +
+        ' <a href="' + GIFT_TX_URL(hash) + '" target="_blank" rel="noopener">' + t('gift.tx') + '</a>';
+      msg.hidden = false;
+    }catch(e){ show('cnew.err.tx'); }
+  });
+}
+
 function renderYear(){
   if(!DAYS) return;
   const sec = document.getElementById('year');
@@ -2513,7 +2847,9 @@ async function loadGiftFile(year, key){
   if(k in GIFT_FILES) return GIFT_FILES[k];
   GIFT_FILES[k] = false;
   try{
-    const r = await fetch('data/gift/' + k + '.json', { cache: 'no-cache' });
+    // absolute: /c/<slug> keeps its path after the rewrite, so a relative
+    // fetch would resolve to /c/data/... and 404
+    const r = await fetch('/data/gift/' + k + '.json', { cache: 'no-cache' });
     if(r.ok) GIFT_FILES[k] = await r.json();
   }catch(e){}
   return GIFT_FILES[k];
@@ -2741,7 +3077,7 @@ function ensureGiftModal(){
   // the U with the bow — the logo IS a present, so it seals the gift card
   const emblem = document.createElement('img');
   emblem.className = 'giftmodal__emblem';
-  emblem.src = 'assets/apple-touch-icon.png';
+  emblem.src = '/assets/apple-touch-icon.png';
   emblem.alt = '';
   gmTitle = document.createElement('span');
   gmTitle.className = 'daymodal__title giftmodal__title';
@@ -3213,7 +3549,7 @@ if(IS_PERSONAL){
 
 async function loadIndex(){
   try{
-    const r = await fetch('data/date-index.json', { cache: 'no-cache' });
+    const r = await fetch('/data/date-index.json', { cache: 'no-cache' });
     if(!r.ok) return;
     const j = await r.json();
     DAYS = j.days || {};
@@ -3226,6 +3562,21 @@ async function loadIndex(){
     renderLiveTags();
     renderDayStatus();
     renderYear();
+    if(COMM_NEW){
+      commLayout();
+      document.getElementById('commnew').hidden = false;
+      cnewInit();
+    }
+    if(COMM_SLUG){
+      commLayout();
+      COMM = await loadCommunity();
+      if(COMM) renderCommunity();
+      else{
+        const sec = document.getElementById('community');
+        document.getElementById('comm-title').textContent = t('comm.missing');
+        sec.hidden = false;
+      }
+    }
     // the holder calendar lives on my.uday.gift — the main page stays compact
     if(IS_PERSONAL){
       document.getElementById('mine').hidden = false;
@@ -3248,6 +3599,12 @@ document.querySelectorAll('.langs button').forEach(b =>
 
 // The composer opens on request. Nothing inside it needs a first paint to
 // work — the chips and the 96x96 canvas were built at load, hidden or not.
+const commExpand = document.getElementById('comm-expand');
+if(commExpand) commExpand.addEventListener('click', () => {
+  commMonthOnly = !commMonthOnly;
+  applyCommCollapse();
+});
+
 document.getElementById('year-expand').addEventListener('click', () => {
   yearMonthOnly = !yearMonthOnly;
   applyYearCollapse();
