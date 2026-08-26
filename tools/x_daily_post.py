@@ -57,7 +57,7 @@ def compose_text(meta, gift):
 def main():
     argv = [a for a in sys.argv[1:] if not a.startswith("-")]
     day = argv[0] if argv else today_key()
-    dry = "--dry-run" in sys.argv
+    dry = "--dry-run" in sys.argv and "--check" not in sys.argv
 
     card = os.path.join(ROOT, "data", "x-card.png")
     meta = build(day, card)
@@ -74,10 +74,19 @@ def main():
                       os.environ["X_ACCESS_TOKEN"], os.environ["X_ACCESS_SECRET"])
 
     with open(card, "rb") as fh:
-        r = x.post(MEDIA_URL, files={"media": fh})
+        # v2 upload rejects a bare file: media_category and media_type are required
+        r = x.post(MEDIA_URL, files={"media": ("card.png", fh, "image/png")},
+                   data={"media_category": "tweet_image", "media_type": "image/png"})
     if r.status_code >= 300:
         sys.exit("media upload failed %d: %s" % (r.status_code, r.text[:400]))
     media_id = str((r.json().get("data") or r.json())["id"])
+
+    if "--check" in sys.argv:
+        # Credentials and write scope proven without publishing: an uploaded
+        # media id is private until a post references it, and upload is not
+        # billed. Stops here on purpose.
+        print("credentials OK, media accepted (id %s) — nothing posted" % media_id)
+        return
 
     r = x.post(TWEET_URL, json={"text": text, "media": {"media_ids": [media_id]}})
     if r.status_code >= 300:
