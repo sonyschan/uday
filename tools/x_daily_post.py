@@ -18,6 +18,7 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from x_daily_card import build, today_key, ROOT
+from x_daily_line import line_for
 
 MEDIA_URL = "https://api.x.com/2/media/upload"
 TWEET_URL = "https://api.x.com/2/tweets"
@@ -50,8 +51,9 @@ def compose_text(meta, gift):
     else:
         lines.append("%s carry this date, held by %s."
                      % (plural("pieces", "piece"), plural("wallets", "wallet")))
-    lines += ["", "Tomorrow the calendar turns again. One of these days is yours."]
-    return "\n".join(lines)
+    closer, src = line_for(meta["day"], verbose=True)
+    lines += ["", closer]
+    return "\n".join(lines), src
 
 
 def main():
@@ -61,8 +63,9 @@ def main():
 
     card = os.path.join(ROOT, "data", "x-card.png")
     meta = build(day, card)
-    text = compose_text(meta, gift_of(day))
+    text, src = compose_text(meta, gift_of(day))
     print("\n--- post text ---\n%s\n-----------------" % text)
+    print("closing line source: %s" % (src or "(fallback — no factual claim)"))
 
     missing = [k for k in KEYS if not os.environ.get(k)]
     if dry or missing:
