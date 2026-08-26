@@ -859,6 +859,16 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 .cnew__slug input{ flex:1; min-width:0; }
 .cnew__actions{ margin-top:20px; }
 .cnew__kind{ display:block; margin-top:5px; font-size:var(--fs-micro); color:var(--muted); }
+.cnew__wait{ display:flex; flex-direction:column; align-items:flex-start; gap:16px; }
+.cnew__waitline{ margin:0; font-size:var(--fs-sub); color:var(--vellum); max-width:52ch; }
+.cnew__spin{
+  width:30px; height:30px; border-radius:50%;
+  border:3px solid rgba(232,185,63,.22); border-top-color:var(--gold);
+  animation:cnew-spin 1s linear infinite;
+}
+.cnew__spin--done{ animation:none; border-color:var(--gold); }
+@keyframes cnew-spin{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce){ .cnew__spin{ animation-duration:3s; } }
 .cnew__msg{ margin-top:14px; font-size:var(--fs-sub); color:var(--gold); word-break:break-all; }
 .sel__opt[aria-disabled="true"]{ opacity:.38; cursor:not-allowed; }
 @media (max-width:560px){ .cnew__row{ grid-template-columns:1fr; gap:6px; } }
@@ -1305,6 +1315,10 @@ const I18N = {
     'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'Website',
     'cnew.links.note':'Optional, https only. You can change these later; nothing else about the room can change.',
     'cnew.err.link':'Links must start with https://',
+    'cnew.wait':'Making uday.gift/c/{slug}. Waiting for the transaction to land — this is usually seconds.',
+    'cnew.done':'uday.gift/c/{slug} exists. Taking you there…',
+    'cnew.slow':'The transaction has not landed yet. It may still go through — the room will be at uday.gift/c/{slug} when it does.',
+    'cnew.open':'OPEN THE ROOM',
     'cnew.go':'CREATE','cnew.soon':'soon',
     'cnew.sent':'Creating uday.gift/c/{slug} — it appears once the index catches up.',
     'cnew.err.slug':'The URL can use a-z, 0-9 and dashes only.',
@@ -1458,6 +1472,10 @@ const I18N = {
     'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'网站',
     'cnew.links.note':'选填，只接受 https。这些之后可以改；房间的其他一切都不能改。',
     'cnew.err.link':'连结必须以 https:// 开头。',
+    'cnew.wait':'正在建立 uday.gift/c/{slug}。等待交易上链——通常只要几秒。',
+    'cnew.done':'uday.gift/c/{slug} 已经存在。正在带你过去…',
+    'cnew.slow':'交易还没上链。它可能仍会成功——成功后房间就在 uday.gift/c/{slug}。',
+    'cnew.open':'打开房间',
     'cnew.go':'创建','cnew.soon':'即将支持',
     'cnew.sent':'正在创建 uday.gift/c/{slug}——索引跟上后就会出现。',
     'cnew.err.slug':'网址只能用 a-z、0-9 和连字号。',
@@ -2387,13 +2405,103 @@ const COMM_SLUG = (location.pathname.match(/^\/c\/([a-z0-9-]{1,32})\/?$/) || [])
 const COMM_NEW = /^\/c\/?$/.test(location.pathname);
 let COMM = null;
 
+const SEL_COMMUNITIES = '0xbd6a7a82';   // communities(bytes32)
+const SEL_LINKS        = '0xb2fccc7f';   // links(bytes32)
+
+/// The index first, the chain as a fallback.
+///
+/// A room exists the moment its transaction lands, but the published index
+/// only catches up on its next cycle — so without this, someone who just made
+/// a room is told it does not exist for up to an hour. Reading the contract
+/// costs one call and only happens when the index has nothing, so the normal
+/// path still never touches an RPC.
 async function loadCommunity(){
   if(!COMM_SLUG) return null;
   try{
     const r = await fetch('/data/communities.json', { cache: 'no-cache' });
-    if(!r.ok) return null;
+    if(r.ok){
+      const j = await r.json();
+      const hit = (j.communities || []).find(c => c.slug === COMM_SLUG);
+      if(hit) return hit;
+    }
+  }catch(e){}
+  return await loadCommunityFromChain(COMM_SLUG);
+}
+
+async function loadCommunityFromChain(slug){
+  if(!COMM_CONTRACT){
+    try{
+      const r = await fetch(COMM_ADDR_FILE, { cache: 'no-cache' });
+      if(r.ok) COMM_CONTRACT = (await r.text()).trim();
+    }catch(e){ return null; }
+  }
+  if(!COMM_CONTRACT) return null;
+  const home = CHAINS[0];
+  const id = await slugId(slug);
+  if(!id) return null;
+  const call = async (sel) => {
+    try{
+      const r = await fetch(home.rpc, { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
+          params: [{ to: COMM_CONTRACT, data: sel + id }, 'latest'] }) });
+      const j = await r.json();
+      return (j && j.result && j.result !== '0x') ? j.result.slice(2) : null;
+    }catch(e){ return null; }
+  };
+  const meta = await call(SEL_COMMUNITIES);
+  if(!meta) return null;
+  const w = i => meta.slice(i * 64, (i + 1) * 64);
+  const token = '0x' + w(1).slice(24);
+  if(/^0x0+$/.test(token)) return null;                  // no such room
+  const str = off => {
+    const p = parseInt(off, 16) * 2;
+    const n = parseInt(meta.slice(p, p + 64), 16);
+    return decodeURIComponent(
+      (meta.slice(p + 64, p + 64 + n * 2).match(/../g) || [])
+        .map(h => '%' + h).join(''));
+  };
+  const chainId = parseInt(w(0), 16);
+  const raw = await call(SEL_LINKS);
+  const links = {};
+  if(raw){
+    const lw = i => raw.slice(i * 64, (i + 1) * 64);
+    ['x', 'telegram', 'other'].forEach((k, i) => {
+      const p = parseInt(lw(i), 16) * 2;
+      const n = parseInt(raw.slice(p, p + 64), 16);
+      if(!n) return;
+      const v = decodeURIComponent((raw.slice(p + 64, p + 64 + n * 2).match(/../g) || [])
+                  .map(h => '%' + h).join(''));
+      if(/^https:\/\//i.test(v)) links[k] = v;
+    });
+  }
+  return { id: '0x' + id, slug: str(w(5)), name: str(w(6)),
+           chainId: chainId, token: token,
+           gatedOnchain: chainId === home.id,
+           minBalance: BigInt('0x' + w(2)).toString(),
+           creator: '0x' + w(3).slice(24), createdAt: parseInt(w(4), 16),
+           tokenKind: 'erc20', tokenDecimals: 18,   // refined by the index
+           links: links, members: [], fresh: true };
+}
+
+/// keccak of the slug — the community id. Uses the wallet's own provider when
+/// one is present, since the page carries no hash function.
+async function slugId(slug){
+  const hex = Array.from(new TextEncoder().encode(slug))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  if(mineEth && mineEth.request){
+    try{
+      const r = await mineEth.request({ method: 'web3_sha3', params: ['0x' + hex] });
+      if(/^0x[0-9a-f]{64}$/i.test(r)) return r.slice(2);
+    }catch(e){}
+  }
+  try{
+    const r = await fetch(CHAINS[0].rpc, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'web3_sha3',
+        params: ['0x' + hex] }) });
     const j = await r.json();
-    return (j.communities || []).find(c => c.slug === COMM_SLUG) || null;
+    return (j && j.result) ? j.result.slice(2) : null;
   }catch(e){ return null; }
 }
 
@@ -2666,6 +2774,56 @@ async function cnewProbe(){
   if(unit) unit.textContent = pr.kind === 'erc721' ? t('cnew.unit.items') : t('cnew.unit.tokens');
 }
 
+/// The form has done its job; leaving it on screen invites a second identical
+/// transaction. It is replaced by a waiting state that polls the CONTRACT —
+/// not the index — because the room exists the moment the transaction lands,
+/// and the page can already render it from the chain.
+function cnewWaiting(slug, hash){
+  const box = document.querySelector('.cnew');
+  box.textContent = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'cnew__wait';
+  const spin = document.createElement('span');
+  spin.className = 'cnew__spin';
+  spin.setAttribute('aria-hidden', 'true');
+  const line = document.createElement('p');
+  line.className = 'cnew__waitline';
+  line.textContent = t('cnew.wait', { slug: slug });
+  const tx = document.createElement('a');
+  tx.className = 'btn btn--ghost';
+  tx.href = GIFT_TX_URL(hash); tx.target = '_blank'; tx.rel = 'noopener';
+  tx.textContent = t('gift.tx');
+  wrap.append(spin, line, tx);
+  box.appendChild(wrap);
+
+  let tries = 0;
+  const poll = async () => {
+    tries++;
+    const found = await loadCommunityFromChain(slug);
+    if(found){
+      line.textContent = t('cnew.done', { slug: slug });
+      spin.classList.add('cnew__spin--done');
+      setTimeout(() => { location.href = '/c/' + slug; }, 900);
+      return;
+    }
+    // ~90s of patience, then stop spinning and hand over the link: the
+    // transaction may simply be slow, and a spinner that never ends is worse
+    // than a sentence that admits it does not know
+    if(tries > 30){
+      spin.classList.add('cnew__spin--done');
+      line.textContent = t('cnew.slow', { slug: slug });
+      const go = document.createElement('a');
+      go.className = 'btn btn--gold';
+      go.href = '/c/' + slug;
+      go.textContent = t('cnew.open');
+      wrap.insertBefore(go, tx);
+      return;
+    }
+    setTimeout(poll, 3000);
+  };
+  setTimeout(poll, 1500);
+}
+
 async function cnewInit(){
   if(!document.getElementById('commnew')) return;
   cnewMenu();
@@ -2720,9 +2878,7 @@ async function cnewInit(){
         from: acc[0], to: COMM_CONTRACT,
         data: cnewCalldata(slug, name, cnewChain.id, token, raw, {
           x: linkOf('cnew-x'), telegram: linkOf('cnew-tg'), other: linkOf('cnew-other') }) }] });
-      msg.innerHTML = t('cnew.sent', { slug: slug }) +
-        ' <a href="' + GIFT_TX_URL(hash) + '" target="_blank" rel="noopener">' + t('gift.tx') + '</a>';
-      msg.hidden = false;
+      cnewWaiting(slug, hash);
     }catch(e){ show('cnew.err.tx'); }
   });
 }
