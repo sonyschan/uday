@@ -463,6 +463,9 @@ section{ position:relative; }
 .giftmodal__body p{ margin:12px 0 0; font-size:var(--fs-sub); color:#e6dbc2; line-height:1.75; }
 .giftmodal__state{ margin-top:18px; display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
 .giftmodal__ok{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
+/* after the claim the number stops being an offer and becomes a receipt */
+.giftmodal__amount--got{ color:var(--vellum); }
+.giftmodal__amount--got::before{ content:"+"; color:var(--gold); margin-right:.12em; }
 .giftmodal__bless{
   margin:16px 0 0; text-align:center;
   font-size:var(--fs-sub); line-height:1.85; color:#f0e2ba;
@@ -1201,7 +1204,7 @@ const I18N = {
     'gift.title':'TODAY’S GIFT',
     'gift.not.yours':'Every uDAY is a calendar date — and when the real calendar reaches that date, that day’s holders share the day’s gift. Today, {total} USDG belongs to holders of {day}.',
     'gift.cta':'CLAIM THE GIFT',
-    'gift.modal.title':'TODAY’S GIFT · {day}',
+    'gift.modal.title':'TODAY’S GIFT · {day}','gift.modal.claimed.title':'YOURS · {day}',
     'gift.modal.p1':'Every uDAY is a calendar date. When the real calendar reaches that date, its holders share the day’s gift — today belongs to holders of {day}.',
     'gift.modal.p2':'The gift grows and changes with the uDAY ecosystem — today it is USDG; tomorrow it may be something more.',
     'gift.modal.connect':'CONNECT WALLET TO CLAIM',
@@ -1320,7 +1323,7 @@ const I18N = {
     'gift.title':'今日礼物',
     'gift.not.yours':'每枚 uDAY 都是一个日期——当现实的日历走到那一天，这一天的主人们就能分享当天的礼物。今天共 {total} USDG，属于 {day} 的持有者。',
     'gift.cta':'领取礼物',
-    'gift.modal.title':'今日礼物 · {day}',
+    'gift.modal.title':'今日礼物 · {day}','gift.modal.claimed.title':'已归你 · {day}',
     'gift.modal.p1':'每枚 uDAY 都是一个日期。当现实的日历走到那一天，拥有它们的主人们就能分享当天的礼物——今天属于 {day} 的持有者。',
     'gift.modal.p2':'礼物会随 uDAY 生态一起成长变化——今天是 USDG，明天也许更有趣。',
     'gift.modal.connect':'连接钱包领取',
@@ -2577,6 +2580,8 @@ async function renderGift(){
     btn.textContent = t('gift.pending');
     try{
       const hash = await sendGiftClaim(dayId, id, entry);
+      document.getElementById('gift-title').textContent =
+        t('gift.modal.claimed.title', { day: dayTxt });
       line.textContent = t('gift.bless', { day: dayTxt });
       btn.hidden = true;
       const sh = document.getElementById('gift-share');
@@ -2633,12 +2638,40 @@ function closeGiftModal(){
   giftModal.hidden = true;
   document.body.style.overflow = '';
 }
+/// Both ways of arriving at "you have this day's gift" — the claim that just
+/// landed and the reopen afterwards — are the same state, so they get the
+/// same panel: a receipt, a blessing, and the date of the next one. The
+/// explainer paragraphs and the snapshot caveat are for people deciding;
+/// someone already paid does not need to be sold to again.
+function giftClaimedView(dayTxt, amt, id){
+  gmTitle.textContent = t('gift.modal.claimed.title', { day: dayTxt });
+  gmAmount.textContent = amt + ' USDG';
+  gmAmount.classList.add('giftmodal__amount--got');
+  gmAmount.hidden = false;
+  gmBody.textContent = '';
+  const bless = document.createElement('p');
+  bless.className = 'giftmodal__bless';
+  bless.textContent = t('gift.bless', { day: dayTxt });
+  gmBody.appendChild(bless);
+  const n = nextGiftDay(id);
+  if(n){
+    const nx = document.createElement('p');
+    nx.className = 'giftmodal__snap';
+    nx.textContent = n.days === 1
+      ? t('gift.next.tomorrow', { day: dayLabel(n.m, n.d) })
+      : t('gift.next', { n: n.days, day: dayLabel(n.m, n.d) });
+    gmBody.appendChild(nx);
+  }
+  gmState.textContent = '';
+}
+
 async function openGiftModal(){
   ensureGiftModal();
   const g = await loadGiftData();
   const { key, dayId } = giftToday();
   const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
   gmTitle.textContent = t('gift.modal.title', { day: dayTxt });
+  gmAmount.classList.remove('giftmodal__amount--got');
   // no root on-chain yet (the day's list froze at 00:00 but the gift is
   // still being wrapped) — the perk still gets its full pitch, just no number
   gmAmount.hidden = !g;
@@ -2680,10 +2713,13 @@ async function openGiftModal(){
   }else if(entry){
     const amt = String(Math.floor(entry.amount / 1e6));
     if(await giftClaimedCheck(dayId, id)){
-      const s = document.createElement('p');
-      s.className = 'giftmodal__ok';
-      s.textContent = t('gift.claimed', { n: amt });
-      gmState.appendChild(s);
+      giftClaimedView(dayTxt, amt, id);
+      const share = document.createElement('a');
+      share.className = 'btn btn--gold';
+      share.target = '_blank'; share.rel = 'noopener';
+      share.href = giftShareUrl(amt);
+      share.textContent = t('gift.share');
+      gmState.appendChild(share);
     }else{
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'btn btn--gold';
@@ -2692,13 +2728,10 @@ async function openGiftModal(){
         b.disabled = true; b.textContent = t('gift.pending');
         try{
           const hash = await sendGiftClaim(dayId, id, entry);
-          // the warm ending: the story gives way to a blessing + the receipt
-          gmBody.textContent = '';
-          const bless = document.createElement('p');
-          bless.className = 'giftmodal__bless';
-          bless.textContent = t('gift.bless', { day: dayTxt });
-          gmBody.appendChild(bless);
-          gmState.textContent = '';
+          // The panel was announcing the DAY's pot; now the subject is the
+          // person. The headline becomes what THEY received — a holder of 2
+          // of the day's 4 USDG must not read their receipt as 4.
+          giftClaimedView(dayTxt, amt, id);
           const share = document.createElement('a');
           share.className = 'btn btn--gold';
           share.target = '_blank'; share.rel = 'noopener';
