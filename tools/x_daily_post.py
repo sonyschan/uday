@@ -51,13 +51,21 @@ def compose_text(meta, gift):
     else:
         lines.append("%s carry this date, held by %s."
                      % (plural("pieces", "piece"), plural("wallets", "wallet")))
-    closer, src = line_for(meta["day"], verbose=True)
+    # --line pins the closer: every generation searches afresh, so a line the
+    # owner reviewed must be posted verbatim rather than re-rolled
+    if "--line" in sys.argv:
+        closer, src = sys.argv[sys.argv.index("--line") + 1], "(pinned by hand)"
+    else:
+        closer, src = line_for(meta["day"], verbose=True)
     lines += ["", closer]
     return "\n".join(lines), src
 
 
 def main():
-    argv = [a for a in sys.argv[1:] if not a.startswith("-")]
+    argv = sys.argv[1:]
+    if "--line" in argv:
+        i = argv.index("--line"); del argv[i:i + 2]
+    argv = [a for a in argv if not a.startswith("-")]
     day = argv[0] if argv else today_key()
     dry = "--dry-run" in sys.argv and "--check" not in sys.argv
 
