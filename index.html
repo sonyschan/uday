@@ -839,6 +839,20 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   margin:0 0 18px; font-size:var(--fs-sub); color:var(--gold);
   font-family:var(--display); letter-spacing:var(--ls-narrow);
 }
+.commjoin{
+  margin-top:26px; padding:18px 20px; border-radius:10px;
+  border:1px solid rgba(232,185,63,.4);
+  background:linear-gradient(135deg, rgba(232,185,63,.09), rgba(232,185,63,.02));
+}
+.commjoin__line{ margin:0 0 14px; font-size:var(--fs-sub); color:#e6dbc2; max-width:60ch; }
+.commjoin__days{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px; }
+.commjoin__day{
+  padding:7px 11px; border-radius:4px; cursor:pointer;
+  border:1px solid var(--rule); background:rgba(243,231,205,.04);
+  font-family:var(--display); font-size:var(--fs-micro); color:var(--vellum);
+}
+.commjoin__day[aria-pressed="true"]{ border-color:var(--gold); color:var(--gold); background:rgba(232,185,63,.12); }
+.commjoin__mine{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
 .comm__gate{
   margin-top:26px; padding-top:14px; border-top:1px solid var(--rule);
   font-size:var(--fs-micro); color:var(--muted); word-break:break-all;
@@ -1067,6 +1081,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
         <button type="button" class="btn btn--ghost yearwall__expand" id="comm-expand"
                 data-i18n="year.expand">SEE THE WHOLE YEAR</button>
       </div>
+      <div class="commjoin rise" id="comm-join" hidden></div>
       <p class="comm__gate rise" id="comm-gate"></p>
     </div>
   </section>
@@ -1309,6 +1324,19 @@ const I18N = {
     'comm.gate.floor':'Holding a uDAY is required either way, and that part is enforced onchain.',
     'comm.link.site':'Website',
     'comm.link.note':'links maintained by whoever created this room',
+    'join.connect':'Connect a wallet to see whether you can stand on this calendar.',
+    'join.member':'You are in this room. Only you can take yourself out of it.',
+    'join.member.days':'On the calendar as {days}.',
+    'join.leave':'LEAVE','join.left':'You have left. Your days come off the calendar next cycle.',
+    'join.needuday':'Every member of every room holds at least one uDAY — that part is enforced by the contract, not by us.',
+    'join.getuday':'GET A uDAY',
+    'join.noday':'You hold uDAY, but none of your pieces have revealed their date yet. A day has to be yours before it can stand here.',
+    'join.ready':'Your {days} is ready to stand on this calendar.',
+    'join.go':'JOIN',
+    'join.pick':'Pick the day that will stand here. You have {n} to give.',
+    'join.gowith':'JOIN WITH THIS DAY',
+    'join.noslots':'Every day you can declare is already spoken for. Hold more uDAY for another, or free one on your own calendar.',
+    'join.sent':'Sent. You appear on the calendar once the index catches up — usually within the hour.',
     'comm.missing':'No community here yet.',
     'cnew.kicker':'Start a community','cnew.title':'A room nobody runs',
     'cnew.blurb':'Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.',
@@ -1466,6 +1494,19 @@ const I18N = {
     'comm.gate.floor':'无论哪一种，持有 uDAY 都是必要条件，而那一半是链上强制的。',
     'comm.link.site':'网站',
     'comm.link.note':'连结由开设这个房间的人维护',
+    'join.connect':'连接钱包，看看你能不能站上这张日历。',
+    'join.member':'你已经在这个房间里。只有你自己能把自己移出去。',
+    'join.member.days':'日历上是 {days}。',
+    'join.leave':'离开','join.left':'你已离开。你的日子会在下一轮从日历上消失。',
+    'join.needuday':'每个房间的每个成员都至少持有一枚 uDAY——这一点由合约强制，不是由我们。',
+    'join.getuday':'去拿一枚 uDAY',
+    'join.noday':'你持有 uDAY，但还没有任何一枚揭晓日期。一天要先属于你，才能站在这里。',
+    'join.ready':'你的 {days} 已经可以站上这张日历了。',
+    'join.go':'加入',
+    'join.pick':'选一个要站在这里的日子。你有 {n} 个名额。',
+    'join.gowith':'用这一天加入',
+    'join.noslots':'你能宣告的日子都已经用完了。持有更多 uDAY 换一个名额，或在自己的日历上腾出一个。',
+    'join.sent':'已送出。索引跟上后你就会出现在日历上——通常一小时内。',
     'comm.missing':'这里还没有社群。',
     'cnew.kicker':'创建社群','cnew.title':'一个没有管理员的房间',
     'cnew.blurb':'选一个代币和一个门槛。持有足够数量的人都能加入，而没有任何人——包括你、包括我们——能把他们移出去。这些规则在创建的那一刻就永久固定。',
@@ -2428,14 +2469,21 @@ async function loadCommunity(){
   return await loadCommunityFromChain(COMM_SLUG);
 }
 
+/// The deployed address, fetched once. Both the chain fallback and the join
+/// panel need it, and the join panel is reached WITHOUT the fallback whenever
+/// the index already knows the room — which is why loading it inside the
+/// fallback alone left the panel permanently hidden.
+async function ensureCommContract(){
+  if(COMM_CONTRACT) return COMM_CONTRACT;
+  try{
+    const r = await fetch(COMM_ADDR_FILE, { cache: 'no-cache' });
+    if(r.ok) COMM_CONTRACT = (await r.text()).trim();
+  }catch(e){}
+  return COMM_CONTRACT;
+}
+
 async function loadCommunityFromChain(slug){
-  if(!COMM_CONTRACT){
-    try{
-      const r = await fetch(COMM_ADDR_FILE, { cache: 'no-cache' });
-      if(r.ok) COMM_CONTRACT = (await r.text()).trim();
-    }catch(e){ return null; }
-  }
-  if(!COMM_CONTRACT) return null;
+  if(!await ensureCommContract()) return null;
   const home = CHAINS[0];
   const id = await slugId(slug);
   if(!id) return null;
@@ -2609,6 +2657,171 @@ function renderCommunity(){
 
   applyCommCollapse();
   document.getElementById('community').hidden = false;
+  renderJoin();
+}
+
+const SEL_ISMEMBER = '0x10ad56b3', SEL_DAYSOF = '0xd98ceee6', SEL_SLOTSOF = '0x8ac48a59';
+const SEL_JOIN = '0xad677d0b', SEL_JOINWITH = '0x7f9275f2', SEL_LEAVE = '0x5265303c';
+const UTOKEN_BUY = UTOKEN_TOKEN;
+
+async function commCall(sel, args){
+  const home = CHAINS[0];
+  try{
+    const r = await fetch(home.rpc, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
+        params: [{ to: COMM_CONTRACT, data: sel + (args || '') }, 'latest'] }) });
+    const j = await r.json();
+    return (j && j.result && j.result !== '0x') ? j.result : null;
+  }catch(e){ return null; }
+}
+
+/// The days this wallet could declare: only dates it actually holds a piece
+/// of. That constraint IS the product — to stand on a community's calendar on
+/// your birthday you have to own that birthday.
+function commOwnedDays(id){
+  if(!DAYS || !id) return [];
+  return Object.keys(DAYS).filter(isRealDate)
+    .filter(k => DAYS[k].some(e => e.owner === id))
+    .sort();
+}
+
+let commPick = null;
+async function renderJoin(){
+  const box = document.getElementById('comm-join');
+  if(!COMM || !await ensureCommContract()){ box.hidden = true; return; }
+  box.textContent = '';
+  const me = mineIdentity();
+  const line = document.createElement('p');
+  line.className = 'commjoin__line';
+  box.appendChild(line);
+  const act = (label, cls, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn ' + (cls || 'btn--gold');
+    b.textContent = label; b.addEventListener('click', fn);
+    box.appendChild(b); return b;
+  };
+  const link = (label, href) => {
+    const a = document.createElement('a');
+    a.className = 'btn btn--ghost'; a.href = href;
+    a.target = '_blank'; a.rel = 'noopener'; a.textContent = label;
+    box.appendChild(a); return a;
+  };
+  box.hidden = false;
+
+  if(!me){
+    line.textContent = t('join.connect');
+    if(mineEth) act(t('gift.modal.connect'), 'btn--gold', () => mineConnect.click());
+    else link(t('gift.modal.connect'), 'https://' + PERSONAL_HOST + '/');
+    return;
+  }
+
+  const pad = a => pad32(a.replace('0x', '').toLowerCase());
+  const cid = COMM.id.replace('0x', '');
+  const [mem, slots, mine] = await Promise.all([
+    commCall(SEL_ISMEMBER, cid + pad(me)),
+    commCall(SEL_SLOTSOF, pad(me)),
+    commCall(SEL_DAYSOF, pad(me)),
+  ]);
+
+  // already in: show what stands on the calendar and the only way out
+  if(mem && /1$/.test(mem)){
+    const mineKeys = commOwnedDays(me).filter(k =>
+      (COMM.members || []).some(m => m.addr === me && (m.days || []).includes(k)));
+    const shown = mineKeys.length ? mineKeys : commOwnedDays(me);
+    line.textContent = t('join.member');
+    if(shown.length){
+      const p = document.createElement('p');
+      p.className = 'commjoin__mine';
+      p.textContent = t('join.member.days', {
+        days: shown.slice(0, 3).map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
+      box.insertBefore(p, box.firstChild.nextSibling);
+    }
+    act(t('join.leave'), 'btn--ghost', async () => {
+      if(!await ensureChain()) return;
+      try{
+        await mineEth.request({ method: 'eth_sendTransaction',
+          params: [{ from: mineWallet, to: COMM_CONTRACT, data: SEL_LEAVE + cid }] });
+        line.textContent = t('join.left');
+      }catch(e){}
+    });
+    return;
+  }
+
+  // the uDAY floor is the half consensus enforces, so it is checked first
+  if(!slots || BigInt(slots) === 0n){
+    line.textContent = t('join.needuday');
+    link(t('join.getuday'), UTOKEN_BUY);
+    return;
+  }
+
+  const owned = commOwnedDays(me);
+  const declared = [];
+  if(mine){
+    const w = mine.slice(2);
+    const n = parseInt(w.slice(64, 128), 16);
+    for(let i = 0; i < n; i++){
+      const v = parseInt(w.slice(128 + i * 64, 192 + i * 64), 16);
+      declared.push(pad2(Math.floor(v / 100)) + '-' + pad2(v % 100));
+    }
+  }
+  const usable = declared.filter(k => owned.includes(k));
+
+  if(usable.length){
+    line.textContent = t('join.ready', {
+      days: usable.map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
+    act(t('join.go'), 'btn--gold', () => commSend(SEL_JOIN + cid));
+    return;
+  }
+
+  if(!owned.length){
+    line.textContent = t('join.noday');
+    link(t('join.getuday'), UTOKEN_BUY);
+    return;
+  }
+
+  // pick which of the days they hold will stand on this calendar
+  line.textContent = t('join.pick', { n: Number(BigInt(slots)) });
+  const row = document.createElement('div');
+  row.className = 'commjoin__days';
+  const free = Math.max(0, Number(BigInt(slots)) - declared.length);
+  owned.slice(0, 60).forEach(k => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'commjoin__day';
+    b.setAttribute('aria-pressed', String(commPick === k));
+    b.textContent = dayLabel(+k.slice(0,2), +k.slice(3));
+    b.addEventListener('click', () => { commPick = k; renderJoin(); });
+    row.appendChild(b);
+  });
+  box.insertBefore(row, box.firstChild.nextSibling);
+  if(!free){
+    const p = document.createElement('p');
+    p.className = 'commjoin__mine';
+    p.textContent = t('join.noslots');
+    box.appendChild(p);
+    return;
+  }
+  const go = act(t('join.gowith'), 'btn--gold', () => {
+    if(!commPick) return;
+    const m = +commPick.slice(0, 2), d = +commPick.slice(3);
+    commSend(SEL_JOINWITH + cid + pad32((m * 100 + d).toString(16)));
+  });
+  go.disabled = !commPick;
+}
+
+async function commSend(data){
+  if(!await ensureChain()) return;
+  const box = document.getElementById('comm-join');
+  const line = box.querySelector('.commjoin__line');
+  try{
+    await mineEth.request({ method: 'eth_sendTransaction',
+      params: [{ from: mineWallet, to: COMM_CONTRACT, data: data }] });
+    line.textContent = t('join.sent');
+    box.querySelectorAll('button').forEach(b => b.disabled = true);
+    // the calendar cannot show them until the index rebuilds; say the true
+    // thing rather than pretending the page is stale
+    setTimeout(renderJoin, 6000);
+  }catch(e){}
 }
 
 function applyCommCollapse(){
@@ -2827,10 +3040,7 @@ function cnewWaiting(slug, hash){
 async function cnewInit(){
   if(!document.getElementById('commnew')) return;
   cnewMenu();
-  try{
-    const r = await fetch(COMM_ADDR_FILE, { cache: 'no-cache' });
-    if(r.ok) COMM_CONTRACT = (await r.text()).trim();
-  }catch(e){}
+  await ensureCommContract();
   const msg = document.getElementById('cnew-msg');
   const go = document.getElementById('cnew-go');
   // `change` on a text input only fires on blur, so a pasted address sat there
@@ -3042,6 +3252,7 @@ function mineWalletUI(){
   // surfaces that mention it whenever the connected wallet changes
   if(DAYS){ renderDayStatus(); if(mineAddr) renderMine(); }
   if(typeof renderGift === 'function') renderGift();
+  if(typeof renderJoin === 'function' && COMM) renderJoin();
 }
 function mineDisconnect(){
   // EIP-1193 has no programmatic disconnect: logging out means forgetting —
