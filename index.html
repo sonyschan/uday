@@ -1662,7 +1662,7 @@ const I18N = {
     'cnew.sent':'Creating uday.gift/c/{slug} — it appears once the index catches up.',
     'cnew.err.slug':'The URL can use a-z, 0-9 and dashes only.',
     'cnew.err.name':'Give it a name.','cnew.err.token':'That is not a contract address.',
-    'cnew.err.min':'The minimum must be a number.',
+    'cnew.err.min':'The minimum must be a number above zero — a gate of 0 is no gate.',
     'cnew.err.nocontract':'Communities are not live on this network yet.',
     'cnew.err.nowallet':'No wallet found in this browser.',
     'cnew.err.chain':'Switch to Robinhood Chain to continue.',
@@ -1872,7 +1872,7 @@ const I18N = {
     'cnew.sent':'正在创建 uday.gift/c/{slug}——索引跟上后就会出现。',
     'cnew.err.slug':'网址只能用 a-z、0-9 和连字号。',
     'cnew.err.name':'给它一个名字。','cnew.err.token':'这不是一个合约地址。',
-    'cnew.err.min':'门槛必须是数字。',
+    'cnew.err.min':'门槛必须是大于 0 的数字——0 等于没有门槛。',
     'cnew.err.nocontract':'社群功能尚未在这条链上启用。',
     'cnew.err.nowallet':'这个浏览器里找不到钱包。',
     'cnew.err.chain':'请切换到 Robinhood Chain。',
@@ -2978,6 +2978,10 @@ async function loadCommunityFromChain(slug){
         .map(h => '%' + h).join(''));
   };
   const chainId = parseInt(w(0), 16);
+  const chain = CHAINS.find(c => c.id === chainId);
+  const probed = (chain && chain.rpc)
+    ? await probeToken(chain, token).catch(() => null) || { kind: 'erc20', decimals: 18 }
+    : { kind: 'erc20', decimals: 18 };
   const raw = await call(SEL_LINKS);
   const links = {};
   if(raw){
@@ -2996,7 +3000,11 @@ async function loadCommunityFromChain(slug){
            gatedOnchain: chainId === home.id,
            minBalance: BigInt('0x' + w(2)).toString(),
            creator: '0x' + w(3).slice(24), createdAt: parseInt(w(4), 16),
-           tokenKind: 'erc20', tokenDecimals: 18,   // refined by the index
+           // The chain stores neither the token's kind nor its decimals, and
+           // assuming 18 rendered a 1-item ERC-721 gate as "0" — a room that
+           // looked like anyone could walk into it. Ask the token itself; the
+           // index refines this later, but a fresh room must not lie meanwhile.
+           tokenKind: probed.kind, tokenDecimals: probed.decimals,
            links: links, members: [], fresh: true };
 }
 
@@ -3276,6 +3284,21 @@ const chainName = id => ({ 4663: 'Robinhood Chain', 1: 'Ethereum', 8453: 'Base',
                            42161: 'Arbitrum', 10: 'Optimism' })[id] || ('chain ' + id);
 
 let commMonthOnly = true;
+/// A gate rendered as "0" says anyone may walk in, so this never prints 0 for
+/// a threshold that is not zero — it drops to fractions, and to raw units
+/// rather than round a real rule away.
+function gateAmount(c){
+  let raw;
+  try{ raw = BigInt(c.minBalance || '0'); }catch(e){ return String(c.minBalance); }
+  const dec = c.tokenKind === 'erc721' ? 0 : (c.tokenDecimals || 0);
+  if(dec === 0) return raw.toLocaleString();
+  const unit = 10n ** BigInt(dec);
+  if(raw % unit === 0n) return (raw / unit).toLocaleString();
+  const v = Number(raw) / Number(unit);
+  return v >= 1e-6 ? v.toLocaleString(undefined, { maximumFractionDigits: 8 })
+                   : raw.toLocaleString() + ' (raw)';
+}
+
 function renderCommunity(){
   if(!COMM) return;
   const by = commByDay(COMM);
@@ -3322,9 +3345,7 @@ function renderCommunity(){
   // for both would be the one dishonest sentence on this page.
   const gate = document.getElementById('comm-gate');
   const unit = COMM.tokenKind === 'erc721' ? '' : ' ';
-  const amount = COMM.tokenDecimals === 0
-    ? Number(COMM.minBalance).toLocaleString()
-    : (Number(COMM.minBalance) / Math.pow(10, COMM.tokenDecimals || 18)).toLocaleString();
+  const amount = gateAmount(COMM);
   gate.textContent = t('comm.gate', { min: amount, token: COMM.token }) + ' ' +
     t(COMM.gatedOnchain ? 'comm.gate.onchain' : 'comm.gate.index',
       { chain: chainName(COMM.chainId) }) + ' ' + t('comm.gate.floor');
@@ -3917,7 +3938,10 @@ async function cnewInit(){
     if(!/^[a-z0-9-]{1,32}$/.test(slug)) return show('cnew.err.slug');
     if(!name) return show('cnew.err.name');
     if(!/^0x[0-9a-fA-F]{40}$/.test(token)) return show('cnew.err.token');
-    if(!(Number(min) >= 0)) return show('cnew.err.min');
+    // > 0, not >= 0. A zero threshold makes balanceOf(x) >= 0 always true, so
+    // the token gate is a no-op while the page still presents it as a gate —
+    // and the contract cannot refuse it, being frozen. This is the only guard.
+    if(!(Number(min) > 0)) return show('cnew.err.min');
     // refused, not silently dropped: a dead string in a room that can never be
     // edited is permanent clutter
     if(['cnew-x','cnew-tg','cnew-other'].some(id => {
