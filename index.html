@@ -3438,9 +3438,20 @@ function joinWaiting(){
   box.hidden = false;
 }
 
+/// Two callers race here: loadIndex when the index lands, and mineWalletUI the
+/// moment a wallet reports in. Both of this function's awaits sit BEFORE the
+/// box is cleared, so two runs would each clear and then each append — and
+/// since the later clear removed the earlier run's opening line but not its
+/// still-pending appends, the panel came out with ONE heading and TWO sets of
+/// buttons. A generation stamp means only the newest run may touch the DOM.
+let joinRun = 0;
 async function renderJoin(){
+  const run = ++joinRun;
   const box = document.getElementById('comm-join');
-  if(!COMM || !await ensureCommContract()){ box.hidden = true; return; }
+  if(!COMM){ box.hidden = true; return; }
+  const ready = await ensureCommContract();
+  if(run !== joinRun) return;              // a newer run took over
+  if(!ready){ box.hidden = true; return; }
   box.textContent = '';
   // Which days this wallet holds is known only from the collection index, and
   // this runs before it lands — mineWalletUI() calls it the moment a wallet
@@ -3480,6 +3491,7 @@ async function renderJoin(){
     commCall(SEL_SLOTSOF, pad(me)),
     commCall(SEL_DAYSOF, pad(me)),
   ]);
+  if(run !== joinRun) return;              // three chain reads is plenty of time to be lapped
   const owned = commOwnedDays(me);
   const declared = parseDeclared(mine);
   const held = declared.filter(k => owned.includes(k));
