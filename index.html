@@ -1141,18 +1141,15 @@ html.pre-personal main, html.pre-comm main{ min-height:100svh; }
    every page and stay put: fading them says "the whole page was replaced",
    when what actually changed is the content inside a frame that never moved. */
 html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
-@view-transition{ navigation:auto; }   /* same-origin hops: uday.gift <-> /c */
-/* Same reason on the same-origin path: a named element is carried across
-   instead of being cross-faded with the rest of the page. The topbar is
-   position:fixed, so its box is identical on both pages and it simply holds
-   still. The footer is NOT named on purpose — it sits at the end of the flow,
-   so the two pages put it at wildly different offsets and a named element
-   would interpolate between them, i.e. slide. */
-.topbar{ view-transition-name:topbar; }
+/* No @view-transition. A cross-document one holds the OUTGOING page and stops
+   producing frames until the incoming document is ready — and the incoming
+   document here is the same 260KB file every page is. Filmed on a throttled
+   phone, tapping a room went blank at 938ms and then emitted no frames at all
+   for 1080ms before the new page appeared: a freeze, not a fade. The browser's
+   own paint-holding does the same job for free and gives up when it is slow. */
 
 @media (prefers-reduced-motion:reduce){
   html.leaving main{ opacity:1; transition:none; }
-  @view-transition{ navigation:none; }
 }
 
 [hidden]{ display:none !important; }
@@ -5139,7 +5136,13 @@ async function loadIndex(){
 /// out first hands the visitor over through the ground colour both pages
 /// share, so the hop reads as one move instead of a blink plus a jump.
 function leaveTo(url){
-  if(reduced){ location.href = url; return; }
+  // Same-origin: the browser keeps the old page on screen until the new one
+  // paints, and abandons that on its own when it takes too long. Fading first
+  // just adds dead time to a hop that was already seamless. The fade earns its
+  // place only across the host boundary, where no such holding happens.
+  let sameOrigin = true;
+  try{ sameOrigin = new URL(url, location.href).origin === location.origin; }catch(e){}
+  if(reduced || sameOrigin){ location.href = url; return; }
   document.documentElement.classList.add('leaving');
   setTimeout(() => { location.href = url; }, 170);
 }
