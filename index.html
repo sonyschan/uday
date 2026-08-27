@@ -3968,6 +3968,59 @@ async function openGiftModal(){
   gmBody.appendChild(snap);
   gmState.textContent = '';
   const id = mineIdentity();
+
+  // A gift he missed but can still take comes FIRST — the personal card
+  // already did this, but the HOMEPAGE modal did not, so a holder of AUG 25
+  // arriving here on AUG 27 was judged against today's list, called a
+  // non-holder, and handed a BRING IT HOME button that took him to uToken
+  // while his own gift sat open with hours on the clock.
+  if(id && mineWallet){
+    const late = await pendingGift(id);
+    if(late && late.back > 0){
+      const amt = String(Math.floor(late.entry.amount / 1e6));
+      const lateTxt = dayLabel(+late.day.key.slice(0, 2), +late.day.key.slice(3));
+      const hrs = Math.max(1, Math.round(late.left / 3600));
+      gmTitle.textContent = t('gift.late.title', { day: lateTxt });
+      gmAmount.hidden = false;
+      gmAmount.classList.remove('giftmodal__amount--got');
+      gmAmount.textContent = amt + ' USDG';
+      gmBody.textContent = '';
+      const p1 = document.createElement('p');
+      p1.textContent = t('gift.late.line', { day: lateTxt, n: amt, h: hrs });
+      gmBody.appendChild(p1);
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn btn--gold';
+      b.textContent = t('gift.btn', { n: amt });
+      b.addEventListener('click', async () => {
+        b.disabled = true; b.textContent = t('gift.pending');
+        try{
+          const hash = await sendGiftClaim(late.day.dayId, id, late.entry);
+          giftClaimedView(lateTxt, amt, id);
+          const share = document.createElement('a');
+          share.className = 'btn btn--gold';
+          share.target = '_blank'; share.rel = 'noopener';
+          share.href = giftShareUrl(amt);
+          share.textContent = t('gift.share');
+          gmState.appendChild(share);
+          const a2 = document.createElement('a');
+          a2.className = 'btn btn--ghost';
+          a2.target = '_blank'; a2.rel = 'noopener';
+          a2.href = GIFT_TX_URL(hash);
+          a2.textContent = t('gift.tx');
+          gmState.appendChild(a2);
+          va('event', { name: 'gift_claim', data: { day: late.day.key, late: 1, src: 'home' } });
+        }catch(e){
+          b.disabled = false; b.textContent = t('gift.btn', { n: amt });
+        }
+      });
+      gmState.appendChild(b);
+      giftModal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      va('event', { name: 'gift_modal', data: { day: late.day.key, late: 1 } });
+      return;
+    }
+  }
+
   const entry = (g && id) ? g.claims[id] : null;
   if(!id || (!mineWallet && entry)){
     // anonymous (or an address-identity that cannot sign): guide to connect
