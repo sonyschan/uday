@@ -1630,6 +1630,10 @@ const I18N = {
     'join.member.pending':'Joining as {days} — the chain has it; it joins the wall on the next index build.',
     'join.member.both':'On the calendar as {days}. {coming} is on its way — the chain has it, and it joins the wall on the next index build.',
     'join.leave':'LEAVE THIS ROOM','join.left':'You have left. Your days come off the calendar next cycle.',
+    'join.short':'This room needs {min} of {token} on {chain}, and this wallet holds none of it. Membership is re-checked there every cycle, so joining would never put you on the wall.',
+    'join.member.short':'You are recorded in this room on chain — but the gate, {min} of {token} on {chain}, is checked by the published index, and this wallet does not meet it. Your days stay off the wall until it does.',
+    'join.short':'这个房间需要在 {chain} 上持有 {min} 枚 {token}，而这个钱包一枚也没有。成员资格每一轮都会重新核对，所以加入了也永远不会站上这张日历。',
+    'join.member.short':'链上记录了你在这个房间里——但门槛（{chain} 上的 {min} 枚 {token}）是由公开索引核对的，而这个钱包不符合。在符合之前，你的日子不会出现在这张日历上。',
     'join.needuday':'Every member of every room holds at least one uDAY — that part is enforced by the contract, not by us.',
     'join.getuday':'GET A uDAY',
     'join.noday':'You hold uDAY, but none of your pieces have revealed their date yet. A day has to be yours before it can stand here.',
@@ -3284,6 +3288,32 @@ const chainName = id => ({ 4663: 'Robinhood Chain', 1: 'Ethereum', 8453: 'Base',
                            42161: 'Arbitrum', 10: 'Optimism' })[id] || ('chain ' + id);
 
 let commMonthOnly = true;
+/// The half of the gate consensus cannot enforce.
+///
+/// On a foreign-chain room the contract CANNOT see the gating balance — a
+/// foreign address has no code here — so it records the join and the published
+/// index enforces the rule instead. That is by design and the page says so.
+/// What it did NOT do was check the rule before offering the button, so a
+/// wallet holding none of the token could join, be told its days were on the
+/// way, and wait forever for an index that filters it out every cycle.
+///
+/// null means the chain could not be reached — which must never be read as
+/// "fails the gate", only as "not known".
+async function gateBalance(c, addr){
+  if(!c || c.gatedOnchain) return null;         // consensus already handled it
+  const chain = CHAINS.find(x => x.id === c.chainId);
+  if(!chain || !chain.rpc) return null;
+  try{
+    const r = await fetch(chain.rpc, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
+        params: [{ to: c.token, data: '0x70a08231' + pad32(addr.replace('0x','').toLowerCase()) }, 'latest'] }) });
+    const j = await r.json();
+    if(!j || !j.result || j.result === '0x') return null;
+    return BigInt(j.result);
+  }catch(e){ return null; }
+}
+
 /// A gate rendered as "0" says anyone may walk in, so this never prints 0 for
 /// a threshold that is not zero — it drops to fractions, and to raw units
 /// rather than round a real rule away.
@@ -3537,12 +3567,15 @@ async function renderJoin(){
 
   const pad = a => pad32(a.replace('0x', '').toLowerCase());
   const cid = COMM.id.replace('0x', '');
-  const [mem, slots, mine] = await Promise.all([
+  const [mem, slots, mine, gateBal] = await Promise.all([
     commCall(SEL_ISMEMBER, cid + pad(me)),
     commCall(SEL_SLOTSOF, pad(me)),
     commCall(SEL_DAYSOF, pad(me)),
+    gateBalance(COMM, me),
   ]);
-  if(run !== joinRun) return;              // three chain reads is plenty of time to be lapped
+  if(run !== joinRun) return;              // four reads is plenty of time to be lapped
+  // known-and-short, never merely unknown
+  const shortOfGate = gateBal !== null && gateBal < BigInt(COMM.minBalance || '0');
   const owned = commOwnedDays(me);
   const declared = parseDeclared(mine);
   const held = declared.filter(k => owned.includes(k));
@@ -3561,6 +3594,16 @@ async function renderJoin(){
   };
 
   if(mem && /1$/.test(mem)){
+    if(shortOfGate){
+      // the chain records the membership, the index refuses to publish it —
+      // saying "your days are on the way" here is a promise that never lands
+      line.textContent = t('join.member.short',
+        { min: gateAmount(COMM), token: shortAddr(COMM.token), chain: chainName(COMM.chainId) });
+      markPendingDays([]);
+      xRow(box);
+      act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
+      return;
+    }
     const published = held.filter(k =>
       (COMM.members || []).some(m => m.addr === me && (m.days || []).includes(k)));
     if(held.length){
@@ -3597,6 +3640,15 @@ async function renderJoin(){
   if(!slots || BigInt(slots) === 0n){
     line.textContent = t('join.needuday');
     link(t('join.getuday'), UTOKEN_BUY);
+    return;
+  }
+
+  if(shortOfGate){
+    // Offering JOIN here spends gas on a membership the index will filter out
+    // every cycle. The contract cannot refuse it; this is the only place that
+    // can, and it says which chain the rule is read on.
+    line.textContent = t('join.short',
+      { min: gateAmount(COMM), token: shortAddr(COMM.token), chain: chainName(COMM.chainId) });
     return;
   }
 
