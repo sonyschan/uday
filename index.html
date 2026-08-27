@@ -4701,7 +4701,11 @@ async function loadIndex(){
       commLayout();
       document.getElementById('commnew').hidden = false;
       cnewInit();
-      renderCommList();
+      // awaited: the rooms list is a SECOND fetch and it inserts ABOVE the
+      // create form, so releasing the column first showed the form alone and
+      // then shoved it down. cnewInit stays unawaited — it probes a token on
+      // demand and nothing waits on it.
+      await renderCommList();
     }
     if(COMM_SLUG){
       commLayout();
