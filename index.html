@@ -127,6 +127,27 @@ html.personal main{ padding-top:70px; }
 .tb-wallet .btn{ padding:9px 13px; font-size:var(--fs-micro); }
 .tb-wallet .mine__wallet{ padding:9px 12px; white-space:nowrap; }
 .tb-out svg{ display:none; }
+/* Two doors in the bar. Defined at TOP LEVEL — an earlier version anchored
+   onto a `.tb-out{` that lived inside @media(max-width:560px), which nested a
+   media query inside a media query: silently invalid, so none of it applied
+   and both label variants rendered at once. */
+.tb-nav{ display:flex; gap:4px; }
+.tb-nav__a{
+  padding:7px 11px; border-radius:5px; cursor:pointer;
+  border:1px solid transparent; background:none;
+  font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--muted);
+  transition:color .16s, border-color .16s;
+}
+.tb-nav__a:hover{ color:var(--gold); border-color:rgba(232,185,63,.4); }
+.tb-nav__a[aria-current="page"]{ color:var(--gold); border-color:rgba(232,185,63,.5); }
+.tb-nav__short{ display:none; }
+@media (max-width:640px){
+  .tb-nav__long{ display:none; }
+  .tb-nav__short{ display:inline; }
+  .tb-nav__a{ padding:7px 8px; }
+}
+
 @media (max-width:560px){
   .topbar__right{ gap:6px; }
   .tb-wallet .btn{ padding:8px 10px; }
@@ -140,7 +161,7 @@ html.personal main{ padding-top:70px; }
   /* logout collapses to its icon */
   .tb-out span{ display:none; }
   .tb-out svg{ display:block; }
-  .tb-out{ padding:8px; }
+.tb-out{ padding:8px; }
   /* the fixed bar has no scrollbar to reveal overflow — every element must
      actually fit: tighter paddings across the whole bar */
   .topbar{ padding:12px 14px; gap:10px; }
@@ -839,6 +860,13 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   margin:0 0 18px; font-size:var(--fs-sub); color:var(--gold);
   font-family:var(--display); letter-spacing:var(--ls-narrow);
 }
+.rooms{ max-width:64ch; }
+.rooms__rule{
+  margin:0 0 12px; font-family:var(--display); font-size:var(--fs-sub);
+  letter-spacing:var(--ls-narrow); color:var(--gold);
+}
+.rooms__noadmin{ margin:0; font-size:var(--fs-sub); color:#c6bba3; }
+.rooms__acts{ display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
 .commjoin{
   margin-top:26px; padding:18px 20px; border-radius:10px;
   border:1px solid rgba(232,185,63,.4);
@@ -961,9 +989,22 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
       <button type="button" data-lang="en" aria-pressed="true">EN</button>
       <button type="button" data-lang="zh" aria-pressed="false">中文</button>
     </div>
+    <!-- Two doors, always visible. The address chip used to be the only way
+         into my.uday.gift, so MY CALENDAR inherits that job, cookie and all —
+         removing the chip without moving its handoff would lock out everyone
+         already signed in. -->
+    <nav class="tb-nav">
+      <button type="button" class="tb-nav__a" id="nav-mine">
+        <span class="tb-nav__long" data-i18n="nav.mine">MY CALENDAR</span>
+        <span class="tb-nav__short" data-i18n="nav.mine.short">个人</span>
+      </button>
+      <button type="button" class="tb-nav__a" id="nav-comm">
+        <span class="tb-nav__long" data-i18n="nav.comm">COMMUNITIES</span>
+        <span class="tb-nav__short" data-i18n="nav.comm.short">社区</span>
+      </button>
+    </nav>
     <div class="tb-wallet">
       <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>CONNECT</button>
-      <button type="button" class="mine__wallet" id="mine-wallet" hidden></button>
       <button type="button" class="btn btn--ghost tb-out" id="mine-disconnect" hidden>
         <span data-i18n="mine.disconnect">LOG OUT</span>
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
@@ -1123,6 +1164,27 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
           <button type="button" class="btn btn--gold" id="cnew-go" data-i18n="cnew.go">CREATE</button>
         </div>
         <p class="cnew__msg" id="cnew-msg" hidden></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── communities: the story just said a date has an identity; this is
+       what happens when a group of them stand together ─────────────── -->
+  <section class="band" id="rooms">
+    <div class="shell">
+      <hr class="rule rule--gem">
+      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
+        <p class="kicker" data-i18n="rooms.kicker">Communities</p>
+        <h2 data-i18n="rooms.title">A calendar of the people you know</h2>
+        <p data-i18n="rooms.blurb">Open a room gated by any token — on Robinhood Chain or Ethereum, ERC-20 or ERC-721 — and everyone who holds it can put their day on one shared calendar. You always know whose is next.</p>
+      </div>
+      <div class="rooms rise">
+        <p class="rooms__rule" data-i18n="rooms.rule">1 uDAY to stand on a room’s calendar. 10 to open one.</p>
+        <p class="rooms__noadmin" data-i18n="rooms.noadmin">No admin — not even us. A room’s rules are frozen the moment it is created, and nobody can remove anyone.</p>
+        <div class="rooms__acts">
+          <a class="btn btn--gold" href="/c" id="rooms-create" data-i18n="rooms.create">START A COMMUNITY</a>
+          <a class="btn btn--ghost" href="/c" id="rooms-browse" data-i18n="rooms.browse">SEE THE ROOMS</a>
+        </div>
       </div>
     </div>
   </section>
@@ -1378,6 +1440,12 @@ const I18N = {
     'mine.showyear':'SEE THE FULL YEAR','mine.hideyear':'HIDE THE FULL YEAR',
     'mine.btn.view':'VIEW YOUR PIECE',
     'proof.supply':'10,000 max','proof.lp':'LP burned','proof.art':'Art onchain',
+    'rooms.kicker':'Communities','rooms.title':'A calendar of the people you know',
+    'rooms.blurb':'Open a room gated by any token — on Robinhood Chain or Ethereum, ERC-20 or ERC-721 — and everyone who holds it can put their day on one shared calendar. You always know whose is next.',
+    'rooms.rule':'1 uDAY to stand on a room’s calendar. 10 to open one.',
+    'rooms.noadmin':'No admin — not even us. A room’s rules are frozen the moment it is created, and nobody can remove anyone.',
+    'rooms.create':'START A COMMUNITY','rooms.browse':'SEE THE ROOMS',
+    'nav.mine':'MY CALENDAR','nav.mine.short':'MINE','nav.comm':'COMMUNITIES','nav.comm.short':'ROOMS',
     'gift.title':'TODAY’S GIFT',
     'gift.not.yours':'Every uDAY is a calendar date — and when the real calendar reaches that date, that day’s holders share the day’s gift. Today, {total} USDG belongs to holders of {day}.',
     'gift.cta':'CLAIM THE GIFT',
@@ -1548,6 +1616,12 @@ const I18N = {
     'mine.showyear':'看全年年历','mine.hideyear':'收起全年年历',
     'mine.btn.view':'查看你的这一枚',
     'proof.supply':'上限 10,000','proof.lp':'流动性已烧毁','proof.art':'艺术全在链上',
+    'rooms.kicker':'社区','rooms.title':'一张属于你认识的人的日历',
+    'rooms.blurb':'用任何代币开一个房间——Robinhood Chain 或以太坊、ERC-20 或 ERC-721 都行——持有它的人就能把自己的日子放上同一张日历。你永远知道下一个是谁。',
+    'rooms.rule':'1 枚 uDAY 就能站上一个房间的日历。10 枚可以开一个。',
+    'rooms.noadmin':'没有管理员——包括我们。房间的规则在创建的那一刻就永久固定，没有人能把任何人移出去。',
+    'rooms.create':'创建社区','rooms.browse':'看看有哪些房间',
+    'nav.mine':'我的日历','nav.mine.short':'个人','nav.comm':'社区日历','nav.comm.short':'社区',
     'gift.title':'今日礼物',
     'gift.not.yours':'每枚 uDAY 都是一个日期——当现实的日历走到那一天，这一天的主人们就能分享当天的礼物。今天共 {total} USDG，属于 {day} 的持有者。',
     'gift.cta':'领取礼物',
@@ -2843,7 +2917,7 @@ function commLayout(){
   const bar = document.querySelector('.proofbar'); if(bar) bar.hidden = true;
   // the whole collection's wall belongs on the main page; this room is
   // about these people, and two 366-cell grids on one screen read as noise
-  ['story','forge','roadmap','year'].forEach(id => {
+  ['story','forge','roadmap','year','rooms'].forEach(id => {
     const el = document.getElementById(id); if(el) el.hidden = true;
   });
   document.querySelector('.brand').href = 'https://uday.gift/';
@@ -3233,21 +3307,16 @@ function mineWalletUI(){
   const id = mineIdentity();
   const connected = !!id;
   mineConnect.hidden = connected || !mineEth;
-  const chip = document.getElementById('mine-wallet');
-  const dis  = document.getElementById('mine-disconnect');
-  chip.hidden = dis.hidden = !connected;
+  const dis = document.getElementById('mine-disconnect');
+  dis.hidden = !connected;
   // Connected = identified: the paste-an-address fallback is for wallet-less
   // visitors checking their own address, so it leaves once a wallet is here.
   document.getElementById('mine-addr').hidden = connected;
   document.getElementById('mine-view').hidden = connected;
-  if(connected){
-    // narrow screens get the head of the address only — the chip must stay
-    // on one line next to the language switch and the logout icon
-    chip.textContent = matchMedia('(max-width:560px)').matches
-      ? id.slice(0, 5) + '…' : shortAddr(id);
-    chip.title = t('mine.wallet.back');
-    dis.setAttribute('aria-label', t('mine.disconnect'));  // icon-only on mobile
-  }
+  // The address used to sit here as a chip that doubled as the door to
+  // my.uday.gift. MY CALENDAR is that door now, and an address nobody needs
+  // to read was only crowding the bar on narrow screens.
+  if(connected) dis.setAttribute('aria-label', t('mine.disconnect'));
   // ownership colours the copy (YOUR wallet / view YOUR piece) — refresh the
   // surfaces that mention it whenever the connected wallet changes
   if(DAYS){ renderDayStatus(); if(mineAddr) renderMine(); }
@@ -3269,17 +3338,38 @@ function mineDisconnect(){
   va('event', { name: 'mine_disconnect' });
 }
 document.getElementById('mine-disconnect').addEventListener('click', mineDisconnect);
-document.getElementById('mine-wallet').addEventListener('click', () => {
+/// Both doors behave the same when nobody is signed in: connect first, then
+/// land where you were going. Dropping someone on the homepage after they
+/// connect — which is what happened before — makes them do the trip twice.
+async function navGo(dest){
   const id = mineIdentity();
-  if(!id) return;
-  // on the main site the chip is a door to your page; on it, a way back home
+  if(!id){
+    if(!mineEth) { location.href = dest === 'mine' ? 'https://' + PERSONAL_HOST + '/' : '/c'; return; }
+    let acc;
+    try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
+    catch(e){ return; }                          // declined; stay put
+    if(!(acc && acc[0])) return;
+    mineWallet = acc[0].toLowerCase();
+    mineWalletUI();
+    setMineAddr(acc[0], 'wallet');
+  }
+  if(dest === 'comm'){ location.href = '/c'; return; }
+  // MY CALENDAR carries the handoff the address chip used to carry: neither
+  // wallet auth nor localStorage crosses the subdomain boundary
   if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
-    setHandoff(id);
+    setHandoff(mineIdentity());
     location.href = 'https://' + PERSONAL_HOST + '/';
     return;
   }
-  setMineAddr(id, 'wallet');
-});
+  setMineAddr(mineIdentity(), 'wallet');
+}
+document.getElementById('nav-mine').addEventListener('click', () => navGo('mine'));
+document.getElementById('nav-comm').addEventListener('click', () => navGo('comm'));
+(function markCurrentNav(){
+  if(IS_PERSONAL) document.getElementById('nav-mine').setAttribute('aria-current', 'page');
+  else if(COMM_SLUG || COMM_NEW) document.getElementById('nav-comm').setAttribute('aria-current', 'page');
+})();
+
 
 if(mineEth) mineConnect.hidden = false;
 mineConnect.addEventListener('click', async () => {
@@ -4091,7 +4181,7 @@ if(IS_PERSONAL){
   // the personal page IS the calendar: fold the marketing page away
   document.querySelector('.hero').hidden = true;
   document.querySelector('.proofbar').hidden = true;
-  ['story','forge'].forEach(id => {
+  ['story','forge','rooms'].forEach(id => {
     const s = document.getElementById(id); if(s) s.hidden = true;
   });
   // the holder calendar leads; the global wall waits behind a toggle
