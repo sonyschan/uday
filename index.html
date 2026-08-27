@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08060f">
 <title>uDAY — Onchain Days</title>
 <meta name="description" content="A date. An artwork. A gift. uDAY turns the days that matter into onchain art on Robinhood Chain — and when the calendar reaches your date, its holders claim that day’s gift.">
 <meta property="og:title" content="uDAY — Onchain Days">
@@ -20,6 +21,20 @@
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <script>window.va = window.va || function(){(window.vaq = window.vaq || []).push(arguments);};</script>
 <script defer src="/_vercel/insights/script.js"></script>
+<script>
+/* Which of the three pages this is has to be known BEFORE the first paint.
+   The layout used to be decided inside loadIndex(), i.e. after a fetch: the
+   full marketing homepage painted, then collapsed to the calendar ~400ms
+   later. That collapse is what reads as flicker when moving between the two
+   doors. Only a class is set here — every section is visible by default, so a
+   visitor without JS still gets the whole page. */
+(function(){
+  var h = document.documentElement;
+  if(location.hostname === 'my.uday.gift' ||
+     /[?&]view=personal(&|$)/.test(location.search)) h.className += ' pre-personal';
+  else if(/^\/c(\/|$)/.test(location.pathname))      h.className += ' pre-comm';
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -64,7 +79,12 @@ html[lang="zh"]{
 }
 
 *,*::before,*::after{ box-sizing:border-box; }
-html{ scroll-behavior:smooth; }
+/* The ground colour belongs on the ROOT, not just on body: the root's
+   background is the canvas the browser paints during a navigation, before the
+   next document has a body to paint. Without it the hop between the two hosts
+   flashed the default white for a frame. color-scheme makes every browser-
+   supplied surface — that canvas included — dark by default. */
+html{ scroll-behavior:smooth; background:var(--ink); color-scheme:dark; }
 @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
 
 body{
@@ -929,7 +949,11 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   content:''; position:absolute; inset:2%;
   background:url('/assets/star.svg') center/contain no-repeat;
   /* vector now — the points are geometry, not pixels; no pixelated hint */
+  /* stars come from an RPC, a beat after the wall — so they bloom, not pop */
+  animation:starin .34s cubic-bezier(.34,1.56,.64,1) both;
 }
+@keyframes starin{ from{ opacity:0; transform:scale(.55) } to{ opacity:1; transform:none } }
+@media (prefers-reduced-motion:reduce){ .yearcell--star::after{ animation:none } }
 .commjoin__days--mine{ max-height:none; margin-top:4px; }
 .commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
   display:inline-flex; align-items:center; gap:8px; cursor:default; }
@@ -1049,6 +1073,53 @@ footer{ padding:64px 0 80px; }
 html.reveal-on .rise{ opacity:0; transform:translateY(22px); transition:opacity .9s cubic-bezier(.22,1,.36,1), transform .9s cubic-bezier(.22,1,.36,1); }
 html.reveal-on .rise.in{ opacity:1; transform:none; }
 @media (prefers-reduced-motion:reduce){ html.reveal-on .rise{opacity:1; transform:none; transition:none} .medallion__spin{animation:none} }
+
+/* ─── page transitions ──────────────────────────────────────────────── */
+/* Committed before the first paint by the head script. Only the sections that
+   carry no `hidden` attribute need listing — the rest never paint anyway. The
+   personal page keeps #roadmap on purpose; a room does not. */
+html.pre-personal .hero, html.pre-personal .proofbar, html.pre-personal #story,
+html.pre-personal #rooms, html.pre-personal #forge,
+html.pre-comm .hero, html.pre-comm .proofbar, html.pre-comm #story,
+html.pre-comm #rooms, html.pre-comm #forge, html.pre-comm #roadmap{ display:none; }
+
+/* Even with the layout committed, a room and a holder wall are both built from
+   the index, so they arrive one fetch late. Hold the column back and let it
+   come in as one piece rather than assembling itself in public.
+   The failsafe is the point of the animation: it reveals the page at 1.8s on
+   its own, so a JS failure before page-in can never leave a blank column. */
+html.pre-personal main, html.pre-comm main{
+  opacity:0; transform:translateY(10px);
+  transition:opacity .42s ease-out, transform .42s cubic-bezier(.22,1,.36,1);
+  animation:pagein 0s 1.8s forwards;
+}
+/* !important beats an animation's fill — that is what lets JS reveal early */
+html.page-in main{ opacity:1 !important; transform:none !important; }
+@keyframes pagein{ to{ opacity:1; transform:none; } }
+
+/* Leaving for the other host. my.uday.gift and uday.gift are different
+   origins, so a cross-document view transition is not available (same-origin
+   only) — the two hand off through their shared ground colour instead.
+   ONLY the column fades. The topbar and the footer are the same chrome on
+   every page and stay put: fading them says "the whole page was replaced",
+   when what actually changed is the content inside a frame that never moved. */
+html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
+@view-transition{ navigation:auto; }   /* same-origin hops: uday.gift <-> /c */
+/* Same reason on the same-origin path: a named element is carried across
+   instead of being cross-faded with the rest of the page. The topbar is
+   position:fixed, so its box is identical on both pages and it simply holds
+   still. The footer is NOT named on purpose — it sits at the end of the flow,
+   so the two pages put it at wildly different offsets and a named element
+   would interpolate between them, i.e. slide. */
+.topbar{ view-transition-name:topbar; }
+
+@media (prefers-reduced-motion:reduce){
+  html.pre-personal main, html.pre-comm main{
+    opacity:1; transform:none; transition:none; animation:none;
+  }
+  html.leaving main{ opacity:1; transition:none; }
+  @view-transition{ navigation:none; }
+}
 
 [hidden]{ display:none !important; }
 </style>
@@ -1862,6 +1933,15 @@ function applyLang(next){
   document.querySelectorAll('.langs button').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.lang === next)));
   try{ localStorage.setItem('uday.lang', next); }catch(e){}
+  // localStorage is per-origin, so uday.gift and my.uday.gift each keep their
+  // own copy and a visitor reading Chinese landed in English the moment they
+  // crossed. A cookie on the shared parent domain is the one store both sides
+  // can see; the handoff cookie already carried the locale, but only in the
+  // direction of the personal page.
+  try{
+    document.cookie = 'uday_lang=' + next +
+      ';domain=.uday.gift;path=/;max-age=31536000;secure;samesite=lax';
+  }catch(e){}
   renderChips();
   renderGallery();
   if(typeof renderStory === 'function') renderStory();
@@ -3048,7 +3128,7 @@ async function renderJoin(){
   if(!me){
     line.textContent = t('join.connect');
     if(mineEth) act(t('gift.modal.connect'), 'btn--gold', () => mineConnect.click());
-    else link(t('gift.modal.connect'), 'https://' + PERSONAL_HOST + '/');
+    else link(t('gift.modal.connect'), personalUrl(mineIdentity()));
     return;
   }
 
@@ -3657,10 +3737,35 @@ document.getElementById('mine-disconnect').addEventListener('click', mineDisconn
 /// Both doors behave the same when nobody is signed in: connect first, then
 /// land where you were going. Dropping someone on the homepage after they
 /// connect — which is what happened before — makes them do the trip twice.
+/// Where MY CALENDAR leads FROM HERE. Production has a my.* sibling and the
+/// address rides a cookie across the origin boundary. A preview deployment or
+/// localhost has no sibling at all — personal mode there is hostname-detected,
+/// so the query flag is the only door, and the address has to ride the URL
+/// because no cookie is shared with anything. Every caller must go through
+/// this: hard-coding the production host meant MY CALENDAR did nothing on a
+/// preview whenever a wallet was connected, which is exactly where a branch
+/// gets reviewed. (?view=personal with no &addr= renders no wall — a trap this
+/// project has hit twice — so the address is always carried when known.)
+function personalUrl(addr){
+  if(/(^|\.)uday\.gift$/.test(location.hostname)) return 'https://' + PERSONAL_HOST + '/';
+  const u = new URL(location.origin + '/');
+  u.searchParams.set('view', 'personal');
+  if(addr) u.searchParams.set('addr', addr);
+  if(lang !== 'en') u.searchParams.set('lang', lang);
+  return u.href;
+}
+/// The handoff cookie is armed only when we are actually leaving, never when a
+/// link is merely rendered: it lives five minutes, so arming it at paint time
+/// would be stale by the time anyone clicked.
+function goPersonal(addr){
+  if(addr && /(^|\.)uday\.gift$/.test(location.hostname)) setHandoff(addr);
+  leaveTo(personalUrl(addr));
+}
+
 async function navGo(dest){
   const id = mineIdentity();
   if(!id){
-    if(!mineEth) { location.href = dest === 'mine' ? 'https://' + PERSONAL_HOST + '/' : '/c'; return; }
+    if(!mineEth) { dest === 'mine' ? goPersonal(null) : leaveTo('/c'); return; }
     let acc;
     try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
     catch(e){ return; }                          // declined; stay put
@@ -3670,17 +3775,13 @@ async function navGo(dest){
     setMineAddr(acc[0], 'wallet');
   }
   if(dest === 'comm'){
-    location.href = /(^|\.)uday\.gift$/.test(location.hostname)
-      ? 'https://uday.gift/c' : '/c';
+    leaveTo(/(^|\.)uday\.gift$/.test(location.hostname)
+      ? 'https://uday.gift/c' : '/c');
     return;
   }
   // MY CALENDAR carries the handoff the address chip used to carry: neither
   // wallet auth nor localStorage crosses the subdomain boundary
-  if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
-    setHandoff(mineIdentity());
-    location.href = 'https://' + PERSONAL_HOST + '/';
-    return;
-  }
+  if(!IS_PERSONAL){ goPersonal(mineIdentity()); return; }
   setMineAddr(mineIdentity(), 'wallet');
 }
 document.getElementById('nav-mine').addEventListener('click', () => navGo('mine'));
@@ -3702,11 +3803,7 @@ mineConnect.addEventListener('click', async () => {
   if(!(acc && acc[0])) return;
   // On the main site, logging in means going to YOUR page. The address rides
   // in the URL because neither wallet auth nor localStorage crosses origins.
-  if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
-    setHandoff(acc[0].toLowerCase());
-    location.href = 'https://' + PERSONAL_HOST + '/';
-    return;
-  }
+  if(!IS_PERSONAL){ goPersonal(acc[0].toLowerCase()); return; }
   mineWallet = acc[0].toLowerCase();
   mineWalletUI();
   setMineAddr(acc[0], 'wallet');
@@ -4192,7 +4289,7 @@ async function openGiftModal(){
     }else{
       const a = document.createElement('a');
       a.className = 'btn btn--gold';
-      a.href = 'https://' + PERSONAL_HOST + '/';
+      a.href = personalUrl(mineIdentity());
       a.textContent = t('gift.modal.connect');
       gmState.appendChild(a);
     }
@@ -4619,7 +4716,46 @@ async function loadIndex(){
     // piece. On the slow path (default already up) this repaints over it.
     heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
   }catch(e){ /* no index yet — the static page stands on its own */ }
+  finally{ pageIn(); }
 }
+
+/// The held-back column comes in once its layout is final. Safe to call twice:
+/// the CSS failsafe already reveals the page at 1.8s regardless, so this only
+/// ever makes the reveal EARLIER, never conditional on it.
+function pageIn(){ document.documentElement.classList.add('page-in'); }
+setTimeout(pageIn, 1500);          // slow index: beat the CSS failsafe
+
+/// Leaving for the other host. my.uday.gift and uday.gift are separate
+/// origins, so a cross-document view transition cannot apply (same-origin
+/// only) and the browser would otherwise flash between two documents. Fading
+/// out first hands the visitor over through the ground colour both pages
+/// share, so the hop reads as one move instead of a blink plus a jump.
+function leaveTo(url){
+  if(reduced){ location.href = url; return; }
+  document.documentElement.classList.add('leaving');
+  setTimeout(() => { location.href = url; }, 170);
+}
+// A bfcache restore replays the faded-out document — undo it on the way back
+addEventListener('pageshow', () => {
+  document.documentElement.classList.remove('leaving');
+  pageIn();
+});
+// The two doors are not the only way across: the brand mark and the gift
+// modal both link host-to-host. One delegated listener covers every such link,
+// present and future, instead of each one being remembered separately.
+document.addEventListener('click', (e) => {
+  if(e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey ||
+     e.shiftKey || e.altKey) return;
+  const a = e.target.closest && e.target.closest('a[href]');
+  if(!a || a.target === '_blank' || a.hasAttribute('download')) return;
+  let u;
+  try{ u = new URL(a.href, location.href); }catch(err){ return; }
+  if(!/^https?:$/.test(u.protocol)) return;
+  if(u.host === location.host) return;                  // same origin: view transition
+  if(!/(^|\.)uday\.gift$/.test(u.hostname)) return;     // ours only, never outbound
+  e.preventDefault();
+  leaveTo(u.href);
+});
 
 /* ─────────────────────────────────────────────────────────────────────
    chrome
@@ -4680,12 +4816,16 @@ if('IntersectionObserver' in window){
 let saved = 'en';
 const urlLang = new URLSearchParams(location.search).get('lang');
 const handoffLang = (typeof HANDOFF !== 'undefined' && HANDOFF) ? HANDOFF.lang : null;
+// below localStorage: on this origin the two agree, and the cookie is only
+// load-bearing on the first visit after crossing from the other host
+const cookieLang = (document.cookie.match(/(?:^|;\s*)uday_lang=(en|zh)\b/) || [])[1] || null;
 try{
   saved = urlLang
        || handoffLang
        || localStorage.getItem('uday.lang')
+       || cookieLang
        || ((navigator.language||'').toLowerCase().startsWith('zh') ? 'zh' : 'en');
-}catch(e){ saved = urlLang || handoffLang || 'en'; }
+}catch(e){ saved = urlLang || handoffLang || cookieLang || 'en'; }
 if(!I18N[saved]) saved = 'en';
 applyLang(saved);
 paint(forgeCanvas, spec);
