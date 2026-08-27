@@ -1109,10 +1109,7 @@ html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
   display:flex; align-items:center; gap:16px; flex-wrap:wrap;
   margin:22px 0 0; font-size:var(--fs-sub); color:#c6bba3;
 }
-.yearwall__expand{ display:none; margin-top:16px; }
 @media (max-width:720px){
-  .yearwall__expand{ display:inline-block; }
-  .yearwall__grid--month .off{ display:none; }
 }
 .proofbar{ border-block:1px solid var(--rule); background:rgba(16,13,32,.55); }
 .proofbar__row{
@@ -1348,8 +1345,6 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
           <div class="yearwall__grid" id="comm-grid"></div>
         </div>
         <p class="yearwall__note" id="comm-note"></p>
-        <button type="button" class="btn btn--ghost yearwall__expand" id="comm-expand"
-                data-i18n="year.expand">SEE THE WHOLE YEAR</button>
       </div>
       <div class="commjoin rise" id="comm-join" hidden></div>
       <p class="comm__gate rise" id="comm-gate"></p>
@@ -1433,10 +1428,11 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
           <span data-i18n="year.mine.q">Which of these squares are yours?</span>
           <button type="button" class="btn btn--gold" id="year-mine-go" data-i18n="nav.mine">MY CALENDAR</button>
         </p>
-        <!-- 366 cells is one row on a desktop and twelve on a phone. Narrow
-             screens open on the current month; the year is one tap away. -->
-        <button type="button" class="btn btn--ghost yearwall__expand" id="year-expand"
-                data-i18n="year.expand">SEE THE WHOLE YEAR</button>
+        <!-- 366 cells: one row on a desktop, twelve on a phone. It stays
+             twelve there. Collapsing to the current month left a SINGLE row
+             with no sign the other eleven existed, and a toggle nobody found
+             because a lone row does not read as a calendar in the first
+             place. Twelve rows running past the edge do. -->
       </div>
     </div>
   </section>
@@ -1623,7 +1619,6 @@ const I18N = {
     'status.btn.offer':'BRING IT HOME','status.btn.mint':'MINT A DAY',
     'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} DAYS BORN','live.sealed':'{n} STILL SEALED','live.owners':'{n} COLLECTORS',
     'year.mine.q':'Which of these squares are yours?',
-    'year.expand':'SEE THE WHOLE YEAR','year.collapse':'SHOW THIS MONTH ONLY',
     'comm.kicker':'A community','comm.blurb':'Every lit cell is a day someone here claimed as theirs. Nobody runs this room: you are in it while you hold the token, and only you can leave.',
     'comm.stat.members':'{n} MEMBERS','comm.stat.days':'{n} DAYS CLAIMED',
     'comm.next':'Next up in {n} days — {day} belongs to {who}.',
@@ -1837,7 +1832,6 @@ const I18N = {
     'status.btn.offer':'把它带回家','status.btn.mint':'铸造一天',
     'live.lit':'全年点亮 {lit}/366 天','live.alive':'已诞生 {n} 枚','live.sealed':'{n} 枚待揭晓','live.owners':'收藏者 {n} 位',
     'year.mine.q':'这些格子里，哪几格是你的？',
-    'year.expand':'看整年','year.collapse':'只看本月',
     'comm.kicker':'一个社群','comm.blurb':'每一格亮起的日子，都是这里的某个人认定属于自己的一天。这个房间没有管理员：持有代币你就在里面，也只有你自己能离开。',
     'comm.stat.members':'{n} 位成员','comm.stat.days':'{n} 天已被认领',
     'comm.next':'下一个在 {n} 天后——{day} 属于 {who}。',
@@ -2097,7 +2091,6 @@ function applyLang(next){
   const fo = document.getElementById('btn-forge-open'), fp = document.getElementById('forge-panel');
   if(fo && fp && !fp.hidden) fo.textContent = t('forge.close');
   if(typeof renderCommunity === 'function' && COMM) renderCommunity();
-  if(typeof applyYearCollapse === 'function') applyYearCollapse();
   if(typeof renderRoad === 'function') renderRoad();
 }
 
@@ -2922,17 +2915,6 @@ function buildWall(grid, byDay, opts){
 /// Narrow screens open the wall on the current month. The cells are all
 /// built either way — this only marks the other eleven months, and the CSS
 /// acts on the mark below 720px, so a rotation or a resize needs no rebuild.
-let yearMonthOnly = true;
-function applyYearCollapse(){
-  const grid = document.getElementById('year-grid');
-  if(!grid) return;
-  const m = today.getMonth() + 1;
-  grid.classList.toggle('yearwall__grid--month', yearMonthOnly);
-  grid.querySelectorAll('[data-m]').forEach(el =>
-    el.classList.toggle('off', yearMonthOnly && +el.dataset.m !== m));
-  const btn = document.getElementById('year-expand');
-  if(btn) btn.textContent = t(yearMonthOnly ? 'year.expand' : 'year.collapse');
-}
 
 /* ─────────────────────────────────────────────────────────────────────
    communities — /c/<slug>. A community's calendar is the SAME wall the
@@ -3368,7 +3350,6 @@ function kindMark(kind){
                  '<path d="M2.1 7.8v3.5c0 1.27 2.64 2.3 5.9 2.3s5.9-1.03 5.9-2.3V7.8" fill="none" stroke="currentColor" stroke-width="1.5"/>', 'Token', 20);
 }
 
-let commMonthOnly = true;
 /// The half of the gate consensus cannot enforce.
 ///
 /// On a foreign-chain room the contract CANNOT see the gating balance — a
@@ -3488,7 +3469,6 @@ function renderCommunity(){
   }
   lw.hidden = !lw.children.length;
 
-  applyCommCollapse();
   document.getElementById('community').hidden = false;
   renderJoin();
 }
@@ -3800,16 +3780,6 @@ async function commSend(data, wantMember){
   line.textContent = t('join.sent');
 }
 
-function applyCommCollapse(){
-  const grid = document.getElementById('comm-grid');
-  if(!grid) return;
-  const m = today.getMonth() + 1;
-  grid.classList.toggle('yearwall__grid--month', commMonthOnly);
-  grid.querySelectorAll('[data-m]').forEach(el =>
-    el.classList.toggle('off', commMonthOnly && +el.dataset.m !== m));
-  const b = document.getElementById('comm-expand');
-  if(b) b.textContent = t(commMonthOnly ? 'year.expand' : 'year.collapse');
-}
 
 /// On a community URL the marketing page folds away entirely, the same way
 /// my.uday.gift does — you followed a link to see one room, not the pitch.
@@ -4122,7 +4092,6 @@ function renderYear(){
   const { lit } = buildWall(document.getElementById('year-grid'), DAYS,
                             { today: true, embers: INDEX_META.embers });
   document.getElementById('year-note').textContent = t('year.note', { lit });
-  applyYearCollapse();
   // The impossible days are the wall's most shareable fact \u2014 one loud line,
   // not a footnote. {day} names the first glitch day (FEB 30) as proof.
   const glitchDays = Object.keys(DAYS).filter(k => !isRealDate(k)).sort();
@@ -5399,17 +5368,6 @@ document.querySelectorAll('.langs button').forEach(b =>
 
 // The composer opens on request. Nothing inside it needs a first paint to
 // work — the chips and the 96x96 canvas were built at load, hidden or not.
-const commExpand = document.getElementById('comm-expand');
-if(commExpand) commExpand.addEventListener('click', () => {
-  commMonthOnly = !commMonthOnly;
-  applyCommCollapse();
-});
-
-document.getElementById('year-expand').addEventListener('click', () => {
-  yearMonthOnly = !yearMonthOnly;
-  applyYearCollapse();
-  va('event', { name: 'year_expand', data: { open: yearMonthOnly ? 0 : 1 } });
-});
 
 document.getElementById('btn-forge-open').addEventListener('click', (e) => {
   const panel = document.getElementById('forge-panel');
