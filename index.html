@@ -1936,6 +1936,18 @@ function t(key, vars){
   return v;
 }
 
+/// A cookie both hosts can see. The domain attribute is only VALID on
+/// uday.gift — set it anywhere else and the browser drops the cookie without a
+/// word — so a preview deployment or localhost gets a host-only cookie
+/// instead, which is the same thing there because it has no sibling host.
+function sharedCookie(name, value, maxAge){
+  const dom = /(^|\.)uday\.gift$/.test(location.hostname) ? ';domain=.uday.gift' : '';
+  try{
+    document.cookie = name + '=' + value + dom + ';path=/;max-age=' + maxAge +
+                      ';secure;samesite=lax';
+  }catch(e){}
+}
+
 function applyLang(next){
   lang = next;
   document.documentElement.lang = next;
@@ -1948,10 +1960,7 @@ function applyLang(next){
   // crossed. A cookie on the shared parent domain is the one store both sides
   // can see; the handoff cookie already carried the locale, but only in the
   // direction of the personal page.
-  try{
-    document.cookie = 'uday_lang=' + next +
-      ';domain=.uday.gift;path=/;max-age=31536000;secure;samesite=lax';
-  }catch(e){}
+  sharedCookie('uday_lang', next, 31536000);
   renderChips();
   renderGallery();
   if(typeof renderStory === 'function') renderStory();
@@ -3614,14 +3623,13 @@ const IS_PERSONAL = location.hostname === PERSONAL_HOST ||
    target the bare https://my.uday.gift/ and the address bar never flashes
    ?lang=&addr= at all. ?addr= keeps working as the share-link fallback. */
 function setHandoff(addr){
-  document.cookie = 'uday_h=' + addr + '|' + lang +
-    ';domain=.uday.gift;path=/;max-age=300;secure;samesite=lax';
+  sharedCookie('uday_h', addr + '|' + lang, 300);
 }
 const HANDOFF = (function takeHandoff(){
   if(!IS_PERSONAL) return null;
   const m = document.cookie.match(/(?:^|;\s*)uday_h=([^;]*)/);
   if(!m) return null;
-  document.cookie = 'uday_h=;domain=.uday.gift;path=/;max-age=0;secure;samesite=lax';
+  sharedCookie('uday_h', '', 0);
   const parts = m[1].split('|');
   return { addr: parts[0], lang: parts[1] };
 })();
@@ -3708,9 +3716,25 @@ let mineWallet = null;                 // the CONNECTED address; null = logged o
    who just logged in reads as being logged out. */
 function mineIdentity(){ return mineWallet || (IS_PERSONAL ? mineAddr : null); }
 
+/* `eth_accounts` is the only way to learn that an authorization already
+   exists, and it cannot be asked synchronously — so the wallet chrome painted
+   CONNECT and flipped to LOG OUT one round-trip later, on every load. The
+   personal page never showed this because its address arrives with the URL;
+   that asymmetry is exactly what made one door feel worse than the other.
+   A hint on the shared parent domain lets the FIRST paint be right. It is
+   deliberately not an identity: only these buttons trust it, everything
+   downstream still asks mineIdentity(), and the restore below decides. */
+const CONN_HINT = /(?:^|;\s*)uday_conn=1\b/.test(document.cookie);
+let walletSettled = false;
+function setConnHint(on){
+  sharedCookie('uday_conn', on ? '1' : '', on ? 2592000 : 0);
+}
+
 function mineWalletUI(){
   const id = mineIdentity();
-  const connected = !!id;
+  // optimistic only while the answer is genuinely unknown, and only here
+  const connected = !!id || (!!mineEth && !walletSettled && CONN_HINT);
+  if(walletSettled) setConnHint(!!mineWallet);
   mineConnect.hidden = connected || !mineEth;
   const dis = document.getElementById('mine-disconnect');
   dis.hidden = !connected;
@@ -3804,7 +3828,15 @@ document.getElementById('nav-comm').addEventListener('click', () => navGo('comm'
 })();
 
 
-if(mineEth) mineConnect.hidden = false;
+// First paint of the wallet chrome, before the restore has answered. Chrome
+// only — no identity is invented, so nothing downstream can act on it.
+if(mineEth){
+  const dis = document.getElementById('mine-disconnect');
+  mineConnect.hidden = CONN_HINT;
+  dis.hidden = !CONN_HINT;
+  document.getElementById('mine-addr').hidden = CONN_HINT;
+  document.getElementById('mine-view').hidden = CONN_HINT;
+}
 mineConnect.addEventListener('click', async () => {
   let acc;
   try{
@@ -3853,9 +3885,16 @@ if(mineEth && mineEth.on) mineEth.on('accountsChanged', a => {
 // Silent session restore: eth_accounts never prompts — it only reports an
 // authorization that already exists, so a reload keeps the logged-in chip.
 if(mineEth && mineEth.request){
-  mineEth.request({ method: 'eth_accounts' }).then(a => {
-    if(a && a[0]){ mineWallet = a[0].toLowerCase(); mineWalletUI(); }
-  }).catch(() => {});
+  const settle = () => { walletSettled = true; mineWalletUI(); };
+  mineEth.request({ method: 'eth_accounts' })
+    .then(a => { if(a && a[0]) mineWallet = a[0].toLowerCase(); settle(); })
+    .catch(settle);
+  // A wallet that never answers must not leave a stale hint standing forever.
+  // Late and correct beats indefinitely optimistic.
+  setTimeout(() => { if(!walletSettled) settle(); }, 2500);
+}else{
+  walletSettled = true;                 // no provider: nothing to wait for
+  setConnHint(false);
 }
 
 document.getElementById('mine-view').addEventListener('click', () =>
