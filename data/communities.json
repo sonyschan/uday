@@ -98,6 +98,24 @@
    "token": "0x77372a4cc66063575b05b44481f059be356964a4",
    "tokenDecimals": 0,
    "tokenKind": "erc721"
+  },
+  {
+   "chainId": 1,
+   "createdAt": 1787838011,
+   "creator": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+   "gatedOnchain": false,
+   "id": "0xcc88f2fd43d3625f763579656a0408aff9a233c85ca2d9fd845e1d294bb4563f",
+   "links": {
+    "other": "https://nakamigos.io",
+    "x": "https://x.com/Nakamigos"
+   },
+   "members": [],
+   "minBalance": "1",
+   "name": "nakamigos",
+   "slug": "nakamigos",
+   "token": "0xd774557b647330c91bf44cfeab205095f7e6c367",
+   "tokenDecimals": 0,
+   "tokenKind": "erc721"
   }
  ],
  "contract": "0xa8c69d7afef3efc22cace7eb314a97a5ef640cfd"
