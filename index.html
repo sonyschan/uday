@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08060f">
 <title>uDAY — Onchain Days</title>
 <meta name="description" content="A date. An artwork. A gift. uDAY turns the days that matter into onchain art on Robinhood Chain — and when the calendar reaches your date, its holders claim that day’s gift.">
 <meta property="og:title" content="uDAY — Onchain Days">
@@ -20,6 +21,20 @@
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <script>window.va = window.va || function(){(window.vaq = window.vaq || []).push(arguments);};</script>
 <script defer src="/_vercel/insights/script.js"></script>
+<script>
+/* Which of the three pages this is has to be known BEFORE the first paint.
+   The layout used to be decided inside loadIndex(), i.e. after a fetch: the
+   full marketing homepage painted, then collapsed to the calendar ~400ms
+   later. That collapse is what reads as flicker when moving between the two
+   doors. Only a class is set here — every section is visible by default, so a
+   visitor without JS still gets the whole page. */
+(function(){
+  var h = document.documentElement;
+  if(location.hostname === 'my.uday.gift' ||
+     /[?&]view=personal(&|$)/.test(location.search)) h.className += ' pre-personal';
+  else if(/^\/c(\/|$)/.test(location.pathname))      h.className += ' pre-comm';
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -64,7 +79,12 @@ html[lang="zh"]{
 }
 
 *,*::before,*::after{ box-sizing:border-box; }
-html{ scroll-behavior:smooth; }
+/* The ground colour belongs on the ROOT, not just on body: the root's
+   background is the canvas the browser paints during a navigation, before the
+   next document has a body to paint. Without it the hop between the two hosts
+   flashed the default white for a frame. color-scheme makes every browser-
+   supplied surface — that canvas included — dark by default. */
+html{ scroll-behavior:smooth; background:var(--ink); color-scheme:dark; }
 @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
 
 body{
@@ -929,7 +949,11 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   content:''; position:absolute; inset:2%;
   background:url('/assets/star.svg') center/contain no-repeat;
   /* vector now — the points are geometry, not pixels; no pixelated hint */
+  /* stars come from an RPC, a beat after the wall — so they bloom, not pop */
+  animation:starin .34s cubic-bezier(.34,1.56,.64,1) both;
 }
+@keyframes starin{ from{ opacity:0; transform:scale(.55) } to{ opacity:1; transform:none } }
+@media (prefers-reduced-motion:reduce){ .yearcell--star::after{ animation:none } }
 .commjoin__days--mine{ max-height:none; margin-top:4px; }
 .commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
   display:inline-flex; align-items:center; gap:8px; cursor:default; }
@@ -1049,6 +1073,45 @@ footer{ padding:64px 0 80px; }
 html.reveal-on .rise{ opacity:0; transform:translateY(22px); transition:opacity .9s cubic-bezier(.22,1,.36,1), transform .9s cubic-bezier(.22,1,.36,1); }
 html.reveal-on .rise.in{ opacity:1; transform:none; }
 @media (prefers-reduced-motion:reduce){ html.reveal-on .rise{opacity:1; transform:none; transition:none} .medallion__spin{animation:none} }
+
+/* ─── page transitions ──────────────────────────────────────────────── */
+/* Committed before the first paint by the head script. Only the sections that
+   carry no `hidden` attribute need listing — the rest never paint anyway. The
+   personal page keeps #roadmap on purpose; a room does not. */
+html.pre-personal .hero, html.pre-personal .proofbar, html.pre-personal #story,
+html.pre-personal #rooms, html.pre-personal #forge,
+html.pre-comm .hero, html.pre-comm .proofbar, html.pre-comm #story,
+html.pre-comm #rooms, html.pre-comm #forge, html.pre-comm #roadmap{ display:none; }
+
+/* Even with the layout committed, a room and a holder wall are both built from
+   the index, so they arrive one fetch late. Hold the column back and let it
+   come in as one piece rather than assembling itself in public.
+   The failsafe is the point of the animation: it reveals the page at 1.8s on
+   its own, so a JS failure before page-in can never leave a blank column. */
+html.pre-personal main, html.pre-comm main{
+  opacity:0; transform:translateY(10px);
+  transition:opacity .42s ease-out, transform .42s cubic-bezier(.22,1,.36,1);
+  animation:pagein 0s 1.8s forwards;
+}
+/* !important beats an animation's fill — that is what lets JS reveal early */
+html.page-in main{ opacity:1 !important; transform:none !important; }
+@keyframes pagein{ to{ opacity:1; transform:none; } }
+
+/* Leaving for the other host. my.uday.gift and uday.gift are different
+   origins, so a cross-document view transition is not available (same-origin
+   only) — the two hand off through their shared ground colour instead. */
+html.leaving main, html.leaving .topbar, html.leaving .foot{
+  opacity:0; transition:opacity .17s ease-in;
+}
+@view-transition{ navigation:auto; }   /* same-origin hops: uday.gift <-> /c */
+
+@media (prefers-reduced-motion:reduce){
+  html.pre-personal main, html.pre-comm main{
+    opacity:1; transform:none; transition:none; animation:none;
+  }
+  html.leaving main, html.leaving .topbar, html.leaving .foot{ opacity:1; transition:none; }
+  @view-transition{ navigation:none; }
+}
 
 [hidden]{ display:none !important; }
 </style>
@@ -3660,7 +3723,7 @@ document.getElementById('mine-disconnect').addEventListener('click', mineDisconn
 async function navGo(dest){
   const id = mineIdentity();
   if(!id){
-    if(!mineEth) { location.href = dest === 'mine' ? 'https://' + PERSONAL_HOST + '/' : '/c'; return; }
+    if(!mineEth) { leaveTo(dest === 'mine' ? 'https://' + PERSONAL_HOST + '/' : '/c'); return; }
     let acc;
     try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
     catch(e){ return; }                          // declined; stay put
@@ -3670,15 +3733,15 @@ async function navGo(dest){
     setMineAddr(acc[0], 'wallet');
   }
   if(dest === 'comm'){
-    location.href = /(^|\.)uday\.gift$/.test(location.hostname)
-      ? 'https://uday.gift/c' : '/c';
+    leaveTo(/(^|\.)uday\.gift$/.test(location.hostname)
+      ? 'https://uday.gift/c' : '/c');
     return;
   }
   // MY CALENDAR carries the handoff the address chip used to carry: neither
   // wallet auth nor localStorage crosses the subdomain boundary
   if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
     setHandoff(mineIdentity());
-    location.href = 'https://' + PERSONAL_HOST + '/';
+    leaveTo('https://' + PERSONAL_HOST + '/');
     return;
   }
   setMineAddr(mineIdentity(), 'wallet');
@@ -3704,7 +3767,7 @@ mineConnect.addEventListener('click', async () => {
   // in the URL because neither wallet auth nor localStorage crosses origins.
   if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
     setHandoff(acc[0].toLowerCase());
-    location.href = 'https://' + PERSONAL_HOST + '/';
+    leaveTo('https://' + PERSONAL_HOST + '/');
     return;
   }
   mineWallet = acc[0].toLowerCase();
@@ -4619,7 +4682,46 @@ async function loadIndex(){
     // piece. On the slow path (default already up) this repaints over it.
     heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
   }catch(e){ /* no index yet — the static page stands on its own */ }
+  finally{ pageIn(); }
 }
+
+/// The held-back column comes in once its layout is final. Safe to call twice:
+/// the CSS failsafe already reveals the page at 1.8s regardless, so this only
+/// ever makes the reveal EARLIER, never conditional on it.
+function pageIn(){ document.documentElement.classList.add('page-in'); }
+setTimeout(pageIn, 1500);          // slow index: beat the CSS failsafe
+
+/// Leaving for the other host. my.uday.gift and uday.gift are separate
+/// origins, so a cross-document view transition cannot apply (same-origin
+/// only) and the browser would otherwise flash between two documents. Fading
+/// out first hands the visitor over through the ground colour both pages
+/// share, so the hop reads as one move instead of a blink plus a jump.
+function leaveTo(url){
+  if(reduced){ location.href = url; return; }
+  document.documentElement.classList.add('leaving');
+  setTimeout(() => { location.href = url; }, 170);
+}
+// A bfcache restore replays the faded-out document — undo it on the way back
+addEventListener('pageshow', () => {
+  document.documentElement.classList.remove('leaving');
+  pageIn();
+});
+// The two doors are not the only way across: the brand mark and the gift
+// modal both link host-to-host. One delegated listener covers every such link,
+// present and future, instead of each one being remembered separately.
+document.addEventListener('click', (e) => {
+  if(e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey ||
+     e.shiftKey || e.altKey) return;
+  const a = e.target.closest && e.target.closest('a[href]');
+  if(!a || a.target === '_blank' || a.hasAttribute('download')) return;
+  let u;
+  try{ u = new URL(a.href, location.href); }catch(err){ return; }
+  if(!/^https?:$/.test(u.protocol)) return;
+  if(u.host === location.host) return;                  // same origin: view transition
+  if(!/(^|\.)uday\.gift$/.test(u.hostname)) return;     // ours only, never outbound
+  e.preventDefault();
+  leaveTo(u.href);
+});
 
 /* ─────────────────────────────────────────────────────────────────────
    chrome
