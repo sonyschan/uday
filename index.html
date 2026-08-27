@@ -1088,13 +1088,18 @@ html.pre-comm #rooms, html.pre-comm #forge, html.pre-comm #roadmap{ display:none
    come in as one piece rather than assembling itself in public.
    The failsafe is the point of the animation: it reveals the page at 1.8s on
    its own, so a JS failure before page-in can never leave a blank column. */
-html.pre-personal main, html.pre-comm main{
+/* The footer is held with it, and only here: until the column has its content
+   the document is barely a screen tall, so the footer paints tucked under the
+   header for a frame and then drops. It is NOT part of the leave fade — this
+   is about arriving, not departing. */
+html.pre-personal main, html.pre-comm main,
+html.pre-personal .foot, html.pre-comm .foot{
   opacity:0; transform:translateY(10px);
   transition:opacity .42s ease-out, transform .42s cubic-bezier(.22,1,.36,1);
   animation:pagein 0s 1.8s forwards;
 }
 /* !important beats an animation's fill — that is what lets JS reveal early */
-html.page-in main{ opacity:1 !important; transform:none !important; }
+html.page-in main, html.page-in .foot{ opacity:1 !important; transform:none !important; }
 @keyframes pagein{ to{ opacity:1; transform:none; } }
 
 /* Leaving for the other host. my.uday.gift and uday.gift are different
@@ -1103,7 +1108,11 @@ html.page-in main{ opacity:1 !important; transform:none !important; }
    ONLY the column fades. The topbar and the footer are the same chrome on
    every page and stay put: fading them says "the whole page was replaced",
    when what actually changed is the content inside a frame that never moved. */
-html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
+/* !important, and AFTER the page-in rule: that rule needs its own !important
+   to beat the reveal animation's fill, and it would otherwise pin main at
+   opacity 1 for the rest of the page's life — leaving the fade below a silent
+   no-op. Equal specificity, so source order decides between the two. */
+html.leaving main{ opacity:0 !important; transition:opacity .17s ease-in; }
 @view-transition{ navigation:auto; }   /* same-origin hops: uday.gift <-> /c */
 /* Same reason on the same-origin path: a named element is carried across
    instead of being cross-faded with the rest of the page. The topbar is
@@ -1114,10 +1123,11 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
 .topbar{ view-transition-name:topbar; }
 
 @media (prefers-reduced-motion:reduce){
-  html.pre-personal main, html.pre-comm main{
+  html.pre-personal main, html.pre-comm main,
+  html.pre-personal .foot, html.pre-comm .foot{
     opacity:1; transform:none; transition:none; animation:none;
   }
-  html.leaving main{ opacity:1; transition:none; }
+  html.leaving main{ opacity:1 !important; transition:none; }
   @view-transition{ navigation:none; }
 }
 
