@@ -5,7 +5,7 @@
 // diff, which keeps the promise the rest of this project makes — anything
 // dynamic either ships as a commit or is not built. It also means no private
 // store exists that a stranger cannot see.
-import { unseal, readCookie, cookie, okHandle, okAvatar, fail } from '../_lib.js';
+import { unseal, readCookie, cookie, okHandle, okAvatar, bounce } from '../_lib.js';
 
 const FILE = 'data/x-links.json';
 
@@ -72,19 +72,21 @@ export default async function handler(req, res) {
     X_OAUTH_REDIRECT: REDIRECT,
     GITHUB_TOKEN, GITHUB_REPO,
   } = process.env;
-  if (!CLIENT_ID || !CLIENT_SECRET || !SECRET || !GITHUB_TOKEN || !GITHUB_REPO)
-    return fail(res, 503, 'X login is not configured');
-
   const q = req.query || {};
-  const jar = unseal(readCookie(req, 'uday_xo'), SECRET);
+  const jar = unseal(readCookie(req, 'uday_xo'), SECRET || 'unset');
   // burn the cookie whatever happens next — a state that survives one attempt
   // is a state that can be replayed
   res.setHeader('Set-Cookie', cookie('uday_xo', '', 0));
+  // the sealed state is the only thing that knows where this started; without
+  // it the rooms index is the nearest honest place to land
+  const back = (jar && jar.back) || '/c';
 
-  if (!jar) return fail(res, 400, 'this link expired — start again from the room');
-  if (q.error) return res.status(302).setHeader('Location', jar.back + '#x=cancelled').end();
+  if (!CLIENT_ID || !CLIENT_SECRET || !SECRET || !GITHUB_TOKEN || !GITHUB_REPO)
+    return bounce(res, back, 'config', 'missing one of the five required vars');
+  if (!jar) return bounce(res, back, 'state', 'no cookie, or it failed its mac');
+  if (q.error) return bounce(res, back, 'cancelled', String(q.error));
   if (!q.code || String(q.state || '') !== jar.state)
-    return fail(res, 400, 'state mismatch');
+    return bounce(res, back, 'state', 'state mismatch');
 
   const form = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -113,18 +115,18 @@ export default async function handler(req, res) {
   }
   if (!tok.ok) {
     const why = await tok.text().catch(() => '');
-    return fail(res, 502, 'X refused the token exchange (' + tok.status + ') ' + why.slice(0, 200));
+    return bounce(res, back, 'token', tok.status + ' ' + why.slice(0, 300));
   }
   const { access_token } = await tok.json();
-  if (!access_token) return fail(res, 502, 'X returned no token');
+  if (!access_token) return bounce(res, back, 'token', 'no access_token in the response');
 
   const me = await fetch('https://api.x.com/2/users/me?user.fields=profile_image_url,name', {
     headers: { Authorization: 'Bearer ' + access_token },
   });
-  if (!me.ok) return fail(res, 502, 'could not read that X account (' + me.status + ')');
+  if (!me.ok) return bounce(res, back, 'profile', 'users/me ' + me.status);
   const d = (await me.json()).data || {};
 
-  if (!okHandle(d.username)) return fail(res, 502, 'X returned an unusable handle');
+  if (!okHandle(d.username)) return bounce(res, back, 'profile', 'unusable handle ' + d.username);
   // _normal is X's 48px crop; the page draws these small and pixel-sharp
   const avatar = typeof d.profile_image_url === 'string'
     ? d.profile_image_url.replace('_normal.', '_bigger.') : '';
@@ -138,9 +140,9 @@ export default async function handler(req, res) {
   };
 
   try { await commitLink(jar.addr, entry); }
-  catch (e) { return fail(res, 502, 'linked with X but could not record it: ' + e.message); }
+  catch (e) { return bounce(res, back, 'record', e.message); }
 
   // The commit needs a deploy before the file is public, so the page is told
   // the handle directly and shows it at once rather than looking broken.
-  res.status(302).setHeader('Location', jar.back + '#x=' + entry.handle).end();
+  res.status(302).setHeader('Location', back + '#x=' + entry.handle).end();
 }

@@ -967,6 +967,7 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   border:1px solid rgba(232,185,63,.45); background:var(--night); object-fit:cover; }
 .commjoin__x{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; }
 .commjoin__xwhy{ color:var(--muted); font-size:var(--fs-micro); }
+.commjoin__xerr{ color:#e8a0a0; font-size:var(--fs-micro); margin:10px 0 0; }
 .commjoin__xoff{ background:none; border:0; padding:0; cursor:pointer;
   color:var(--muted); font-family:var(--body); font-size:var(--fs-micro);
   text-decoration:underline; text-underline-offset:3px; }
@@ -1599,6 +1600,17 @@ const I18N = {
     'x.why':'Members see a name instead of an address. Removable any time.',
     'x.failed':'that did not go through',
     'x.needwallet':'connect a wallet first',
+    'x.err.config':'X login is not switched on yet. Nothing was sent.',
+    'x.err.sig':'That signature did not match your wallet. Try again.',
+    'x.err.stale':'That took too long — sign again.',
+    'x.err.nouday':'Showing an X account needs at least 1 uDAY.',
+    'x.err.chain':'Could not read the chain just now. Try again.',
+    'x.err.state':'That link expired. Start again from here.',
+    'x.err.token':'X refused the handshake. Nothing was linked.',
+    'x.err.profile':'X would not say who you are. Nothing was linked.',
+    'x.err.record':'X said yes, but the link could not be recorded. Try again.',
+    'x.err.cancelled':'You stopped at X. Nothing was linked.',
+    'x.err.failed':'That did not go through. Nothing was linked.',
     'people.sub':'Whose day this is. Go say something.',
     'people.sub.none':'Whose day this is. Nobody here has shown an X account yet.',
     'people.congrats':'WISH THEM WELL',
@@ -1797,6 +1809,17 @@ const I18N = {
     'x.why':'成员会看到名字，而不是一串地址。随时可以移除。',
     'x.failed':'没有成功',
     'x.needwallet':'请先连接钱包',
+    'x.err.config':'X 登录还没启用，什么都没有送出。',
+    'x.err.sig':'签名和你的钱包对不上，再试一次。',
+    'x.err.stale':'隔太久了，请重新签一次。',
+    'x.err.nouday':'显示 X 帐号至少需要 1 枚 uDAY。',
+    'x.err.chain':'刚才读不到链上资料，再试一次。',
+    'x.err.state':'这个连结过期了，请从这里重新开始。',
+    'x.err.token':'X 拒绝了这次握手，没有连结成功。',
+    'x.err.profile':'X 没有回传你的帐号，没有连结成功。',
+    'x.err.record':'X 那边通过了，但连结没能记录下来，再试一次。',
+    'x.err.cancelled':'你在 X 那边停下了，没有连结成功。',
+    'x.err.failed':'没有成功，什么都没有连结。',
     'people.sub':'这是谁的日子。去说一声吧。',
     'people.sub.none':'这是谁的日子。这里还没有人显示 X 帐号。',
     'people.congrats':'去祝贺',
@@ -3002,15 +3025,24 @@ async function loadXLinks(){
   // deployed yet — a minute or so. Without this the visitor lands on a page
   // that shows no sign anything happened and tries again. Cosmetic and local:
   // the fragment is trivially forgeable, and forging it fools only yourself.
-  const m = (location.hash || '').match(/^#x=([A-Za-z0-9_]{1,15})$/);
+  const h = location.hash || '';
+  const m = h.match(/^#x=([A-Za-z0-9_]{1,15})$/);
+  const err = h.match(/^#x-err=([a-z]{1,12})$/);
   if(m){
     const me = mineIdentity();
     if(me && !X_LINKS[me]) X_LINKS[me] = { handle: m[1], name: '', avatar: '', at: 0 };
-    history.replaceState(null, '', location.pathname + location.search);
-  }else if(/^#x=cancelled$/.test(location.hash || '')){
-    history.replaceState(null, '', location.pathname + location.search);
+  }else if(err){
+    // a code, never a sentence: the fragment is a URL somebody may paste, and
+    // the server detail belongs in the logs where it can actually be read
+    X_ERR = X_ERRS.includes(err[1]) ? err[1] : 'failed';
   }
+  if(m || err) history.replaceState(null, '', location.pathname + location.search);
 }
+// t() falls back to the key itself, which would print "x.err.token" at
+// somebody. Only codes with copy are honoured; anything else reads as failed.
+const X_ERRS = ['config', 'sig', 'stale', 'nouday', 'chain', 'state',
+                'token', 'profile', 'record', 'cancelled', 'failed'];
+let X_ERR = null;
 /// Checked HERE as well as in the function that writes the file. These land in
 /// an href, and one filter is one edit away from being no filter — the same
 /// lesson a javascript: url in the room links already taught this project once.
@@ -3124,6 +3156,15 @@ function xRow(box){
   if(!me) return;
   const row = document.createElement('div');
   row.className = 'commjoin__x';
+  // whatever went wrong, it went wrong after pressing the button that lives
+  // here — so this is where it gets said
+  if(X_ERR){
+    const e = document.createElement('p');
+    e.className = 'commjoin__xerr';
+    e.textContent = t('x.err.' + X_ERR);
+    box.appendChild(e);
+    X_ERR = null;                       // said once, not on every re-render
+  }
   const cur = xOf(me);
   if(cur){
     row.appendChild(xFace(me));

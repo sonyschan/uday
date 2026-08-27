@@ -32,29 +32,30 @@ const withEnv = async (env, fn) => {
 // ---- start ----
 await withEnv({ X_OAUTH_CLIENT_ID: '', X_STATE_SECRET: '' }, async () => {
   const r = mkRes(); await start({ query: {}, headers: {} }, r);
-  ok('start: unconfigured -> 503', r.code === 503, r.code);
+  ok('start: unconfigured -> bounces back, not a text page',
+     r.code === 302 && /#x-err=config$/.test(r.headers.location || ''), r.code + ' ' + r.headers.location);
 });
 await withEnv(ENV, async () => {
   let r = mkRes(); await start({ query: { addr: 'nope' }, headers: {} }, r);
-  ok('start: bad address -> 400', r.code === 400, r.code);
+  ok('start: bad address -> #x-err=sig', r.code === 302 && /#x-err=sig$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
 
   const ts = Date.now();
   const sig = sign(linkMessage(ADDR, ts));
   r = mkRes(); await start({ query: { addr: ADDR, sig, ts: ts - 3600000 }, headers: {} }, r);
-  ok('start: stale timestamp -> 400', r.code === 400, r.code);
+  ok('start: stale timestamp -> #x-err=stale', r.code === 302 && /#x-err=stale$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
 
   r = mkRes(); await start({ query: { addr: ADDR, sig: sign('something else'), ts }, headers: {} }, r);
-  ok('start: signature over other text -> 403/400', r.code === 403 || r.code === 400, r.code);
+  ok('start: signature over other text -> #x-err=sig', r.code === 302 && /#x-err=sig$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
 
   const other = '0x1111111111111111111111111111111111111111';
   r = mkRes(); await start({ query: { addr: other, sig, ts }, headers: {} }, r);
-  ok('start: signature for a DIFFERENT wallet -> 403', r.code === 403, r.code + ' ' + r.body);
+  ok('start: signature for a DIFFERENT wallet -> #x-err=sig', r.code === 302 && /#x-err=sig$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
 
   // real signature, wallet holds nothing
   const realFetch = globalThis.fetch;
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ result: '0x0' }) });
   r = mkRes(); await start({ query: { addr: ADDR, sig, ts }, headers: {} }, r);
-  ok('start: holds 0 uDAY -> 403', r.code === 403, r.code + ' ' + r.body);
+  ok('start: holds 0 uDAY -> #x-err=nouday', r.code === 302 && /#x-err=nouday$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
 
   // real signature, wallet holds 5 uDAY
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ result: '0x' + (5n * 10n ** 18n).toString(16) }) });
@@ -65,6 +66,11 @@ await withEnv(ENV, async () => {
   ok('start: PKCE S256 challenge present', u.searchParams.get('code_challenge_method') === 'S256' && (u.searchParams.get('code_challenge') || '').length > 20);
   ok('start: scope is read-only, no offline', u.searchParams.get('scope') === 'tweet.read users.read', u.searchParams.get('scope'));
   ok('start: state cookie is HttpOnly+Secure+Lax', /HttpOnly/.test(r.headers['set-cookie']) && /Secure/.test(r.headers['set-cookie']) && /SameSite=Lax/.test(r.headers['set-cookie']));
+
+
+  // a bounce must stay on this site even when `back` was never sanitised
+  r = mkRes(); await start({ query: { addr: 'nope', back: 'https://evil.example/x' }, headers: {} }, r);
+  ok('start: bounce refuses an absolute `back`', r.headers.location === '/c#x-err=sig', r.headers.location);
 
   // open-redirect attempt in `back`
   r = mkRes(); await start({ query: { addr: ADDR, sig, ts, back: 'https://evil.example/x' }, headers: {} }, r);
@@ -77,15 +83,16 @@ await withEnv(ENV, async () => {
 // ---- callback ----
 await withEnv(ENV, async () => {
   let r = mkRes(); await callback({ query: { code: 'c', state: 's' }, headers: {} }, r);
-  ok('callback: no cookie -> 400', r.code === 400, r.code);
+  ok('callback: no cookie -> /c#x-err=state', r.code === 302 && r.headers.location === '/c#x-err=state', r.code + ' ' + r.headers.location);
 
   const jar = { addr: ADDR, verifier: 'v', state: 'realstate', back: '/c/unipeg' };
   const cookieHdr = 'uday_xo=' + seal(jar, ENV.X_STATE_SECRET);
   r = mkRes(); await callback({ query: { code: 'c', state: 'WRONG' }, headers: { cookie: cookieHdr } }, r);
-  ok('callback: state mismatch -> 400', r.code === 400, r.code);
+  ok('callback: state mismatch -> back#x-err=state', r.code === 302 && r.headers.location === '/c/unipeg#x-err=state', r.code + ' ' + r.headers.location);
 
   r = mkRes(); await callback({ query: { error: 'access_denied' }, headers: { cookie: cookieHdr } }, r);
-  ok('callback: user cancelled -> back to the room', r.code === 302 && r.headers.location === '/c/unipeg#x=cancelled', r.headers.location);
+  ok('callback: user cancelled -> back#x-err=cancelled (not the success shape)',
+     r.code === 302 && r.headers.location === '/c/unipeg#x-err=cancelled', r.headers.location);
 
   // happy path, every network call intercepted
   const calls = [];
@@ -139,7 +146,7 @@ await withEnv(ENV, async () => {
     return { ok: true, status: 200, json: async () => ({ sha: 'a', content: Buffer.from('{}').toString('base64') }) };
   };
   r = mkRes(); await callback({ query: { code: 'c', state: 'realstate' }, headers: { cookie: cookieHdr } }, r);
-  ok('callback: unusable handle is refused', r.code === 502, r.code);
+  ok('callback: unusable handle -> back#x-err=profile', r.code === 302 && r.headers.location === '/c/unipeg#x-err=profile', r.code + ' ' + r.headers.location);
   globalThis.fetch = realFetch;
 });
 

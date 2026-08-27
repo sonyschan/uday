@@ -107,3 +107,15 @@ export function fail(res, code, why) {
   res.status(code).setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.end(why);
 }
+
+/// Anyone who fails inside this flow arrived by pressing a button in a room,
+/// so that is where they belong afterwards — not on a bare text page with
+/// nothing to press. Only a short CODE travels, because the fragment ends up
+/// in a URL somebody may paste; the detail goes to the log, which is the one
+/// place an operator can actually read it.
+export function bounce(res, back, code, detail) {
+  if (detail) console.error('[x] ' + code + ': ' + detail);
+  const to = /^\/[A-Za-z0-9\-/_]{0,64}$/.test(back || '') ? back : '/c';
+  res.status(302).setHeader('Location', to + '#x-err=' + code);
+  res.end();
+}

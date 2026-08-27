@@ -7,7 +7,7 @@
 // and a uDAY balance, which is the same floor joining a room already charges.
 import {
   recoverPersonalSign, seal, cookie, pkceVerifier, pkceChallenge,
-  udayWhole, fail, b64url,
+  udayWhole, bounce, b64url,
 } from '../_lib.js';
 import { randomBytes } from 'node:crypto';
 
@@ -25,37 +25,40 @@ export const linkMessage = (addr, ts) =>
 const FRESH_MS = 10 * 60 * 1000;
 
 export default async function handler(req, res) {
+  const q = req.query || {};
+  // parsed FIRST, because every failure below has to be able to send the
+  // visitor back to the room they pressed the button in
+  // — only ever a path on this site: a full URL would make this an open
+  // redirect that arrives wearing our domain
+  const back = /^\/[A-Za-z0-9\-/_]{0,64}$/.test(String(q.back || '')) ? String(q.back) : '/c';
+
   const {
     X_OAUTH_CLIENT_ID: CLIENT_ID,
     X_STATE_SECRET: SECRET,
     X_OAUTH_REDIRECT: REDIRECT,
   } = process.env;
-  if (!CLIENT_ID || !SECRET) return fail(res, 503, 'X login is not configured');
+  if (!CLIENT_ID || !SECRET) return bounce(res, back, 'config', 'missing client id or state secret');
 
-  const q = req.query || {};
   const addr = String(q.addr || '').toLowerCase();
   const sig = String(q.sig || '');
   const ts = Number(q.ts || 0);
-  // only ever a path on this site: a full URL here would make this an open
-  // redirect that arrives wearing our domain
-  const back = /^\/[A-Za-z0-9\-/_]{0,64}$/.test(String(q.back || '')) ? String(q.back) : '/c';
 
-  if (!/^0x[0-9a-f]{40}$/.test(addr)) return fail(res, 400, 'bad address');
+  if (!/^0x[0-9a-f]{40}$/.test(addr)) return bounce(res, back, 'sig', 'bad address');
   if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > FRESH_MS)
-    return fail(res, 400, 'that signature is stale — start again');
+    return bounce(res, back, 'stale');
 
   let signer;
   try { signer = recoverPersonalSign(linkMessage(addr, ts), sig); }
-  catch { return fail(res, 400, 'bad signature'); }
-  if (signer.toLowerCase() !== addr) return fail(res, 403, 'signature does not match that wallet');
+  catch (e) { return bounce(res, back, 'sig', e.message); }
+  if (signer.toLowerCase() !== addr) return bounce(res, back, 'sig', 'recovered ' + signer);
 
   // Same floor the community contract enforces for joining. It is not really
   // about spam: a wallet with no uDAY has no day on any calendar, so there is
   // nothing for an X account to stand next to.
   let whole;
   try { whole = await udayWhole(addr); }
-  catch { return fail(res, 503, 'could not read the chain — try again'); }
-  if (whole < 1n) return fail(res, 403, 'linking X needs at least 1 uDAY');
+  catch (e) { return bounce(res, back, 'chain', e.message); }
+  if (whole < 1n) return bounce(res, back, 'nouday');
 
   const verifier = pkceVerifier();
   const state = b64url(randomBytes(16));
