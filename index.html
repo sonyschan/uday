@@ -1099,17 +1099,25 @@ html.page-in main{ opacity:1 !important; transform:none !important; }
 
 /* Leaving for the other host. my.uday.gift and uday.gift are different
    origins, so a cross-document view transition is not available (same-origin
-   only) — the two hand off through their shared ground colour instead. */
-html.leaving main, html.leaving .topbar, html.leaving .foot{
-  opacity:0; transition:opacity .17s ease-in;
-}
+   only) — the two hand off through their shared ground colour instead.
+   ONLY the column fades. The topbar and the footer are the same chrome on
+   every page and stay put: fading them says "the whole page was replaced",
+   when what actually changed is the content inside a frame that never moved. */
+html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
 @view-transition{ navigation:auto; }   /* same-origin hops: uday.gift <-> /c */
+/* Same reason on the same-origin path: a named element is carried across
+   instead of being cross-faded with the rest of the page. The topbar is
+   position:fixed, so its box is identical on both pages and it simply holds
+   still. The footer is NOT named on purpose — it sits at the end of the flow,
+   so the two pages put it at wildly different offsets and a named element
+   would interpolate between them, i.e. slide. */
+.topbar{ view-transition-name:topbar; }
 
 @media (prefers-reduced-motion:reduce){
   html.pre-personal main, html.pre-comm main{
     opacity:1; transform:none; transition:none; animation:none;
   }
-  html.leaving main, html.leaving .topbar, html.leaving .foot{ opacity:1; transition:none; }
+  html.leaving main{ opacity:1; transition:none; }
   @view-transition{ navigation:none; }
 }
 
@@ -1925,6 +1933,15 @@ function applyLang(next){
   document.querySelectorAll('.langs button').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.lang === next)));
   try{ localStorage.setItem('uday.lang', next); }catch(e){}
+  // localStorage is per-origin, so uday.gift and my.uday.gift each keep their
+  // own copy and a visitor reading Chinese landed in English the moment they
+  // crossed. A cookie on the shared parent domain is the one store both sides
+  // can see; the handoff cookie already carried the locale, but only in the
+  // direction of the personal page.
+  try{
+    document.cookie = 'uday_lang=' + next +
+      ';domain=.uday.gift;path=/;max-age=31536000;secure;samesite=lax';
+  }catch(e){}
   renderChips();
   renderGallery();
   if(typeof renderStory === 'function') renderStory();
@@ -4799,12 +4816,16 @@ if('IntersectionObserver' in window){
 let saved = 'en';
 const urlLang = new URLSearchParams(location.search).get('lang');
 const handoffLang = (typeof HANDOFF !== 'undefined' && HANDOFF) ? HANDOFF.lang : null;
+// below localStorage: on this origin the two agree, and the cookie is only
+// load-bearing on the first visit after crossing from the other host
+const cookieLang = (document.cookie.match(/(?:^|;\s*)uday_lang=(en|zh)\b/) || [])[1] || null;
 try{
   saved = urlLang
        || handoffLang
        || localStorage.getItem('uday.lang')
+       || cookieLang
        || ((navigator.language||'').toLowerCase().startsWith('zh') ? 'zh' : 'en');
-}catch(e){ saved = urlLang || handoffLang || 'en'; }
+}catch(e){ saved = urlLang || handoffLang || cookieLang || 'en'; }
 if(!I18N[saved]) saved = 'en';
 applyLang(saved);
 paint(forgeCanvas, spec);
