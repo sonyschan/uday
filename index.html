@@ -976,6 +976,9 @@ html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
 .commjoin__x .commjoin__xwhy{ flex:1 1 260px; line-height:1.6; }
 .commjoin__xwhy{ color:var(--muted); font-size:var(--fs-micro); }
 .commjoin__xerr{ color:#e8a0a0; font-size:var(--fs-micro); margin:10px 0 0; }
+.commjoin__wait{ color:var(--muted); animation:waitpulse 1.6s ease-in-out infinite; }
+@keyframes waitpulse{ 0%,100%{opacity:.5} 50%{opacity:1} }
+@media (prefers-reduced-motion:reduce){ .commjoin__wait{ animation:none; opacity:.75 } }
 .commjoin__xoff{ background:none; border:0; padding:0; cursor:pointer;
   color:var(--muted); font-family:var(--body); font-size:var(--fs-micro);
   text-decoration:underline; text-underline-offset:3px; }
@@ -1586,6 +1589,7 @@ const I18N = {
     'join.connect':'Connect a wallet to see whether you can stand on this calendar.',
     'join.member':'You are in this room. Only you can take yourself out of it.',
     'join.member.days':'On the calendar as {days}.',
+    'join.loading':'Checking which of your days can stand here…',
     'x.link':'LINK AN X ACCOUNT',
     'x.unlink':'remove',
     'x.working':'WAITING FOR YOUR SIGNATURE…',
@@ -1795,6 +1799,7 @@ const I18N = {
     'join.connect':'连接钱包，看看你能不能站上这张日历。',
     'join.member':'你已经在这个房间里。只有你自己能把自己移出去。',
     'join.member.days':'日历上是 {days}。',
+    'join.loading':'正在看看你的哪些日子可以站上这张日历…',
     'x.link':'连接 X 帐号',
     'x.unlink':'移除',
     'x.working':'等待你签名…',
@@ -3420,10 +3425,28 @@ function markPendingDays(keys){
   });
 }
 
+/// The join panel is the only thing on a room that waits for the collection
+/// index, so it says so rather than being an empty space. Replaced wholesale
+/// by renderJoin; if the index never arrives, this stays, which is the truth.
+function joinWaiting(){
+  const box = document.getElementById('comm-join');
+  if(!box || box.childElementCount) return;
+  const p = document.createElement('p');
+  p.className = 'commjoin__line commjoin__wait';
+  p.textContent = t('join.loading');
+  box.appendChild(p);
+  box.hidden = false;
+}
+
 async function renderJoin(){
   const box = document.getElementById('comm-join');
   if(!COMM || !await ensureCommContract()){ box.hidden = true; return; }
   box.textContent = '';
+  // Which days this wallet holds is known only from the collection index, and
+  // this runs before it lands — mineWalletUI() calls it the moment a wallet
+  // reports in. Without this guard it told a holder of 229 days that they had
+  // none, which is not a slower truth, it is a wrong one.
+  if(!DAYS){ joinWaiting(); return; }
   const me = mineIdentity();
   const line = document.createElement('p');
   line.className = 'commjoin__line';
@@ -5013,8 +5036,12 @@ if(IS_PERSONAL){
   yearSec.parentNode.insertBefore(mineSec, yearSec);
   const yl = document.getElementById('mine-yearlink');
   yl.hidden = false;
+  let yearBuilt = false;
   yl.addEventListener('click', () => {
     yearShown = !yearShown;
+    // 366 cells for a section most holders never open — built on first open,
+    // not on every load of the page they came here for
+    if(yearShown && !yearBuilt && DAYS){ renderYear(); yearBuilt = true; }
     yearSec.hidden = !yearShown;
     yearLinkLabel();
     if(yearShown) yearSec.scrollIntoView({ behavior: 'smooth' });
@@ -5023,7 +5050,41 @@ if(IS_PERSONAL){
   yearLinkLabel();
 }
 
+/// A room is 1.3KB of communities.json. The collection index is 178KB and a
+/// 366-cell wall — and on a room every one of those cells was being built into
+/// a section commLayout() had already hidden. So the room boots from its own
+/// file, immediately, and never waits on the index for anything it can draw.
+async function bootCommunity(){
+  commLayout();
+  await loadXLinks();
+  if(COMM_NEW){
+    document.getElementById('commnew').hidden = false;
+    cnewInit();
+    await renderCommList();
+    return;
+  }
+  COMM = await loadCommunity();
+  if(COMM) renderCommunity();
+  else{
+    document.getElementById('comm-title').textContent = t('comm.missing');
+    document.getElementById('community').hidden = false;
+  }
+}
+
+/// The collection index. Everything here is gated on what the page will
+/// actually SHOW — rendering into a hidden section costs exactly as much as
+/// rendering into a visible one and buys nothing.
 async function loadIndex(){
+  if(COMM_NEW || COMM_SLUG){
+    // The room draws itself from its own file. Nothing here competes with it
+    // for a phone's bandwidth until it is on screen.
+    await bootCommunity();
+    // The rooms index needs the collection index for NOTHING. A room needs it
+    // for exactly one thing — which days this wallet holds — so it is fetched
+    // after the room is up, and only when there is somebody to answer for.
+    if(COMM_NEW) return;
+    joinWaiting();
+  }
   try{
     const r = await fetch('/data/date-index.json', { cache: 'no-cache' });
     if(!r.ok) return;
@@ -5032,34 +5093,20 @@ async function loadIndex(){
     INDEX_META = { items: j.items || 0, alive: j.alive || 0, unrevealed: j.unrevealed || 0,
                    owners: j.owners || 0, sealed: j.sealed || null, burned: j.burned || 0,
                    embers: j.extinguished || {}, mcapUsd: j.mcapUsd || 0 };
-    renderRoad();
-    renderStory();
     tombPrune();                    // drop tombstones the fresh index absorbed
+
+    if(COMM_SLUG){
+      if(COMM && typeof renderJoin === 'function') renderJoin();
+      return;
+    }
+
+    renderRoad();
+    if(!IS_PERSONAL) renderStory();      // #story is folded away there
     renderLiveTags();
     renderDayStatus();
-    renderYear();
-    if(COMM_NEW){
-      commLayout();
-      document.getElementById('commnew').hidden = false;
-      cnewInit();
-      // awaited: the rooms list is a SECOND fetch and it inserts ABOVE the
-      // create form, so releasing the column first showed the form alone and
-      // then shoved it down. cnewInit stays unawaited — it probes a token on
-      // demand and nothing waits on it.
-      await renderCommList();
-    }
-    if(COMM_SLUG){
-      commLayout();
-      await loadXLinks();
-      COMM = await loadCommunity();
-      if(COMM) renderCommunity();
-      else{
-        const sec = document.getElementById('community');
-        document.getElementById('comm-title').textContent = t('comm.missing');
-        sec.hidden = false;
-      }
-    }
-    // the holder calendar lives on my.uday.gift — the main page stays compact
+    // On the personal page the whole-collection wall lives behind a toggle, so
+    // its 366 cells are built when it is first opened, not before.
+    if(!IS_PERSONAL) renderYear();
     if(IS_PERSONAL){
       document.getElementById('mine').hidden = false;
       if(mineAddr) renderMine();
@@ -5070,7 +5117,7 @@ async function loadIndex(){
     loadGiftData().then(() => renderDayStatus());
     // First paint on the fast path: the layer-by-layer reveal IS the real
     // piece. On the slow path (default already up) this repaints over it.
-    heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
+    if(!IS_PERSONAL) heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
   }catch(e){ /* no index yet — the static page stands on its own */ }
 }
 
