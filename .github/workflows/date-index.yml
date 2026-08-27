@@ -1,14 +1,17 @@
 # Rebuilds data/date-index.json from Robinhood Chain and commits it if changed.
 # The site serves the committed JSON statically — visitors never touch the RPC,
 # so public-RPC outages only ever delay the next refresh, never break the page.
-#
-# NOTE: this file cannot be pushed by Claude Code (its token lacks the
-# `workflow` OAuth scope) — the owner pushes it.
 name: date-index
 on:
   schedule:
-    - cron: '7,22,37,52 * * * *'   # every 15 min, off the minute-0 rush
-                                   # (public repo: standard runners are free)
+    # Asks for every 15 min, but GitHub deprioritises cron on public repos:
+    # measured gaps on 2026-08-27 ran 28min, 35, 72, 93, 139, 185, 304, then
+    # nothing for 9 hours. Treat this as a floor, never as a schedule.
+    - cron: '7,22,37,52 * * * *'
+  # So a deploy refreshes it too. No loop: this job commits with the default
+  # GITHUB_TOKEN, and GitHub does not start workflows from those pushes.
+  push:
+    branches: [main]
   workflow_dispatch: {}          # manual runs from the Actions tab
 permissions:
   contents: write

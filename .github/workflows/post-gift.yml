@@ -3,9 +3,6 @@
 # low-privilege key: setRoot is append-only and gated to poster/owner, so it
 # can never rewrite a posted day or touch the float. Manual fallback stays
 # local: tools/post-gift.sh (owner keystore).
-#
-# NOTE: this file cannot be pushed by Claude Code (its token lacks the
-# `workflow` OAuth scope) — the owner pushes it.
 name: post-gift
 on:
   schedule:

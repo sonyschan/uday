@@ -13,9 +13,6 @@
 #
 # Until the four X_* secrets exist the script prints and exits 0, so this
 # workflow stays green rather than failing red every morning.
-#
-# NOTE: this file cannot be pushed by Claude Code (its token lacks the
-# `workflow` OAuth scope) — the owner pushes it.
 name: post-x
 on:
   schedule:
