@@ -965,7 +965,15 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
    image on the site that is not pixel art and must not be treated as such. */
 .xface__pfp{ width:26px; height:26px; border-radius:50%; flex:none;
   border:1px solid rgba(232,185,63,.45); background:var(--night); object-fit:cover; }
-.commjoin__x{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; }
+.commjoin__x{ display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-top:12px; }
+.commjoin__xon{ white-space:nowrap; flex:none; }
+/* Silkscreen has no CJK, so a mixed label already falls through per character —
+   and its Latin X is a symmetric glyph that reads as a CLOSE icon next to
+   Chinese. This one button takes the body face in zh so the brand letter is a
+   letter. (English keeps the display face; "X" among Latin caps is unambiguous.) */
+html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
+/* the explanation is two sentences now, so it needs a column rather than a gap */
+.commjoin__x .commjoin__xwhy{ flex:1 1 260px; line-height:1.6; }
 .commjoin__xwhy{ color:var(--muted); font-size:var(--fs-micro); }
 .commjoin__xerr{ color:#e8a0a0; font-size:var(--fs-micro); margin:10px 0 0; }
 .commjoin__xoff{ background:none; border:0; padding:0; cursor:pointer;
@@ -1594,10 +1602,10 @@ const I18N = {
     'join.connect':'Connect a wallet to see whether you can stand on this calendar.',
     'join.member':'You are in this room. Only you can take yourself out of it.',
     'join.member.days':'On the calendar as {days}.',
-    'x.link':'SHOW MY X',
+    'x.link':'LINK AN X ACCOUNT',
     'x.unlink':'remove',
-    'x.working':'WORKING…',
-    'x.why':'Members see a name instead of an address. Removable any time.',
+    'x.working':'WAITING FOR YOUR SIGNATURE…',
+    'x.why':'Two steps: sign with your wallet so we know which one to link — no gas, nothing moves — then authorise at X. After that the room shows your name instead of your address, and you can remove it any time.',
     'x.failed':'that did not go through',
     'x.needwallet':'connect a wallet first',
     'x.err.config':'X login is not switched on yet. Nothing was sent.',
@@ -1803,10 +1811,10 @@ const I18N = {
     'join.connect':'连接钱包，看看你能不能站上这张日历。',
     'join.member':'你已经在这个房间里。只有你自己能把自己移出去。',
     'join.member.days':'日历上是 {days}。',
-    'x.link':'显示我的 X',
+    'x.link':'连接 X 帐号',
     'x.unlink':'移除',
-    'x.working':'处理中…',
-    'x.why':'成员会看到名字，而不是一串地址。随时可以移除。',
+    'x.working':'等待你签名…',
+    'x.why':'两步：先用钱包签名，让我们知道要连到哪个钱包——不花 gas，也不动任何东西——再去 X 授权。之后房间里显示的就是你的名字，不是一串地址，随时可以移除。',
     'x.failed':'没有成功',
     'x.needwallet':'请先连接钱包',
     'x.err.config':'X 登录还没启用，什么都没有送出。',
