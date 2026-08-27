@@ -16,6 +16,25 @@
    "token": "0x44b28991b167582f18ba0259e0173176ca125505",
    "tokenDecimals": 18,
    "tokenKind": "erc20"
+  },
+  {
+   "chainId": 1,
+   "createdAt": 1787794682,
+   "creator": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+   "gatedOnchain": false,
+   "id": "0xac3a57f94a3f04e48dcabcadc3fdd84d47af0336f34a6d9813d632ec6a71d5c8",
+   "links": {
+    "other": "https://x.com/i/chat/group_join/g2050416283863363939/qyKfgCCZ0e",
+    "telegram": "https://t.me/unipeglive",
+    "x": "https://x.com/unipegv4"
+   },
+   "members": [],
+   "minBalance": "1000000000000000000",
+   "name": "Unipeg Community",
+   "slug": "unipeg",
+   "token": "0x44b28991b167582f18ba0259e0173176ca125505",
+   "tokenDecimals": 18,
+   "tokenKind": "erc20"
   }
  ],
  "contract": "0xa8c69d7afef3efc22cace7eb314a97a5ef640cfd"

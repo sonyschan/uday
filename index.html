@@ -856,6 +856,12 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 /* ─── community calendar ─────────────────────────────────────────────
    The wall builder already takes any byDay map, so a community's calendar
    is the same grid fed a different source: its members' declared days. */
+.comm__back{
+  display:inline-block; margin-top:clamp(18px,2vw,28px);
+  font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--muted); text-decoration:none;
+}
+.comm__back:hover{ color:var(--gold); }
 .comm__next{
   margin:0 0 18px; font-size:var(--fs-sub); color:var(--gold);
   font-family:var(--display); letter-spacing:var(--ls-narrow);
@@ -873,7 +879,8 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   background:linear-gradient(135deg, rgba(232,185,63,.09), rgba(232,185,63,.02));
 }
 .commjoin__line{ margin:0 0 14px; font-size:var(--fs-sub); color:#e6dbc2; max-width:60ch; }
-.commjoin__days{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px; }
+.commjoin__days{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px;
+  max-height:224px; overflow-y:auto; padding-right:6px; }
 .commjoin__day{
   padding:7px 11px; border-radius:4px; cursor:pointer;
   border:1px solid var(--rule); background:rgba(243,231,205,.04);
@@ -885,6 +892,17 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   margin-top:26px; padding-top:14px; border-top:1px solid var(--rule);
   font-size:var(--fs-micro); color:var(--muted); word-break:break-all;
 }
+.clist{ display:grid; gap:10px; max-width:64ch; }
+.clist__row{
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:14px 16px; border:1px solid var(--rule); border-radius:8px;
+  background:rgba(243,231,205,.03); text-decoration:none;
+  transition:border-color .16s;
+}
+.clist__row:hover{ border-color:rgba(232,185,63,.5); }
+.clist__name{ font-family:var(--display); font-size:var(--fs-sub); color:var(--vellum); }
+.clist__meta{ margin-left:auto; font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--muted); }
 .cnew{ max-width:56ch; }
 .cnew__row{ display:grid; grid-template-columns:minmax(120px,.34fr) 1fr; gap:14px;
   align-items:center; margin-bottom:14px; }
@@ -1110,6 +1128,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
   <!-- ── a community's calendar: /c/<slug>, everything else folds away ── -->
   <section class="band" id="community" hidden>
     <div class="shell">
+      <a class="comm__back" href="/c" data-i18n="comm.back">← COMMUNITIES</a>
       <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
         <p class="kicker" id="comm-kicker"></p>
         <h2 id="comm-title"></h2>
@@ -1131,7 +1150,19 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
     </div>
   </section>
 
-  <!-- ── /c — start a room. Nobody needs permission, including from us. ── -->
+  <!-- ── /c — the communities index: the rooms that exist, then the way to
+       make one. A child page's parent has to be a real place. ─────────── -->
+  <section class="band" id="commlist" hidden>
+    <div class="shell">
+      <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
+        <p class="kicker" data-i18n="clist.kicker">Communities</p>
+        <h2 data-i18n="clist.title">The rooms so far</h2>
+      </div>
+      <div class="clist rise" id="clist"></div>
+    </div>
+  </section>
+
+  <!-- ── start a room. Nobody needs permission, including from us. ──── -->
   <section class="band" id="commnew" hidden>
     <div class="shell">
       <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
@@ -1413,6 +1444,8 @@ const I18N = {
     'join.noslots':'Every day you can declare is already spoken for. Hold more uDAY for another, or free one on your own calendar.',
     'join.sent':'Sent. You appear on the calendar once the index catches up — usually within the hour.',
     'comm.missing':'No community here yet.',
+    'comm.back':'← COMMUNITIES','clist.kicker':'Communities','clist.title':'The rooms so far',
+    'clist.meta':'{n} MEMBERS · {chain}',
     'cnew.kicker':'Start a community','cnew.title':'A room nobody runs',
     'cnew.blurb':'Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.',
     'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'Website',
@@ -1590,6 +1623,8 @@ const I18N = {
     'join.noslots':'你能宣告的日子都已经用完了。持有更多 uDAY 换一个名额，或在自己的日历上腾出一个。',
     'join.sent':'已送出。索引跟上后你就会出现在日历上——通常一小时内。',
     'comm.missing':'这里还没有社群。',
+    'comm.back':'← 社区日历','clist.kicker':'社区','clist.title':'目前的房间',
+    'clist.meta':'{n} 位成员 · {chain}',
     'cnew.kicker':'创建社群','cnew.title':'一个没有管理员的房间',
     'cnew.blurb':'选一个代币和一个门槛。持有足够数量的人都能加入，而没有任何人——包括你、包括我们——能把他们移出去。这些规则在创建的那一刻就永久固定。',
     'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'网站',
@@ -2532,6 +2567,14 @@ function applyYearCollapse(){
    ───────────────────────────────────────────────────────────────────── */
 const COMM_SLUG = (location.pathname.match(/^\/c\/([a-z0-9-]{1,32})\/?$/) || [])[1] || null;
 const COMM_NEW = /^\/c\/?$/.test(location.pathname);
+// Rooms live on uday.gift. On the personal host the same path would boot
+// personal mode AND community mode together — your collection rendering
+// under someone's room. Send the URL to its real home.
+// literal, not PERSONAL_HOST: that const is declared further down and a
+// reference here is a temporal-dead-zone crash that kills the whole script
+if((COMM_SLUG || COMM_NEW) && location.hostname === 'my.uday.gift'){
+  location.replace('https://uday.gift' + location.pathname + location.search);
+}
 let COMM = null;
 
 const SEL_COMMUNITIES = '0xbd6a7a82';   // communities(bytes32)
@@ -2873,7 +2916,7 @@ async function renderJoin(){
   const row = document.createElement('div');
   row.className = 'commjoin__days';
   const free = Math.max(0, Number(BigInt(slots)) - declared.length);
-  owned.slice(0, 60).forEach(k => {
+  owned.forEach(k => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'commjoin__day';
     b.setAttribute('aria-pressed', String(commPick === k));
@@ -2931,7 +2974,7 @@ function commLayout(){
   const bar = document.querySelector('.proofbar'); if(bar) bar.hidden = true;
   // the whole collection's wall belongs on the main page; this room is
   // about these people, and two 366-cell grids on one screen read as noise
-  ['story','forge','roadmap','year','rooms'].forEach(id => {
+  ['story','forge','roadmap','year','rooms','commlist'].forEach(id => {
     const el = document.getElementById(id); if(el) el.hidden = true;
   });
   document.querySelector('.brand').href = 'https://uday.gift/';
@@ -3123,6 +3166,37 @@ function cnewWaiting(slug, hash){
     setTimeout(poll, 3000);
   };
   setTimeout(poll, 1500);
+}
+
+/// /c lists the rooms that exist. It is the parent every /c/<slug> points
+/// back to, so it has to be a real place, not just a form.
+async function renderCommList(){
+  const sec = document.getElementById('commlist');
+  try{
+    const r = await fetch('/data/communities.json', { cache: 'no-cache' });
+    if(!r.ok) return;
+    const j = await r.json();
+    const rooms = j.communities || [];
+    if(!rooms.length) return;
+    const host = document.getElementById('clist');
+    host.textContent = '';
+    rooms.slice().sort((a, b) => (b.members || []).length - (a.members || []).length)
+      .forEach(c => {
+        const a = document.createElement('a');
+        a.className = 'clist__row';
+        a.href = '/c/' + c.slug;
+        const name = document.createElement('span');
+        name.className = 'clist__name';
+        name.textContent = c.name || c.slug;
+        const meta = document.createElement('span');
+        meta.className = 'clist__meta';
+        meta.textContent = t('clist.meta', {
+          n: (c.members || []).length, chain: chainName(c.chainId) });
+        a.append(name, meta);
+        host.appendChild(a);
+      });
+    sec.hidden = false;
+  }catch(e){}
 }
 
 async function cnewInit(){
@@ -3367,7 +3441,11 @@ async function navGo(dest){
     mineWalletUI();
     setMineAddr(acc[0], 'wallet');
   }
-  if(dest === 'comm'){ location.href = '/c'; return; }
+  if(dest === 'comm'){
+    location.href = /(^|\.)uday\.gift$/.test(location.hostname)
+      ? 'https://uday.gift/c' : '/c';
+    return;
+  }
   // MY CALENDAR carries the handoff the address chip used to carry: neither
   // wallet auth nor localStorage crosses the subdomain boundary
   if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
@@ -3382,8 +3460,8 @@ const ymGo = document.getElementById('year-mine-go');
 if(ymGo) ymGo.addEventListener('click', () => navGo('mine'));
 document.getElementById('nav-comm').addEventListener('click', () => navGo('comm'));
 (function markCurrentNav(){
-  if(IS_PERSONAL) document.getElementById('nav-mine').setAttribute('aria-current', 'page');
-  else if(COMM_SLUG || COMM_NEW) document.getElementById('nav-comm').setAttribute('aria-current', 'page');
+  if(COMM_SLUG || COMM_NEW) document.getElementById('nav-comm').setAttribute('aria-current', 'page');
+  else if(IS_PERSONAL) document.getElementById('nav-mine').setAttribute('aria-current', 'page');
 })();
 
 
@@ -4197,7 +4275,7 @@ if(IS_PERSONAL){
   // the personal page IS the calendar: fold the marketing page away
   document.querySelector('.hero').hidden = true;
   document.querySelector('.proofbar').hidden = true;
-  ['story','forge','rooms'].forEach(id => {
+  ['story','forge','rooms','commlist'].forEach(id => {
     const s = document.getElementById(id); if(s) s.hidden = true;
   });
   // the holder calendar leads; the global wall waits behind a toggle
@@ -4235,6 +4313,7 @@ async function loadIndex(){
       commLayout();
       document.getElementById('commnew').hidden = false;
       cnewInit();
+      renderCommList();
     }
     if(COMM_SLUG){
       commLayout();
