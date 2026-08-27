@@ -887,6 +887,7 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   font-family:var(--display); font-size:var(--fs-micro); color:var(--vellum);
 }
 .commjoin__day[aria-pressed="true"]{ border-color:var(--gold); color:var(--gold); background:rgba(232,185,63,.12); }
+.commjoin__spin{ display:block; width:22px; height:22px; margin-bottom:12px; }
 .commjoin__mine{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
 .comm__gate{
   margin-top:26px; padding-top:14px; border-top:1px solid var(--rule);
@@ -1433,6 +1434,7 @@ const I18N = {
     'join.connect':'Connect a wallet to see whether you can stand on this calendar.',
     'join.member':'You are in this room. Only you can take yourself out of it.',
     'join.member.days':'On the calendar as {days}.',
+    'join.member.pending':'Joining as {days} — on the calendar once the index catches up, usually within the hour.',
     'join.leave':'LEAVE','join.left':'You have left. Your days come off the calendar next cycle.',
     'join.needuday':'Every member of every room holds at least one uDAY — that part is enforced by the contract, not by us.',
     'join.getuday':'GET A uDAY',
@@ -1442,6 +1444,7 @@ const I18N = {
     'join.pick':'Pick the day that will stand here. You have {n} to give.',
     'join.gowith':'JOIN WITH THIS DAY',
     'join.noslots':'Every day you can declare is already spoken for. Hold more uDAY for another, or free one on your own calendar.',
+    'join.mining':'On its way to the chain — this is usually seconds.',
     'join.sent':'Sent. You appear on the calendar once the index catches up — usually within the hour.',
     'comm.missing':'No community here yet.',
     'comm.back':'← COMMUNITIES','clist.kicker':'Communities','clist.title':'The rooms so far',
@@ -1612,6 +1615,7 @@ const I18N = {
     'join.connect':'连接钱包，看看你能不能站上这张日历。',
     'join.member':'你已经在这个房间里。只有你自己能把自己移出去。',
     'join.member.days':'日历上是 {days}。',
+    'join.member.pending':'将以 {days} 站上日历——索引跟上后就会出现，通常一小时内。',
     'join.leave':'离开','join.left':'你已离开。你的日子会在下一轮从日历上消失。',
     'join.needuday':'每个房间的每个成员都至少持有一枚 uDAY——这一点由合约强制，不是由我们。',
     'join.getuday':'去拿一枚 uDAY',
@@ -1621,6 +1625,7 @@ const I18N = {
     'join.pick':'选一个要站在这里的日子。你有 {n} 个名额。',
     'join.gowith':'用这一天加入',
     'join.noslots':'你能宣告的日子都已经用完了。持有更多 uDAY 换一个名额，或在自己的日历上腾出一个。',
+    'join.mining':'正在上链——通常只要几秒。',
     'join.sent':'已送出。索引跟上后你就会出现在日历上——通常一小时内。',
     'comm.missing':'这里还没有社群。',
     'comm.back':'← 社区日历','clist.kicker':'社区','clist.title':'目前的房间',
@@ -2854,38 +2859,6 @@ async function renderJoin(){
     commCall(SEL_SLOTSOF, pad(me)),
     commCall(SEL_DAYSOF, pad(me)),
   ]);
-
-  // already in: show what stands on the calendar and the only way out
-  if(mem && /1$/.test(mem)){
-    const mineKeys = commOwnedDays(me).filter(k =>
-      (COMM.members || []).some(m => m.addr === me && (m.days || []).includes(k)));
-    const shown = mineKeys.length ? mineKeys : commOwnedDays(me);
-    line.textContent = t('join.member');
-    if(shown.length){
-      const p = document.createElement('p');
-      p.className = 'commjoin__mine';
-      p.textContent = t('join.member.days', {
-        days: shown.slice(0, 3).map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
-      box.insertBefore(p, box.firstChild.nextSibling);
-    }
-    act(t('join.leave'), 'btn--ghost', async () => {
-      if(!await ensureChain()) return;
-      try{
-        await mineEth.request({ method: 'eth_sendTransaction',
-          params: [{ from: mineWallet, to: COMM_CONTRACT, data: SEL_LEAVE + cid }] });
-        line.textContent = t('join.left');
-      }catch(e){}
-    });
-    return;
-  }
-
-  // the uDAY floor is the half consensus enforces, so it is checked first
-  if(!slots || BigInt(slots) === 0n){
-    line.textContent = t('join.needuday');
-    link(t('join.getuday'), UTOKEN_BUY);
-    return;
-  }
-
   const owned = commOwnedDays(me);
   const declared = [];
   if(mine){
@@ -2896,12 +2869,43 @@ async function renderJoin(){
       declared.push(pad2(Math.floor(v / 100)) + '-' + pad2(v % 100));
     }
   }
-  const usable = declared.filter(k => owned.includes(k));
+  const held = declared.filter(k => owned.includes(k));
+
+  // already in: show the days THEY DECLARED, from the chain. An early version
+  // fell back to the first three days the wallet owned — someone who joined
+  // with APR 3 was told the calendar had them as JAN 1, JAN 5, JAN 6.
+  if(mem && /1$/.test(mem)){
+    const published = held.filter(k =>
+      (COMM.members || []).some(m => m.addr === me && (m.days || []).includes(k)));
+    line.textContent = t('join.member');
+    const shown = published.length ? published : held;
+    if(shown.length){
+      const p = document.createElement('p');
+      p.className = 'commjoin__mine';
+      const days = shown.map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ');
+      // the index publishes on its own cycle; until then, say "on its way"
+      // rather than presenting a guess as a fact
+      p.textContent = t(published.length ? 'join.member.days' : 'join.member.pending',
+                        { days: days });
+      box.insertBefore(p, box.firstChild.nextSibling);
+    }
+    act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
+    return;
+  }
+
+  // the uDAY floor is the half consensus enforces, so it is checked first
+  if(!slots || BigInt(slots) === 0n){
+    line.textContent = t('join.needuday');
+    link(t('join.getuday'), UTOKEN_BUY);
+    return;
+  }
+
+  const usable = held;
 
   if(usable.length){
     line.textContent = t('join.ready', {
       days: usable.map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
-    act(t('join.go'), 'btn--gold', () => commSend(SEL_JOIN + cid));
+    act(t('join.go'), 'btn--gold', () => commSend(SEL_JOIN + cid, true));
     return;
   }
 
@@ -2935,24 +2939,42 @@ async function renderJoin(){
   const go = act(t('join.gowith'), 'btn--gold', () => {
     if(!commPick) return;
     const m = +commPick.slice(0, 2), d = +commPick.slice(3);
-    commSend(SEL_JOINWITH + cid + pad32((m * 100 + d).toString(16)));
+    commSend(SEL_JOINWITH + cid + pad32((m * 100 + d).toString(16)), true);
   });
   go.disabled = !commPick;
 }
 
-async function commSend(data){
+/// Signs, then WAITS on the chain: a spinner while the transaction mines,
+/// polling isMember until it flips to `wantMember`, then a full re-render —
+/// which lands on the member panel with the declared day and the honest
+/// index-latency note. The old version changed one line of text and blind-
+/// re-rendered after six seconds, usually before the transaction had mined.
+async function commSend(data, wantMember){
   if(!await ensureChain()) return;
   const box = document.getElementById('comm-join');
   const line = box.querySelector('.commjoin__line');
   try{
     await mineEth.request({ method: 'eth_sendTransaction',
       params: [{ from: mineWallet, to: COMM_CONTRACT, data: data }] });
-    line.textContent = t('join.sent');
-    box.querySelectorAll('button').forEach(b => b.disabled = true);
-    // the calendar cannot show them until the index rebuilds; say the true
-    // thing rather than pretending the page is stale
-    setTimeout(renderJoin, 6000);
-  }catch(e){}
+  }catch(e){ return; }                        // declined in the wallet; stay put
+  box.querySelectorAll('button, .btn').forEach(b => b.disabled = true);
+  const spin = document.createElement('span');
+  spin.className = 'cnew__spin commjoin__spin';
+  spin.setAttribute('aria-hidden', 'true');
+  line.parentNode.insertBefore(spin, line);
+  line.textContent = t('join.mining');
+  const me = mineIdentity();
+  const cid = COMM.id.replace('0x', '');
+  const pad = x => pad32(x.replace('0x', '').toLowerCase());
+  for(let i = 0; i < 30; i++){
+    await new Promise(r => setTimeout(r, 2500));
+    const m = await commCall(SEL_ISMEMBER, cid + pad(me));
+    if(!!(m && /1$/.test(m)) === wantMember){ renderJoin(); return; }
+  }
+  // ~75s without a flip: the transaction may just be slow — stop spinning and
+  // say what is known instead of spinning forever
+  spin.remove();
+  line.textContent = t('join.sent');
 }
 
 function applyCommCollapse(){
