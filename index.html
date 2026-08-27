@@ -888,6 +888,14 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 }
 .commjoin__day[aria-pressed="true"]{ border-color:var(--gold); color:var(--gold); background:rgba(232,185,63,.12); }
 .commjoin__spin{ display:block; width:22px; height:22px; margin-bottom:12px; }
+.commjoin__days--mine{ max-height:none; margin-top:4px; }
+.commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
+  display:inline-flex; align-items:center; gap:8px; cursor:default; }
+.commjoin__clear{
+  border:none; background:none; cursor:pointer; padding:0 2px;
+  color:var(--muted); font-size:var(--fs-sub); line-height:1;
+}
+.commjoin__clear:hover{ color:var(--gold); }
 .commjoin__mine{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
 .comm__gate{
   margin-top:26px; padding-top:14px; border-top:1px solid var(--rule);
@@ -1445,6 +1453,7 @@ const I18N = {
     'join.gowith':'JOIN WITH THIS DAY',
     'join.noslots':'Every day you can declare is already spoken for. Hold more uDAY for another, or free one on your own calendar.',
     'join.mining':'On its way to the chain — this is usually seconds.',
+    'join.clear.tip':'Let this day go — the slot comes back, and you can declare another.',
     'join.sent':'Sent. You appear on the calendar once the index catches up — usually within the hour.',
     'comm.missing':'No community here yet.',
     'comm.back':'← COMMUNITIES','clist.kicker':'Communities','clist.title':'The rooms so far',
@@ -1626,6 +1635,7 @@ const I18N = {
     'join.gowith':'用这一天加入',
     'join.noslots':'你能宣告的日子都已经用完了。持有更多 uDAY 换一个名额，或在自己的日历上腾出一个。',
     'join.mining':'正在上链——通常只要几秒。',
+    'join.clear.tip':'放掉这一天——名额会回来，你就能改宣告别的日子。',
     'join.sent':'已送出。索引跟上后你就会出现在日历上——通常一小时内。',
     'comm.missing':'这里还没有社群。',
     'comm.back':'← 社区日历','clist.kicker':'社区','clist.title':'目前的房间',
@@ -2798,6 +2808,7 @@ function renderCommunity(){
 
 const SEL_ISMEMBER = '0x10ad56b3', SEL_DAYSOF = '0xd98ceee6', SEL_SLOTSOF = '0x8ac48a59';
 const SEL_JOIN = '0xad677d0b', SEL_JOINWITH = '0x7f9275f2', SEL_LEAVE = '0x5265303c';
+const SEL_CLEARDAY = '0xbaf0227d';   // clearSpecialDay(uint16), computed with cast sig
 const UTOKEN_BUY = UTOKEN_TOKEN;
 
 async function commCall(sel, args){
@@ -2860,16 +2871,38 @@ async function renderJoin(){
     commCall(SEL_DAYSOF, pad(me)),
   ]);
   const owned = commOwnedDays(me);
-  const declared = [];
-  if(mine){
-    const w = mine.slice(2);
-    const n = parseInt(w.slice(64, 128), 16);
-    for(let i = 0; i < n; i++){
-      const v = parseInt(w.slice(128 + i * 64, 192 + i * 64), 16);
-      declared.push(pad2(Math.floor(v / 100)) + '-' + pad2(v % 100));
-    }
-  }
+  const declared = parseDeclared(mine);
   const held = declared.filter(k => owned.includes(k));
+
+  // Your declared days, each removable. Days are GLOBAL — they stand on every
+  // room's calendar you are in — and leaving a room never touches them, so
+  // without this row there was no way to change your day at all. Clearing
+  // frees the slot; the picker then reappears on its own.
+  const declaredRow = () => {
+    if(!declared.length) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'commjoin__days commjoin__days--mine';
+    declared.forEach(k => {
+      const chip = document.createElement('span');
+      chip.className = 'commjoin__day commjoin__day--set';
+      chip.textContent = dayLabel(+k.slice(0,2), +k.slice(3));
+      const x = document.createElement('button');
+      x.type = 'button'; x.className = 'commjoin__clear';
+      x.textContent = '\u00d7';
+      x.title = t('join.clear.tip');
+      x.setAttribute('aria-label', t('join.clear.tip'));
+      x.addEventListener('click', () => {
+        const m2 = +k.slice(0, 2), d2 = +k.slice(3);
+        commSend(SEL_CLEARDAY + pad32((m2 * 100 + d2).toString(16)), async () => {
+          const r = await commCall(SEL_DAYSOF, pad(me));
+          return !parseDeclared(r).includes(k);
+        });
+      });
+      chip.appendChild(x);
+      wrap.appendChild(chip);
+    });
+    box.appendChild(wrap);
+  };
 
   // already in: show the days THEY DECLARED, from the chain. An early version
   // fell back to the first three days the wallet owned — someone who joined
@@ -2889,6 +2922,7 @@ async function renderJoin(){
                         { days: days });
       box.insertBefore(p, box.firstChild.nextSibling);
     }
+    declaredRow();
     act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
     return;
   }
@@ -2905,6 +2939,7 @@ async function renderJoin(){
   if(usable.length){
     line.textContent = t('join.ready', {
       days: usable.map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
+    declaredRow();
     act(t('join.go'), 'btn--gold', () => commSend(SEL_JOIN + cid, true));
     return;
   }
@@ -2949,6 +2984,18 @@ async function renderJoin(){
 /// which lands on the member panel with the declared day and the honest
 /// index-latency note. The old version changed one line of text and blind-
 /// re-rendered after six seconds, usually before the transaction had mined.
+function parseDeclared(hex){
+  const out = [];
+  if(!hex) return out;
+  const w = hex.slice(2);
+  const n = parseInt(w.slice(64, 128), 16);
+  for(let i = 0; i < n; i++){
+    const v = parseInt(w.slice(128 + i * 64, 192 + i * 64), 16);
+    out.push(pad2(Math.floor(v / 100)) + '-' + pad2(v % 100));
+  }
+  return out;
+}
+
 async function commSend(data, wantMember){
   if(!await ensureChain()) return;
   const box = document.getElementById('comm-join');
@@ -2966,10 +3013,16 @@ async function commSend(data, wantMember){
   const me = mineIdentity();
   const cid = COMM.id.replace('0x', '');
   const pad = x => pad32(x.replace('0x', '').toLowerCase());
+  // wantMember may be a boolean (membership flip) or a predicate — clearing
+  // a day watches daysOf instead of isMember
+  const done = typeof wantMember === 'function' ? wantMember
+    : async () => {
+        const m = await commCall(SEL_ISMEMBER, cid + pad(me));
+        return !!(m && /1$/.test(m)) === wantMember;
+      };
   for(let i = 0; i < 30; i++){
     await new Promise(r => setTimeout(r, 2500));
-    const m = await commCall(SEL_ISMEMBER, cid + pad(me));
-    if(!!(m && /1$/.test(m)) === wantMember){ renderJoin(); return; }
+    if(await done()){ renderJoin(); return; }
   }
   // ~75s without a flip: the transaction may just be slow — stop spinning and
   // say what is known instead of spinning forever
