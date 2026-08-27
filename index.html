@@ -2550,13 +2550,32 @@ async function giftWindowLeft(dayId){
   }catch(e){ return 0; }
 }
 
+let GIFT_WINDOW_S = null;
+/// How many days back can still hold a claimable gift, read from the contract
+/// rather than hardcoded. A number written here drifts the moment the window
+/// is changed on chain — which is exactly how a holder came within hours of
+/// losing a gift the contract was still willing to pay.
+async function giftLookbackDays(){
+  if(GIFT_WINDOW_S === null){
+    try{
+      const r = await mineEth.request({ method: 'eth_call', params: [{
+        to: GIFT_ADDR, data: '0x' + GIFT_SEL_WINDOW }, 'latest'] });
+      GIFT_WINDOW_S = parseInt((r || '0x0').slice(2), 16) || 0;
+    }catch(e){ GIFT_WINDOW_S = 0; }
+  }
+  // a window spanning N days can leave a gift open on any of those calendar
+  // days; +1 because posting time and midnight rarely coincide
+  return Math.min(7, Math.max(1, Math.ceil(GIFT_WINDOW_S / 86400) + 1));
+}
+
 /// Today first, then the days behind it that are still inside their window.
 /// Returns the one the wallet can still claim, preferring the one that
 /// expires soonest — an older gift is the urgent one, not today's.
 async function pendingGift(id){
   if(!id) return null;
   const found = [];
-  for(let back = 0; back <= 2; back++){
+  const lookback = await giftLookbackDays();
+  for(let back = 0; back <= lookback; back++){
     const d = giftDayAt(back);
     const g = await loadGiftFile(d.year, d.key);
     if(!g || !g.claims || !g.claims[id]) continue;
