@@ -888,6 +888,23 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 }
 .commjoin__day[aria-pressed="true"]{ border-color:var(--gold); color:var(--gold); background:rgba(232,185,63,.12); }
 .commjoin__spin{ display:block; width:22px; height:22px; margin-bottom:12px; }
+/* ★ — set on the personal calendar, shown on every joined room's calendar */
+.daymodal__star{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  margin:0 0 18px; padding:12px 14px; border-radius:8px;
+  border:1px solid rgba(232,185,63,.4);
+  background:linear-gradient(135deg, rgba(232,185,63,.08), rgba(232,185,63,.02));
+}
+.daymodal__starglyph{ font-size:20px; color:var(--muted); line-height:1; }
+.daymodal__starglyph.is-on{ color:var(--gold); }
+.daymodal__startxt{ flex:1; min-width:200px; font-size:var(--fs-sub); color:#e6dbc2; }
+.daymodal__starspin{ width:18px; height:18px; }
+.yearcell--star{ position:relative; }
+.yearcell--star::after{
+  content:'\2605'; position:absolute; top:-7px; right:-5px;
+  font-size:11px; color:var(--gold);
+  text-shadow:0 0 4px rgba(8,6,15,.9);
+}
 .commjoin__days--mine{ max-height:none; margin-top:4px; }
 .commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
   display:inline-flex; align-items:center; gap:8px; cursor:default; }
@@ -1447,12 +1464,17 @@ const I18N = {
     'join.needuday':'Every member of every room holds at least one uDAY — that part is enforced by the contract, not by us.',
     'join.getuday':'GET A uDAY',
     'join.noday':'You hold uDAY, but none of your pieces have revealed their date yet. A day has to be yours before it can stand here.',
-    'join.ready':'Your {days} is ready to stand on this calendar.',
+    'join.nostar':'You can join — but the calendar shows \u2605 days, and you have not set one yet. Set it on your own calendar; it will stand on every room you join.',
+    'join.member.nostar':'You are in this room, but the calendar has no \u2605 day of yours yet. Set one on your own calendar and it appears here.',
+    'join.ready':'Join, and your {days} stands on this calendar.',
     'join.go':'JOIN',
-    'join.pick':'Pick the day that will stand here. You have {n} to give.',
-    'join.gowith':'JOIN WITH THIS DAY',
     'join.noslots':'Every day you can declare is already spoken for. Hold more uDAY for another, or free one on your own calendar.',
     'join.mining':'On its way to the chain — this is usually seconds.',
+    'star.count':'\u2605 {n}/{m}',
+    'star.on':'This is one of your \u2605 days — it stands on every community calendar you have joined.',
+    'star.off':'Give this day a \u2605 and it stands on every community calendar you join. ({n}/{m} used)',
+    'star.full':'All your \u2605 are placed ({n}/{m}). Hold more uDAY for another, or take one back first.',
+    'star.set':'MAKE IT A \u2605 DAY','star.remove':'TAKE THE \u2605 BACK',
     'join.clear.tip':'Let this day go — the slot comes back, and you can declare another.',
     'join.sent':'Sent. You appear on the calendar once the index catches up — usually within the hour.',
     'comm.missing':'No community here yet.',
@@ -1629,12 +1651,17 @@ const I18N = {
     'join.needuday':'每个房间的每个成员都至少持有一枚 uDAY——这一点由合约强制，不是由我们。',
     'join.getuday':'去拿一枚 uDAY',
     'join.noday':'你持有 uDAY，但还没有任何一枚揭晓日期。一天要先属于你，才能站在这里。',
-    'join.ready':'你的 {days} 已经可以站上这张日历了。',
+    'join.nostar':'你可以加入——但日历显示的是 \u2605 日子，而你还没有设。到你自己的日历上设一颗，它会站上你加入的每个房间。',
+    'join.member.nostar':'你已经在这个房间里，但日历上还没有你的 \u2605 日子。到你自己的日历设一颗，它就会出现在这里。',
+    'join.ready':'加入后，你的 {days} 就会站上这张日历。',
     'join.go':'加入',
-    'join.pick':'选一个要站在这里的日子。你有 {n} 个名额。',
-    'join.gowith':'用这一天加入',
     'join.noslots':'你能宣告的日子都已经用完了。持有更多 uDAY 换一个名额，或在自己的日历上腾出一个。',
     'join.mining':'正在上链——通常只要几秒。',
+    'star.count':'\u2605 {n}/{m}',
+    'star.on':'这是你的 \u2605 日子——它站在你加入的每一个社群日历上。',
+    'star.off':'给这一天一颗 \u2605，它会站上你加入的每个社群日历。（已用 {n}/{m}）',
+    'star.full':'你的 \u2605 都用完了（{n}/{m}）。持有更多 uDAY 换名额，或先收回一颗。',
+    'star.set':'设为 \u2605 日子','star.remove':'收回这颗 \u2605',
     'join.clear.tip':'放掉这一天——名额会回来，你就能改宣告别的日子。',
     'join.sent':'已送出。索引跟上后你就会出现在日历上——通常一小时内。',
     'comm.missing':'这里还没有社群。',
@@ -2405,6 +2432,17 @@ function openDayModal(key, kind, list){
   dayModalClose.setAttribute('aria-label', t('modal.close'));
   dayModalGrid.textContent = '';
   const me = mineIdentity();
+
+  // ★ lives here: on YOUR calendar, on a day you own. The one line of copy is
+  // the whole education — it states the consequence at the moment of choice.
+  const oldBar = dayModal.querySelector('.daymodal__star');
+  if(oldBar) oldBar.remove();
+  if(IS_PERSONAL && me && kind === 'lit' && list.some(e => e.owner === me)){
+    const bar = document.createElement('div');
+    bar.className = 'daymodal__star';
+    dayModalGrid.parentNode.insertBefore(bar, dayModalGrid);
+    renderStarBar(bar, key);
+  }
   list.forEach(e => {
     const sold = soldTombs.has(e.id);
     const item = document.createElement('div');
@@ -2473,6 +2511,63 @@ function openDayModal(key, kind, list){
 /* Cells with pieces open the day gallery on EVERY pointer type — picking a
    favourite beats being teleported to the earliest. Desktop keeps its hover
    preview; unborn and ember days keep their mint flows. */
+async function renderStarBar(bar, key){
+  await loadStars();
+  bar.textContent = '';
+  const starred = MY_STARS.includes(key);
+  const glyph = document.createElement('span');
+  glyph.className = 'daymodal__starglyph' + (starred ? ' is-on' : '');
+  glyph.textContent = starred ? '\u2605' : '\u2606';
+  const txt = document.createElement('span');
+  txt.className = 'daymodal__startxt';
+  const free = MY_SLOTS - MY_STARS.length;
+  txt.textContent = starred ? t('star.on')
+                  : free > 0 ? t('star.off', { n: MY_STARS.length, m: MY_SLOTS })
+                  : t('star.full', { n: MY_STARS.length, m: MY_SLOTS });
+  bar.append(glyph, txt);
+  if(!mineWallet){
+    if(!starred) return;                       // nothing to act on, state shown
+  }
+  if(starred || free > 0){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn ' + (starred ? 'btn--ghost' : 'btn--gold');
+    b.textContent = t(starred ? 'star.remove' : 'star.set');
+    b.addEventListener('click', async () => {
+      if(!mineWallet){ mineConnect.click(); return; }
+      if(!await ensureChain()) return;
+      const m = +key.slice(0, 2), d = +key.slice(3);
+      const sel = starred ? SEL_CLEARDAY : SEL_SETDAY;
+      try{
+        await mineEth.request({ method: 'eth_sendTransaction', params: [{
+          from: mineWallet, to: COMM_CONTRACT,
+          data: sel + pad32((m * 100 + d).toString(16)) }] });
+      }catch(e){ return; }
+      b.disabled = true;
+      const spin = document.createElement('span');
+      spin.className = 'cnew__spin daymodal__starspin';
+      spin.setAttribute('aria-hidden', 'true');
+      bar.appendChild(spin);
+      txt.textContent = t('join.mining');
+      const pad = x => pad32(x.replace('0x', '').toLowerCase());
+      for(let i = 0; i < 30; i++){
+        await new Promise(r => setTimeout(r, 2500));
+        const r2 = await commCall(SEL_DAYSOF, pad(mineIdentity()));
+        if(parseDeclared(r2).includes(key) !== starred){
+          await loadStars(true);
+          renderStarBar(bar, key);
+          paintStars();
+          va('event', { name: starred ? 'star_clear' : 'star_set', data: { day: key } });
+          return;
+        }
+      }
+      spin.remove();
+      renderStarBar(bar, key);
+    });
+    bar.appendChild(b);
+  }
+}
+
 function attachCellAction(cell, key, kind, list, n){
   const first = list && list.length ? list[0] : null;
   if(CAN_HOVER){
@@ -2809,6 +2904,56 @@ function renderCommunity(){
 const SEL_ISMEMBER = '0x10ad56b3', SEL_DAYSOF = '0xd98ceee6', SEL_SLOTSOF = '0x8ac48a59';
 const SEL_JOIN = '0xad677d0b', SEL_JOINWITH = '0x7f9275f2', SEL_LEAVE = '0x5265303c';
 const SEL_CLEARDAY = '0xbaf0227d';   // clearSpecialDay(uint16), computed with cast sig
+const SEL_SETDAY = '0x613fe19c';   // setSpecialDay(uint16), computed with cast sig
+
+/* ── stars: the days this identity DECLARED, read off the chain. A star is
+   global — it stands on every community calendar its owner has joined — and
+   it is managed HERE, on the personal calendar, never on a room page. The
+   room pages only display the consequence. ─────────────────────────────── */
+let MY_STARS = null, MY_SLOTS = 0;
+async function loadStars(force){
+  const id = mineIdentity();
+  if(!id || !await ensureCommContract()){ MY_STARS = []; return MY_STARS; }
+  if(MY_STARS !== null && !force) return MY_STARS;
+  const pad = x => pad32(x.replace('0x', '').toLowerCase());
+  const [d, sl] = await Promise.all([
+    commCall(SEL_DAYSOF, pad(id)),
+    commCall(SEL_SLOTSOF, pad(id)),
+  ]);
+  MY_STARS = parseDeclared(d);
+  MY_SLOTS = sl ? Number(BigInt(sl)) : 0;
+  return MY_STARS;
+}
+
+/// Marks the starred cells on an already-built wall and refreshes the ★ n/m
+/// tag. Runs after loadStars resolves, so the wall never waits on the chain.
+function paintStars(){
+  if(!IS_PERSONAL || MY_STARS === null) return;
+  document.querySelectorAll('#mine-grid .yearcell--star')
+    .forEach(c => c.classList.remove('yearcell--star'));
+  const grid = document.getElementById('mine-grid');
+  if(grid && DAYS){
+    // the mine wall renders month labels then day cells in calendar order;
+    // find each starred key's cell by its aria-label day text
+    MY_STARS.forEach(k => {
+      const label = dayLabel(+k.slice(0, 2), +k.slice(3));
+      const cell = [...grid.querySelectorAll('.yearcell--lit')]
+        .find(c => (c.getAttribute('aria-label') || '').startsWith(label));
+      if(cell) cell.classList.add('yearcell--star');
+    });
+  }
+  const host = document.getElementById('mine-stats');
+  if(host){
+    let tag = host.querySelector('.tag--stars');
+    if(!tag){
+      tag = document.createElement('span');
+      tag.className = 'tag tag--stars';
+      host.appendChild(tag);
+    }
+    tag.textContent = t('star.count', { n: MY_STARS.length, m: MY_SLOTS });
+  }
+}
+
 const UTOKEN_BUY = UTOKEN_TOKEN;
 
 async function commCall(sel, args){
@@ -2833,7 +2978,6 @@ function commOwnedDays(id){
     .sort();
 }
 
-let commPick = null;
 async function renderJoin(){
   const box = document.getElementById('comm-join');
   if(!COMM || !await ensureCommContract()){ box.hidden = true; return; }
@@ -2874,55 +3018,37 @@ async function renderJoin(){
   const declared = parseDeclared(mine);
   const held = declared.filter(k => owned.includes(k));
 
-  // Your declared days, each removable. Days are GLOBAL — they stand on every
-  // room's calendar you are in — and leaving a room never touches them, so
-  // without this row there was no way to change your day at all. Clearing
-  // frees the slot; the picker then reappears on its own.
-  const declaredRow = () => {
-    if(!declared.length) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'commjoin__days commjoin__days--mine';
-    declared.forEach(k => {
-      const chip = document.createElement('span');
-      chip.className = 'commjoin__day commjoin__day--set';
-      chip.textContent = dayLabel(+k.slice(0,2), +k.slice(3));
-      const x = document.createElement('button');
-      x.type = 'button'; x.className = 'commjoin__clear';
-      x.textContent = '\u00d7';
-      x.title = t('join.clear.tip');
-      x.setAttribute('aria-label', t('join.clear.tip'));
-      x.addEventListener('click', () => {
-        const m2 = +k.slice(0, 2), d2 = +k.slice(3);
-        commSend(SEL_CLEARDAY + pad32((m2 * 100 + d2).toString(16)), async () => {
-          const r = await commCall(SEL_DAYSOF, pad(me));
-          return !parseDeclared(r).includes(k);
-        });
-      });
-      chip.appendChild(x);
-      wrap.appendChild(chip);
-    });
-    box.appendChild(wrap);
+  // ── decoupled: this panel only joins and leaves. Which days stand on the
+  // calendar is decided by ★ on the PERSONAL calendar — a star is global, so
+  // managing it inside one room always changed every other room too, which is
+  // exactly the confusion the picker and the × chips used to cause. The room
+  // states the consequence; my.uday.gift makes the choice.
+  const mineDoor = () => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn btn--ghost';
+    b.textContent = t('nav.mine');
+    b.addEventListener('click', () => navGo('mine'));
+    box.appendChild(b); return b;
   };
 
-  // already in: show the days THEY DECLARED, from the chain. An early version
-  // fell back to the first three days the wallet owned — someone who joined
-  // with APR 3 was told the calendar had them as JAN 1, JAN 5, JAN 6.
   if(mem && /1$/.test(mem)){
     const published = held.filter(k =>
       (COMM.members || []).some(m => m.addr === me && (m.days || []).includes(k)));
-    line.textContent = t('join.member');
-    const shown = published.length ? published : held;
-    if(shown.length){
+    if(held.length){
+      line.textContent = t('join.member');
+      const shown = published.length ? published : held;
       const p = document.createElement('p');
       p.className = 'commjoin__mine';
-      const days = shown.map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ');
-      // the index publishes on its own cycle; until then, say "on its way"
-      // rather than presenting a guess as a fact
+      const days = shown.map(k => '\u2605' + dayLabel(+k.slice(0,2), +k.slice(3))).join(', ');
       p.textContent = t(published.length ? 'join.member.days' : 'join.member.pending',
                         { days: days });
       box.insertBefore(p, box.firstChild.nextSibling);
+    }else{
+      // joined, but no ★ yet: the calendar cannot show them, and the fix
+      // lives on the other page — walk them there
+      line.textContent = t('join.member.nostar');
+      mineDoor();
     }
-    declaredRow();
     act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
     return;
   }
@@ -2934,49 +3060,20 @@ async function renderJoin(){
     return;
   }
 
-  const usable = held;
-
-  if(usable.length){
+  if(held.length){
+    // the consequence, stated before the transaction: joining puts THESE
+    // stars on THIS wall
     line.textContent = t('join.ready', {
-      days: usable.map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
-    declaredRow();
+      days: held.map(k => '\u2605' + dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
     act(t('join.go'), 'btn--gold', () => commSend(SEL_JOIN + cid, true));
     return;
   }
 
-  if(!owned.length){
-    line.textContent = t('join.noday');
-    link(t('join.getuday'), UTOKEN_BUY);
-    return;
-  }
-
-  // pick which of the days they hold will stand on this calendar
-  line.textContent = t('join.pick', { n: Number(BigInt(slots)) });
-  const row = document.createElement('div');
-  row.className = 'commjoin__days';
-  const free = Math.max(0, Number(BigInt(slots)) - declared.length);
-  owned.forEach(k => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'commjoin__day';
-    b.setAttribute('aria-pressed', String(commPick === k));
-    b.textContent = dayLabel(+k.slice(0,2), +k.slice(3));
-    b.addEventListener('click', () => { commPick = k; renderJoin(); });
-    row.appendChild(b);
-  });
-  box.insertBefore(row, box.firstChild.nextSibling);
-  if(!free){
-    const p = document.createElement('p');
-    p.className = 'commjoin__mine';
-    p.textContent = t('join.noslots');
-    box.appendChild(p);
-    return;
-  }
-  const go = act(t('join.gowith'), 'btn--gold', () => {
-    if(!commPick) return;
-    const m = +commPick.slice(0, 2), d = +commPick.slice(3);
-    commSend(SEL_JOINWITH + cid + pad32((m * 100 + d).toString(16)), true);
-  });
-  go.disabled = !commPick;
+  // eligible, but no ★ day yet — join is never blocked (the contract allows
+  // it), and the guidance says what the calendar needs
+  line.textContent = t('join.nostar');
+  act(t('join.go'), 'btn--gold', () => commSend(SEL_JOIN + cid, true));
+  mineDoor();
 }
 
 /// Signs, then WAITS on the chain: a spinner while the transaction mines,
@@ -3485,6 +3582,7 @@ function mineWalletUI(){
   if(DAYS){ renderDayStatus(); if(mineAddr) renderMine(); }
   if(typeof renderGift === 'function') renderGift();
   if(typeof renderJoin === 'function' && COMM) renderJoin();
+  if(IS_PERSONAL && typeof loadStars === 'function') loadStars(true).then(paintStars);
 }
 function mineDisconnect(){
   // EIP-1193 has no programmatic disconnect: logging out means forgetting —
@@ -4458,6 +4556,7 @@ async function loadIndex(){
       document.getElementById('mine').hidden = false;
       if(mineAddr) renderMine();
       renderGift();
+      loadStars().then(paintStars);
     }
     // once the gift file is known, the hero CTA can become 领取礼物
     loadGiftData().then(() => renderDayStatus());
