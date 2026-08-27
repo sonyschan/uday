@@ -33,3 +33,6 @@ data/x-card.png
 
 # local test route for /c/<slug> (Vercel rewrites this in production)
 /c/
+
+# the /api functions need these at build time on Vercel, never in the repo
+node_modules/

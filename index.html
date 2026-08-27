@@ -954,6 +954,35 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 }
 @keyframes starin{ from{ opacity:0; transform:scale(.55) } to{ opacity:1; transform:none } }
 @media (prefers-reduced-motion:reduce){ .yearcell--star::after{ animation:none } }
+/* ─── X identity ────────────────────────────────────────────────────── */
+.xface{ display:inline-flex; align-items:center; gap:7px; text-decoration:none;
+  color:var(--gold); font-family:var(--display); font-size:var(--fs-tiny);
+  letter-spacing:var(--ls-narrow); }
+.xface--anon{ color:var(--muted); }
+.xface:hover .xface__at{ text-decoration:underline; }
+/* A photograph among pixel glyphs: the gold ring is what makes it belong to
+   the page rather than sit on top of it. No pixelated hint — this is the one
+   image on the site that is not pixel art and must not be treated as such. */
+.xface__pfp{ width:26px; height:26px; border-radius:50%; flex:none;
+  border:1px solid rgba(232,185,63,.45); background:var(--night); object-fit:cover; }
+.commjoin__x{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; }
+.commjoin__xwhy{ color:var(--muted); font-size:var(--fs-micro); }
+.commjoin__xerr{ color:#e8a0a0; font-size:var(--fs-micro); margin:10px 0 0; }
+.commjoin__xoff{ background:none; border:0; padding:0; cursor:pointer;
+  color:var(--muted); font-family:var(--body); font-size:var(--fs-micro);
+  text-decoration:underline; text-underline-offset:3px; }
+.commjoin__xoff:hover{ color:var(--vellum); }
+.commnext--go{ cursor:pointer; }
+.commnext--go:hover{ color:var(--gold); }
+.daymodal__grid--people{ display:block; }
+.peoplerow{ display:flex; align-items:center; justify-content:space-between;
+  gap:14px; flex-wrap:wrap; padding:12px 0; border-bottom:1px solid rgba(232,185,63,.14); }
+.peoplerow:last-child{ border-bottom:0; }
+.peoplerow__go{ font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); text-decoration:none; color:var(--ink);
+  background:var(--gold); border-radius:6px; padding:7px 12px; white-space:nowrap; }
+.peoplerow__go:hover{ filter:brightness(1.08); }
+.peoplerow__you{ color:var(--muted); font-size:var(--fs-micro); }
 .commjoin__days--mine{ max-height:none; margin-top:4px; }
 .commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
   display:inline-flex; align-items:center; gap:8px; cursor:default; }
@@ -1565,6 +1594,27 @@ const I18N = {
     'join.connect':'Connect a wallet to see whether you can stand on this calendar.',
     'join.member':'You are in this room. Only you can take yourself out of it.',
     'join.member.days':'On the calendar as {days}.',
+    'x.link':'SHOW MY X',
+    'x.unlink':'remove',
+    'x.working':'WORKING…',
+    'x.why':'Members see a name instead of an address. Removable any time.',
+    'x.failed':'that did not go through',
+    'x.needwallet':'connect a wallet first',
+    'x.err.config':'X login is not switched on yet. Nothing was sent.',
+    'x.err.sig':'That signature did not match your wallet. Try again.',
+    'x.err.stale':'That took too long — sign again.',
+    'x.err.nouday':'Showing an X account needs at least 1 uDAY.',
+    'x.err.chain':'Could not read the chain just now. Try again.',
+    'x.err.state':'That link expired. Start again from here.',
+    'x.err.token':'X refused the handshake. Nothing was linked.',
+    'x.err.profile':'X would not say who you are. Nothing was linked.',
+    'x.err.record':'X said yes, but the link could not be recorded. Try again.',
+    'x.err.cancelled':'You stopped at X. Nothing was linked.',
+    'x.err.failed':'That did not go through. Nothing was linked.',
+    'people.sub':'Whose day this is. Go say something.',
+    'people.sub.none':'Whose day this is. Nobody here has shown an X account yet.',
+    'people.congrats':'WISH THEM WELL',
+    'people.greet':'happy {day} — your day is lit onchain',
     'join.member.pending':'Joining as {days} — on the calendar once the index catches up, usually within the hour.',
     'join.member.both':'On the calendar as {days}. {coming} is on its way — it appears once the index catches up, usually within the hour.',
     'join.leave':'LEAVE','join.left':'You have left. Your days come off the calendar next cycle.',
@@ -1753,6 +1803,27 @@ const I18N = {
     'join.connect':'连接钱包，看看你能不能站上这张日历。',
     'join.member':'你已经在这个房间里。只有你自己能把自己移出去。',
     'join.member.days':'日历上是 {days}。',
+    'x.link':'显示我的 X',
+    'x.unlink':'移除',
+    'x.working':'处理中…',
+    'x.why':'成员会看到名字，而不是一串地址。随时可以移除。',
+    'x.failed':'没有成功',
+    'x.needwallet':'请先连接钱包',
+    'x.err.config':'X 登录还没启用，什么都没有送出。',
+    'x.err.sig':'签名和你的钱包对不上，再试一次。',
+    'x.err.stale':'隔太久了，请重新签一次。',
+    'x.err.nouday':'显示 X 帐号至少需要 1 枚 uDAY。',
+    'x.err.chain':'刚才读不到链上资料，再试一次。',
+    'x.err.state':'这个连结过期了，请从这里重新开始。',
+    'x.err.token':'X 拒绝了这次握手，没有连结成功。',
+    'x.err.profile':'X 没有回传你的帐号，没有连结成功。',
+    'x.err.record':'X 那边通过了，但连结没能记录下来，再试一次。',
+    'x.err.cancelled':'你在 X 那边停下了，没有连结成功。',
+    'x.err.failed':'没有成功，什么都没有连结。',
+    'people.sub':'这是谁的日子。去说一声吧。',
+    'people.sub.none':'这是谁的日子。这里还没有人显示 X 帐号。',
+    'people.congrats':'去祝贺',
+    'people.greet':'{day} 快乐——你的日子在链上亮着',
     'join.member.pending':'将以 {days} 站上日历——索引跟上后就会出现，通常一小时内。',
     'join.member.both':'日历上是 {days}。{coming} 正在路上——索引跟上后就会出现，通常一小时内。',
     'join.leave':'离开','join.left':'你已离开。你的日子会在下一轮从日历上消失。',
@@ -2557,6 +2628,7 @@ function openDayModal(key, kind, list){
   dayModalSub.textContent = t('modal.sub');
   dayModalClose.setAttribute('aria-label', t('modal.close'));
   dayModalGrid.textContent = '';
+  dayModalGrid.classList.remove('daymodal__grid--people');
   const me = mineIdentity();
 
   // ★ lives here: on YOUR calendar, on a day you own. The one line of copy is
@@ -2694,11 +2766,13 @@ async function renderStarBar(bar, key){
   }
 }
 
-function attachCellAction(cell, key, kind, list, n){
+function attachCellAction(cell, key, kind, list, n, people){
   const first = list && list.length ? list[0] : null;
+  // A room's cells carry members, not piece ids — they open the people modal.
+  const open = () => people ? openPeopleModal(key, list) : openDayModal(key, kind, list);
   if(CAN_HOVER){
     if(kind === 'lit' || kind === 'glitch'){
-      cell.addEventListener('click', () => openDayModal(key, kind, list));
+      cell.addEventListener('click', open);
     }else if(kind === 'ember'){
       cell.addEventListener('click', () => {
         va('event', { name: 'calendar_click', data: { day: key, ember: 1 } });
@@ -2708,7 +2782,7 @@ function attachCellAction(cell, key, kind, list, n){
     attachTip(cell, key, kind, first, n);
   }else{
     cell.addEventListener('click', () => {
-      if(kind === 'lit' || kind === 'glitch'){ openDayModal(key, kind, list); return; }
+      if(kind === 'lit' || kind === 'glitch'){ open(); return; }
       va('event', { name: 'calendar_preview', data: { day: key } });
       showTip(cell, key, kind, first, n, true);
     });
@@ -2747,7 +2821,7 @@ function buildWall(grid, byDay, opts){
           const glabel = dayLabel(m, d) + ' \u00b7 ' + t('year.glitch.cell') + ' \u00b7 \u00d7' + gl.length;
           g.setAttribute('aria-label', glabel);
           if(!CAN_HOVER) g.title = glabel;
-          attachCellAction(g, gkey, 'glitch', gl.slice().sort((a,b) => a.id - b.id), gl.length);
+          attachCellAction(g, gkey, 'glitch', gl.slice().sort((a,b) => a.id - b.id), gl.length, opts.people);
           grid.appendChild(g);
         }else{
           const v = document.createElement('span');
@@ -2773,7 +2847,7 @@ function buildWall(grid, byDay, opts){
         cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
         list = byDay[key].slice().sort((a,b) => a.id - b.id);
       }
-      attachCellAction(cell, key, n ? 'lit' : ember ? 'ember' : 'free', list, n);
+      attachCellAction(cell, key, n ? 'lit' : ember ? 'ember' : 'free', list, n, opts.people);
       grid.appendChild(cell);
     }
   }
@@ -2929,6 +3003,227 @@ function commByDay(c){
   return by;
 }
 
+/* ── X identity ───────────────────────────────────────────────────────
+   A wallet is not a person. "0xE72D…35FD's day is in 12 days" gives nobody
+   anyone to congratulate, which is most of what a room is for.
+
+   Linking is opt-in and reversible. Standing on a community calendar already
+   ties a wallet to a date in public; tying it to a name and a face is a
+   larger step, so it needs a door out as much as a door in.
+
+   The handshake cannot happen here: X sends no CORS headers on either the
+   token endpoint or /2/users/me (measured — 400 and 403, neither carrying
+   access-control-allow-origin), so /api/x/* does it and commits the result.
+   The page still only ever reads a committed file. */
+let X_LINKS = {};
+async function loadXLinks(){
+  try{
+    const r = await fetch('/data/x-links.json', { cache: 'no-cache' });
+    if(r.ok) X_LINKS = (await r.json()) || {};
+  }catch(e){ /* rooms keep working; they just show addresses */ }
+  // Coming back from the handshake, the commit that records it has not been
+  // deployed yet — a minute or so. Without this the visitor lands on a page
+  // that shows no sign anything happened and tries again. Cosmetic and local:
+  // the fragment is trivially forgeable, and forging it fools only yourself.
+  const h = location.hash || '';
+  const m = h.match(/^#x=([A-Za-z0-9_]{1,15})$/);
+  const err = h.match(/^#x-err=([a-z]{1,12})$/);
+  if(m){
+    const me = mineIdentity();
+    if(me && !X_LINKS[me]) X_LINKS[me] = { handle: m[1], name: '', avatar: '', at: 0 };
+  }else if(err){
+    // a code, never a sentence: the fragment is a URL somebody may paste, and
+    // the server detail belongs in the logs where it can actually be read
+    X_ERR = X_ERRS.includes(err[1]) ? err[1] : 'failed';
+  }
+  if(m || err) history.replaceState(null, '', location.pathname + location.search);
+}
+// t() falls back to the key itself, which would print "x.err.token" at
+// somebody. Only codes with copy are honoured; anything else reads as failed.
+const X_ERRS = ['config', 'sig', 'stale', 'nouday', 'chain', 'state',
+                'token', 'profile', 'record', 'cancelled', 'failed'];
+let X_ERR = null;
+/// Checked HERE as well as in the function that writes the file. These land in
+/// an href, and one filter is one edit away from being no filter — the same
+/// lesson a javascript: url in the room links already taught this project once.
+function xOf(addr){
+  const e = addr && X_LINKS[String(addr).toLowerCase()];
+  if(!e || !/^[A-Za-z0-9_]{1,15}$/.test(e.handle || '')) return null;
+  return e;
+}
+const xAvatarOk = u => typeof u === 'string' && /^https:\/\/pbs\.twimg\.com\/[\w./-]{1,180}$/.test(u);
+
+/// A member: a person where one is known, an address where not.
+function xFace(addr){
+  const e = xOf(addr);
+  if(!e){
+    const s = document.createElement('span');
+    s.className = 'xface xface--anon';
+    s.textContent = shortAddr(addr);
+    return s;
+  }
+  const a = document.createElement('a');
+  a.className = 'xface';
+  a.href = 'https://x.com/' + e.handle;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  if(xAvatarOk(e.avatar)){
+    const img = document.createElement('img');
+    img.className = 'xface__pfp';
+    img.src = e.avatar; img.alt = '';
+    img.loading = 'lazy';
+    // X's CDN gets no referrer: it does not need to know which room is being read
+    img.referrerPolicy = 'no-referrer';
+    img.addEventListener('error', () => img.remove());
+    a.appendChild(img);
+  }
+  const n = document.createElement('span');
+  n.className = 'xface__at';
+  n.textContent = '@' + e.handle;
+  a.appendChild(n);
+  return a;
+}
+
+/// A community cell answers "WHOSE day is this", not "what pieces exist" —
+/// the artwork gallery belongs to the collection wall, and a room's cells
+/// carry no piece ids at all. This is the door the room exists for.
+function openPeopleModal(key, list){
+  ensureModal();
+  hideTip();
+  const m = +key.slice(0, 2), d = +key.slice(3);
+  dayModal.classList.remove('daymodal--glitch');
+  dayModalTitle.textContent = dayLabel(m, d);
+  dayModalClose.setAttribute('aria-label', t('modal.close'));
+  const oldBar = dayModal.querySelector('.daymodal__star');
+  if(oldBar) oldBar.remove();
+  dayModalGrid.textContent = '';
+  dayModalGrid.classList.add('daymodal__grid--people');
+
+  const me = mineIdentity();
+  const seen = new Set();
+  let named = 0;
+  list.forEach(e => {
+    if(seen.has(e.owner)) return;
+    seen.add(e.owner);
+    const x = xOf(e.owner);
+    if(x) named++;
+    const row = document.createElement('div');
+    row.className = 'peoplerow';
+    row.appendChild(xFace(e.owner));
+    if(x && e.owner !== me){
+      // an intent link, not an API call: the visitor posts this, we never do
+      const go = document.createElement('a');
+      go.className = 'peoplerow__go';
+      go.href = 'https://x.com/intent/post?text=' +
+        encodeURIComponent('@' + x.handle + ' ' + t('people.greet', { day: dayLabel(m, d) }));
+      go.target = '_blank'; go.rel = 'noopener noreferrer';
+      go.textContent = t('people.congrats');
+      row.appendChild(go);
+    }else if(e.owner === me){
+      const you = document.createElement('span');
+      you.className = 'peoplerow__you';
+      you.textContent = t('modal.yours');
+      row.appendChild(you);
+    }
+    dayModalGrid.appendChild(row);
+  });
+  dayModalSub.textContent = named ? t('people.sub') : t('people.sub.none');
+  dayModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  va('event', { name: 'people_modal', data: { day: key, n: seen.size, named: named } });
+}
+
+/// The wallet signs this before either endpoint will touch anything. Without
+/// it a stranger could hang their own X account on somebody else's address —
+/// or tear off a link that is not theirs. The text is duplicated in
+/// api/x/start.js and must stay character-identical: one byte apart and the
+/// server recovers a different, perfectly valid-looking wallet.
+async function xSign(addr){
+  const ts = Date.now();
+  const msg = 'uday.gift\n\n' +
+    'Link an X account to this wallet.\n\n' +
+    'wallet: ' + addr.toLowerCase() + '\n' +
+    'issued: ' + ts + '\n\n' +
+    'Signing proves the wallet is yours. It costs no gas, moves nothing, and\n' +
+    'authorises nothing else.';
+  const sig = await mineEth.request({ method: 'personal_sign', params: [msg, addr] });
+  return { ts: ts, sig: sig };
+}
+
+/// Link / unlink, inside the member panel. Deliberately here and nowhere else:
+/// showing a face is a thing you do for a room you already stand in.
+function xRow(box){
+  const me = mineIdentity();
+  if(!me) return;
+  const row = document.createElement('div');
+  row.className = 'commjoin__x';
+  // whatever went wrong, it went wrong after pressing the button that lives
+  // here — so this is where it gets said
+  if(X_ERR){
+    const e = document.createElement('p');
+    e.className = 'commjoin__xerr';
+    e.textContent = t('x.err.' + X_ERR);
+    box.appendChild(e);
+    X_ERR = null;                       // said once, not on every re-render
+  }
+  const cur = xOf(me);
+  if(cur){
+    row.appendChild(xFace(me));
+    const off = document.createElement('button');
+    off.type = 'button';
+    off.className = 'commjoin__xoff';
+    off.textContent = t('x.unlink');
+    off.addEventListener('click', async () => {
+      if(!mineEth) return;
+      off.disabled = true;
+      off.textContent = t('x.working');
+      try{
+        const { ts, sig } = await xSign(me);
+        const r = await fetch('/api/x/unlink?addr=' + me + '&sig=' + sig + '&ts=' + ts,
+                              { method: 'POST' });
+        if(!r.ok) throw new Error(await r.text());
+        delete X_LINKS[me];
+        renderJoin();
+      }catch(e){
+        off.disabled = false;
+        off.textContent = t('x.unlink');
+        row.appendChild(xNote(e.message || t('x.failed')));
+      }
+    });
+    row.appendChild(off);
+  }else{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn btn--ghost commjoin__xon';
+    b.textContent = t('x.link');
+    b.addEventListener('click', async () => {
+      if(!mineEth){ row.appendChild(xNote(t('x.needwallet'))); return; }
+      b.disabled = true;
+      b.textContent = t('x.working');
+      try{
+        const { ts, sig } = await xSign(me);
+        // a full page trip: the OAuth handshake cannot happen in this tab
+        leaveTo('/api/x/start?addr=' + me + '&sig=' + sig + '&ts=' + ts +
+                '&back=' + encodeURIComponent(location.pathname));
+      }catch(e){
+        b.disabled = false;
+        b.textContent = t('x.link');
+      }
+    });
+    row.appendChild(b);
+    const why = document.createElement('span');
+    why.className = 'commjoin__xwhy';
+    why.textContent = t('x.why');
+    row.appendChild(why);
+  }
+  box.appendChild(row);
+}
+function xNote(msg){
+  const s = document.createElement('span');
+  s.className = 'commjoin__xwhy';
+  s.textContent = msg;
+  return s;
+}
+
 /// The next member birthday from today, wrapping into next year. This is
 /// the reason to come back: a community page that cannot say "whose day is
 /// next" is just a grid.
@@ -2961,7 +3256,7 @@ function renderCommunity(){
   document.getElementById('comm-title').textContent = COMM.name || COMM.slug;
   document.getElementById('comm-blurb').textContent = t('comm.blurb');
 
-  const { lit } = buildWall(document.getElementById('comm-grid'), by, { today: true });
+  const { lit } = buildWall(document.getElementById('comm-grid'), by, { today: true, people: true });
   const host = document.getElementById('comm-stats');
   host.textContent = '';
   const mk = txt => { const el = document.createElement('span'); el.className = 'tag'; el.textContent = txt; host.appendChild(el); };
@@ -2971,13 +3266,25 @@ function renderCommunity(){
   const nx = document.getElementById('comm-next');
   const n = commNextDay(by);
   if(n){
-    const who = n.who.map(e => shortAddr(e.owner)).slice(0, 3).join(', ') +
+    // a name where one is known — this line is the reason to come back, and
+    // "0xE72D…35FD" is not somebody you can wish a happy day
+    const nameOf = e => { const x = xOf(e.owner); return x ? '@' + x.handle : shortAddr(e.owner); };
+    const who = n.who.map(nameOf).slice(0, 3).join(', ') +
                 (n.who.length > 3 ? ' +' + (n.who.length - 3) : '');
     nx.textContent = n.days === 0 ? t('comm.next.today', { who: who })
                    : n.days === 1 ? t('comm.next.tomorrow', { who: who, day: dayLabel(n.m, n.d) })
                    : t('comm.next', { n: n.days, who: who, day: dayLabel(n.m, n.d) });
+    // the highest-signal spot on the page, so it is also the shortest path to
+    // the person: the same door the calendar cell opens
+    const key = pad2(n.m) + '-' + pad2(n.d);
+    nx.classList.add('commnext--go');
+    nx.onclick = () => openPeopleModal(key, by[key] || []);
     nx.hidden = false;
-  }else nx.hidden = true;
+  }else{
+    nx.classList.remove('commnext--go');
+    nx.onclick = null;
+    nx.hidden = true;
+  }
 
   document.getElementById('comm-note').textContent = t('comm.note');
   // The rules are frozen at creation, so showing them IS the trust statement —
@@ -3203,6 +3510,7 @@ async function renderJoin(){
       line.textContent = t('join.member.nostar');
       mineDoor();
     }
+    xRow(box);
     act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
     return;
   }
@@ -4748,6 +5056,7 @@ async function loadIndex(){
     }
     if(COMM_SLUG){
       commLayout();
+      await loadXLinks();
       COMM = await loadCommunity();
       if(COMM) renderCommunity();
       else{
