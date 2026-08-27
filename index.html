@@ -1031,7 +1031,11 @@ html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
 }
 .clist__row:hover{ border-color:rgba(232,185,63,.5); }
 .clist__name{ font-family:var(--display); font-size:var(--fs-sub); color:var(--vellum); }
-.clist__meta{ margin-left:auto; font-family:var(--display); font-size:var(--fs-micro);
+.clist__mark{ display:inline-flex; align-items:center; flex:none; opacity:.72; }
+.clist__row:hover .clist__mark{ opacity:1; }
+.clist__name{ flex:1 1 auto; min-width:0; }
+.clist__meta{ margin-left:auto; display:inline-flex; align-items:center; gap:10px;
+  font-family:var(--display); font-size:var(--fs-micro);
   letter-spacing:var(--ls-narrow); color:var(--muted); }
 .cnew{ max-width:56ch; }
 .cnew__row{ display:grid; grid-template-columns:minmax(120px,.34fr) 1fr; gap:14px;
@@ -1652,7 +1656,7 @@ const I18N = {
     'join.sent':'Sent. You appear on the calendar once the index catches up — usually within the hour.',
     'comm.missing':'No community here yet.',
     'comm.back':'← COMMUNITIES','clist.kicker':'Communities','clist.title':'The rooms so far',
-    'clist.meta':'{n} MEMBERS · {chain}',
+    'clist.members':'{n} MEMBERS',
     'cnew.kicker':'Start a community','cnew.title':'A room nobody runs',
     'cnew.blurb':'Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.',
     'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'Website',
@@ -1862,7 +1866,7 @@ const I18N = {
     'join.sent':'已送出。索引跟上后你就会出现在日历上——通常一小时内。',
     'comm.missing':'这里还没有社群。',
     'comm.back':'← 社区日历','clist.kicker':'社区','clist.title':'目前的房间',
-    'clist.meta':'{n} 位成员 · {chain}',
+    'clist.members':'{n} 位成员',
     'cnew.kicker':'创建社群','cnew.title':'一个没有管理员的房间',
     'cnew.blurb':'选一个代币和一个门槛。持有足够数量的人都能加入，而没有任何人——包括你、包括我们——能把他们移出去。这些规则在创建的那一刻就永久固定。',
     'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'网站',
@@ -3287,6 +3291,44 @@ function commNextDay(by){
 const chainName = id => ({ 4663: 'Robinhood Chain', 1: 'Ethereum', 8453: 'Base',
                            42161: 'Arbitrum', 10: 'Optimism' })[id] || ('chain ' + id);
 
+/* ── small marks ──────────────────────────────────────────────────────
+   Two facts about a room that were only ever spelled out in prose: which
+   chain holds the gating token, and whether that token is counted in ITEMS
+   or in COINS. The second decides what a threshold of "1" even means, and
+   the rooms list showed no trace of it at all.
+
+   Inline SVG in currentColor, not pixel art: these render at 13px, and this
+   project's rule is that pixel art must be DRAWN at the size it is shown — a
+   downscaled glyph turns to noise. Each carries a <title> so the name is
+   still there for a pointer and a screen reader. The ROOM page keeps its
+   chain spelled out in prose: that sentence says who enforces the gate, and
+   that is not a thing to hide behind an icon. */
+const svgMark = (body, title) =>
+  '<svg viewBox="0 0 16 16" width="13" height="13" role="img"><title>' + title + '</title>' + body + '</svg>';
+
+function chainMark(id){
+  const name = chainName(id);
+  if(id === 1)                                    // Ethereum's own diamond
+    return svgMark('<path d="M8 1.2 13.2 8 8 11 2.8 8Z" fill="currentColor" opacity=".55"/>' +
+                   '<path d="M8 12.1 13.2 9 8 14.8 2.8 9Z" fill="currentColor"/>', name);
+  if(id === 4663)                                 // Robinhood Chain: a feather
+    return svgMark('<path d="M12.8 2.4c-5 .4-7.6 3-8.2 6.5-.2 1.2 0 2.2.4 3l-1.4 2.2.9.6 1.3-2.1c.9.4 2 .5 3.1.2 3.3-.8 5-3.9 3.9-10.4Z" ' +
+                   'fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>' +
+                   '<path d="M11.6 4.6C8.4 6 6.3 8.6 5.6 11.6" fill="none" stroke="currentColor" stroke-width="1.1"/>', name);
+  return svgMark('<path d="M8 1.6 14 5v6l-6 3.4L2 11V5Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>', name);
+}
+
+/// ERC-721 is a framed picture — one of one. ERC-20 is stacked coins.
+function kindMark(kind){
+  if(kind === 'erc721')
+    return svgMark('<rect x="2.2" y="2.8" width="11.6" height="10.4" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/>' +
+                   '<path d="M3.6 11.3 6.6 8.2l2.1 2.2 1.9-1.6 1.9 2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>' +
+                   '<circle cx="5.9" cy="6" r="1.05" fill="currentColor"/>', 'NFT');
+  return svgMark('<ellipse cx="8" cy="4.6" rx="5.2" ry="2.1" fill="none" stroke="currentColor" stroke-width="1.3"/>' +
+                 '<path d="M2.8 4.6v3.2c0 1.16 2.33 2.1 5.2 2.1s5.2-.94 5.2-2.1V4.6" fill="none" stroke="currentColor" stroke-width="1.3"/>' +
+                 '<path d="M2.8 8.2v3.2c0 1.16 2.33 2.1 5.2 2.1s5.2-.94 5.2-2.1V8.2" fill="none" stroke="currentColor" stroke-width="1.3"/>', 'Token');
+}
+
 let commMonthOnly = true;
 /// The half of the gate consensus cannot enforce.
 ///
@@ -3952,11 +3994,23 @@ async function renderCommList(){
         const name = document.createElement('span');
         name.className = 'clist__name';
         name.textContent = c.name || c.slug;
+        // the kind mark sits with the room's NAME, because it says what the
+        // room is gated on. innerHTML is safe: both strings are built above
+        // from literals and a chain id, never from the room's own fields.
+        const kind = document.createElement('span');
+        kind.className = 'clist__mark';
+        kind.innerHTML = kindMark(c.tokenKind);
+        kind.title = c.tokenKind === 'erc721' ? 'NFT' : 'Token';
         const meta = document.createElement('span');
         meta.className = 'clist__meta';
-        meta.textContent = t('clist.meta', {
-          n: (c.members || []).length, chain: chainName(c.chainId) });
-        a.append(name, meta);
+        const n = document.createElement('span');
+        n.textContent = t('clist.members', { n: (c.members || []).length });
+        const ch = document.createElement('span');
+        ch.className = 'clist__mark';
+        ch.innerHTML = chainMark(c.chainId);
+        ch.title = chainName(c.chainId);
+        meta.append(n, ch);
+        a.append(kind, name, meta);
         host.appendChild(a);
       });
     sec.hidden = false;
