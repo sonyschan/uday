@@ -106,8 +106,31 @@ await withEnv(ENV, async () => {
   const written = put ? JSON.parse(Buffer.from(JSON.parse(put.init.body).content, 'base64').toString()) : null;
   ok('callback: committed the binding', !!written && written[ADDR] && written[ADDR].handle === 'h2crypto_eth', JSON.stringify(written));
   ok('callback: stored the _bigger avatar crop', written && written[ADDR].avatar.endsWith('_bigger.jpg'), written && written[ADDR].avatar);
-  ok('callback: token exchange used Basic auth', calls[0].init.headers.Authorization.startsWith('Basic '));
+  ok('callback: token exchange tried Basic auth first', calls[0].init.headers.Authorization.startsWith('Basic '));
   ok('callback: cookie is burned', /Max-Age=0/.test(r.headers['set-cookie']));
+
+
+  // X's token endpoint rejected a correct Basic header on a client_credentials
+  // probe and wanted the pair in the body — so the fallback has to work
+  let seen = [];
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    if (u.includes('oauth2/token')) {
+      seen.push(init.headers.Authorization ? 'basic' : 'body');
+      if (init.headers.Authorization) return { ok: false, status: 400, text: async () => 'Missing required parameter [client_secret].' };
+      const b = new URLSearchParams(init.body);
+      if (b.get('client_secret') !== 'csec' || b.get('client_id') !== 'cid')
+        return { ok: false, status: 401, text: async () => 'no creds in body' };
+      return { ok: true, status: 200, json: async () => ({ access_token: 'tok' }) };
+    }
+    if (u.includes('users/me')) return { ok: true, status: 200, json: async () => ({ data: { username: 'h2crypto_eth', name: 'S', profile_image_url: 'https://pbs.twimg.com/profile_images/1/a_normal.jpg' } }) };
+    if ((init && init.method) === 'PUT') return { ok: true, status: 200, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => ({ sha: 'a', content: Buffer.from('{}').toString('base64') }) };
+  };
+  r = mkRes(); await callback({ query: { code: 'c', state: 'realstate' }, headers: { cookie: cookieHdr } }, r);
+  ok('callback: Basic rejected -> retries with body credentials',
+     r.code === 302 && seen.join(',') === 'basic,body', r.code + ' ' + seen.join(','));
+  globalThis.fetch = realFetch;
 
   // a hostile /2/users/me response must never reach the file
   globalThis.fetch = async (url, init) => {

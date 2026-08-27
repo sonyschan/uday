@@ -92,14 +92,29 @@ export default async function handler(req, res) {
     redirect_uri: REDIRECT || 'https://uday.gift/api/x/callback',
     code_verifier: jar.verifier,
   });
+  // X documents Basic auth for a confidential client here, and that is tried
+  // first. But its token endpoint is genuinely picky about how credentials are
+  // presented — a client_credentials probe rejected a correct Basic header with
+  // "Missing required parameter [client_secret]" and only accepted the pair in
+  // the body — so a rejection falls through to the body form rather than
+  // stranding everyone behind a 502 nobody can debug from a browser.
   const basic = Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64');
-  const tok = await fetch('https://api.x.com/2/oauth2/token', {
+  const post = extra => fetch('https://api.x.com/2/oauth2/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded',
-               Authorization: 'Basic ' + basic },
-    body: form,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...extra.headers },
+    body: extra.body,
   });
-  if (!tok.ok) return fail(res, 502, 'X refused the token exchange (' + tok.status + ')');
+  let tok = await post({ headers: { Authorization: 'Basic ' + basic }, body: form });
+  if (tok.status === 400 || tok.status === 401) {
+    const withCreds = new URLSearchParams(form);
+    withCreds.set('client_id', CLIENT_ID);
+    withCreds.set('client_secret', CLIENT_SECRET);
+    tok = await post({ headers: {}, body: withCreds });
+  }
+  if (!tok.ok) {
+    const why = await tok.text().catch(() => '');
+    return fail(res, 502, 'X refused the token exchange (' + tok.status + ') ' + why.slice(0, 200));
+  }
   const { access_token } = await tok.json();
   if (!access_token) return fail(res, 502, 'X returned no token');
 
