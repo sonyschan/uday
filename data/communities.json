@@ -44,6 +44,60 @@
    "token": "0x44b28991b167582f18ba0259e0173176ca125505",
    "tokenDecimals": 18,
    "tokenKind": "erc20"
+  },
+  {
+   "chainId": 4663,
+   "createdAt": 1787836889,
+   "creator": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+   "gatedOnchain": true,
+   "id": "0x9e310eac0fc3caf498f54ca7de305dd7db1bb3be52d70ac9d1debd5ddfc18f92",
+   "links": {
+    "other": "https://theindex.finance",
+    "x": "https://x.com/TheIndexFi"
+   },
+   "members": [
+    {
+     "addr": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+     "days": [
+      "04-03",
+      "09-08",
+      "12-31"
+     ]
+    }
+   ],
+   "minBalance": "10000000000000000000000",
+   "name": "Index",
+   "slug": "index",
+   "token": "0x56910d4409f3a0c78c64dd8d0545ff0705389870",
+   "tokenDecimals": 18,
+   "tokenKind": "erc20"
+  },
+  {
+   "chainId": 1,
+   "createdAt": 1787837030,
+   "creator": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+   "gatedOnchain": false,
+   "id": "0xa8a4842e81d1c37fbfa204048d2e998057ff84167e143af3e09b03be60385edc",
+   "links": {
+    "other": "https://akidcalledbeast.com",
+    "x": "https://x.com/akidcalledbeast"
+   },
+   "members": [
+    {
+     "addr": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+     "days": [
+      "04-03",
+      "09-08",
+      "12-31"
+     ]
+    }
+   ],
+   "minBalance": "1",
+   "name": "akidcalledbeast",
+   "slug": "akcb",
+   "token": "0x77372a4cc66063575b05b44481f059be356964a4",
+   "tokenDecimals": 0,
+   "tokenKind": "erc721"
   }
  ],
  "contract": "0xa8c69d7afef3efc22cace7eb314a97a5ef640cfd"
