@@ -1485,6 +1485,7 @@ const I18N = {
     'join.member':'You are in this room. Only you can take yourself out of it.',
     'join.member.days':'On the calendar as {days}.',
     'join.member.pending':'Joining as {days} — on the calendar once the index catches up, usually within the hour.',
+    'join.member.both':'On the calendar as {days}. {coming} is on its way — it appears once the index catches up, usually within the hour.',
     'join.leave':'LEAVE','join.left':'You have left. Your days come off the calendar next cycle.',
     'join.needuday':'Every member of every room holds at least one uDAY — that part is enforced by the contract, not by us.',
     'join.getuday':'GET A uDAY',
@@ -1672,6 +1673,7 @@ const I18N = {
     'join.member':'你已经在这个房间里。只有你自己能把自己移出去。',
     'join.member.days':'日历上是 {days}。',
     'join.member.pending':'将以 {days} 站上日历——索引跟上后就会出现，通常一小时内。',
+    'join.member.both':'日历上是 {days}。{coming} 正在路上——索引跟上后就会出现，通常一小时内。',
     'join.leave':'离开','join.left':'你已离开。你的日子会在下一轮从日历上消失。',
     'join.needuday':'每个房间的每个成员都至少持有一枚 uDAY——这一点由合约强制，不是由我们。',
     'join.getuday':'去拿一枚 uDAY',
@@ -3081,12 +3083,20 @@ async function renderJoin(){
       line.textContent = t('join.member');
       const pending = held.filter(k => !published.includes(k));
       markPendingDays(pending);
-      const shown = published.length ? published : held;
+      // Three different truths, and an earlier version told the third one
+      // wrong: it printed the PUBLISHED days under the PENDING sentence, so
+      // days already standing on the wall were described as still on their way.
+      const fmt = ks => ks.map(k => '\u2605' + dayLabel(+k.slice(0,2), +k.slice(3))).join(', ');
       const p = document.createElement('p');
       p.className = 'commjoin__mine';
-      const days = shown.map(k => '\u2605' + dayLabel(+k.slice(0,2), +k.slice(3))).join(', ');
-      p.textContent = t(pending.length === 0 ? 'join.member.days' : 'join.member.pending',
-                        { days: days });
+      if(!pending.length){
+        p.textContent = t('join.member.days', { days: fmt(published) });
+      }else if(!published.length){
+        p.textContent = t('join.member.pending', { days: fmt(pending) });
+      }else{
+        p.textContent = t('join.member.both',
+                          { days: fmt(published), coming: fmt(pending) });
+      }
       box.insertBefore(p, box.firstChild.nextSibling);
     }else{
       // joined, but no ★ yet: the calendar cannot show them, and the fix
