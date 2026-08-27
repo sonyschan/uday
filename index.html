@@ -3111,7 +3111,7 @@ async function renderJoin(){
   if(!me){
     line.textContent = t('join.connect');
     if(mineEth) act(t('gift.modal.connect'), 'btn--gold', () => mineConnect.click());
-    else link(t('gift.modal.connect'), 'https://' + PERSONAL_HOST + '/');
+    else link(t('gift.modal.connect'), personalUrl(mineIdentity()));
     return;
   }
 
@@ -3720,10 +3720,35 @@ document.getElementById('mine-disconnect').addEventListener('click', mineDisconn
 /// Both doors behave the same when nobody is signed in: connect first, then
 /// land where you were going. Dropping someone on the homepage after they
 /// connect — which is what happened before — makes them do the trip twice.
+/// Where MY CALENDAR leads FROM HERE. Production has a my.* sibling and the
+/// address rides a cookie across the origin boundary. A preview deployment or
+/// localhost has no sibling at all — personal mode there is hostname-detected,
+/// so the query flag is the only door, and the address has to ride the URL
+/// because no cookie is shared with anything. Every caller must go through
+/// this: hard-coding the production host meant MY CALENDAR did nothing on a
+/// preview whenever a wallet was connected, which is exactly where a branch
+/// gets reviewed. (?view=personal with no &addr= renders no wall — a trap this
+/// project has hit twice — so the address is always carried when known.)
+function personalUrl(addr){
+  if(/(^|\.)uday\.gift$/.test(location.hostname)) return 'https://' + PERSONAL_HOST + '/';
+  const u = new URL(location.origin + '/');
+  u.searchParams.set('view', 'personal');
+  if(addr) u.searchParams.set('addr', addr);
+  if(lang !== 'en') u.searchParams.set('lang', lang);
+  return u.href;
+}
+/// The handoff cookie is armed only when we are actually leaving, never when a
+/// link is merely rendered: it lives five minutes, so arming it at paint time
+/// would be stale by the time anyone clicked.
+function goPersonal(addr){
+  if(addr && /(^|\.)uday\.gift$/.test(location.hostname)) setHandoff(addr);
+  leaveTo(personalUrl(addr));
+}
+
 async function navGo(dest){
   const id = mineIdentity();
   if(!id){
-    if(!mineEth) { leaveTo(dest === 'mine' ? 'https://' + PERSONAL_HOST + '/' : '/c'); return; }
+    if(!mineEth) { dest === 'mine' ? goPersonal(null) : leaveTo('/c'); return; }
     let acc;
     try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
     catch(e){ return; }                          // declined; stay put
@@ -3739,11 +3764,7 @@ async function navGo(dest){
   }
   // MY CALENDAR carries the handoff the address chip used to carry: neither
   // wallet auth nor localStorage crosses the subdomain boundary
-  if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
-    setHandoff(mineIdentity());
-    leaveTo('https://' + PERSONAL_HOST + '/');
-    return;
-  }
+  if(!IS_PERSONAL){ goPersonal(mineIdentity()); return; }
   setMineAddr(mineIdentity(), 'wallet');
 }
 document.getElementById('nav-mine').addEventListener('click', () => navGo('mine'));
@@ -3765,11 +3786,7 @@ mineConnect.addEventListener('click', async () => {
   if(!(acc && acc[0])) return;
   // On the main site, logging in means going to YOUR page. The address rides
   // in the URL because neither wallet auth nor localStorage crosses origins.
-  if(!IS_PERSONAL && /(^|\.)uday\.gift$/.test(location.hostname)){
-    setHandoff(acc[0].toLowerCase());
-    leaveTo('https://' + PERSONAL_HOST + '/');
-    return;
-  }
+  if(!IS_PERSONAL){ goPersonal(acc[0].toLowerCase()); return; }
   mineWallet = acc[0].toLowerCase();
   mineWalletUI();
   setMineAddr(acc[0], 'wallet');
@@ -4255,7 +4272,7 @@ async function openGiftModal(){
     }else{
       const a = document.createElement('a');
       a.className = 'btn btn--gold';
-      a.href = 'https://' + PERSONAL_HOST + '/';
+      a.href = personalUrl(mineIdentity());
       a.textContent = t('gift.modal.connect');
       gmState.appendChild(a);
     }
