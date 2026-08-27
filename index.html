@@ -902,19 +902,19 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 /* A ★ day fills its whole cell — these are the days someone chose to stand
    for, and a corner speck undersold them. The star is inked dark against the
    cell's own gold heat, like a mark pressed into the leaf. */
+/* The ★ is drawn in the SAME mosaic language as the on-chain date glyphs:
+   assets/star.svg is generated with mkglyphs' MOSAIC palette, its md5 pick()
+   per 2x2 block, and the cream-then-dark contour every glyph wears. A chosen
+   day is a piece of the art, not a text character. */
 .yearcell--star{
-  position:relative; overflow:hidden; container-type:size;
-  /* a chosen day outranks its heat: full gold, always — !important because
-     buildWall writes the heat as an inline background */
-  background:var(--gold) !important;
+  position:relative; overflow:hidden;
+  background:var(--gold) !important;      /* chosen outranks heat (inline style) */
   border-color:var(--gold) !important;
 }
 .yearcell--star::after{
-  content:'\2605'; position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:92cqh; line-height:1;   /* the star scales with its cell */
-  color:rgba(8,6,15,.82);
-  text-shadow:0 0 2px rgba(232,185,63,.6);
+  content:''; position:absolute; inset:2%;
+  background:url('/assets/star.svg') center/contain no-repeat;
+  image-rendering:pixelated;
 }
 .commjoin__days--mine{ max-height:none; margin-top:4px; }
 .commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
