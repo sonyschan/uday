@@ -116,6 +116,24 @@
    "token": "0xd774557b647330c91bf44cfeab205095f7e6c367",
    "tokenDecimals": 0,
    "tokenKind": "erc721"
+  },
+  {
+   "chainId": 4663,
+   "createdAt": 1787844940,
+   "creator": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+   "gatedOnchain": true,
+   "id": "0x70f663c2c3b929685d3f54b29fdd9d406e7d22a29daae88d71b63f9df6433654",
+   "links": {
+    "telegram": "https://t.me/unisoccs",
+    "x": "https://x.com/unisoccs"
+   },
+   "members": [],
+   "minBalance": "1000000000000000000",
+   "name": "unisoccs",
+   "slug": "unisoccs",
+   "token": "0x4c2d0c58ebe95b9c0eeea4ee08d22072efb0affe",
+   "tokenDecimals": 18,
+   "tokenKind": "erc20"
   }
  ],
  "contract": "0xa8c69d7afef3efc22cace7eb314a97a5ef640cfd"
