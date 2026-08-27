@@ -186,6 +186,26 @@ html.personal main{ padding-top:70px; }
      actually fit: tighter paddings across the whole bar */
   .topbar{ padding:12px 14px; gap:10px; }
 }
+
+/* Below this the bar genuinely runs out of room, and the thing that fell off
+   the end was the WALLET button — the one control a visitor cannot do without.
+   The language pill is the cheapest thing on the bar and the most expensive in
+   pixels, so it collapses to the language you are NOT reading: one button that
+   says where it takes you, which is all a two-language toggle ever needed. */
+@media (max-width:430px){
+  .langs button[aria-pressed="true"]{ display:none; }
+  .langs button{ padding:6px 10px; }
+  .tb-nav__a{ letter-spacing:var(--ls-narrow); padding:7px 7px; }
+  .topbar{ padding:12px 10px; gap:8px; }
+  .topbar__right{ gap:6px; }
+}
+/* the smallest phones still in use (320) need another dozen pixels */
+@media (max-width:359px){
+  .tb-nav__a{ padding:7px 5px; }
+  .langs button{ padding:6px 8px; }
+  .topbar{ padding:12px 8px; gap:6px; }
+  .topbar__right{ gap:5px; }
+}
 .langs{ display:flex; gap:2px; padding:3px; border:1px solid var(--rule); border-radius:999px; background:rgba(16,13,32,.6); flex-shrink:0; }
 .langs button{ white-space:nowrap; }
 .langs button{
