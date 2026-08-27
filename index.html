@@ -1134,7 +1134,7 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
    carry no `hidden` attribute need listing — the rest never paint anyway. The
    personal page keeps #roadmap on purpose; a room does not. */
 html.pre-personal .hero, html.pre-personal .proofbar, html.pre-personal #story,
-html.pre-personal #rooms, html.pre-personal #forge,
+html.pre-personal #rooms, html.pre-personal #forge, html.pre-personal #roadmap,
 html.pre-comm .hero, html.pre-comm .proofbar, html.pre-comm #story,
 html.pre-comm #rooms, html.pre-comm #forge, html.pre-comm #roadmap{ display:none; }
 
@@ -1148,6 +1148,10 @@ html.pre-comm #rooms, html.pre-comm #forge, html.pre-comm #roadmap{ display:none
    while the main thread is busy parsing the index. Never trade a visible page
    for a smoother reflow — the reflow is cheaper than the wait. */
 html.pre-personal main, html.pre-comm main{ min-height:100svh; }
+/* ...and only until it has something in it. Kept forever it turns a genuinely
+   short page — the signed-out personal page is a heading and one input — into
+   a screen of nothing with the footer pushed off the bottom. */
+html.filled main{ min-height:0; }
 
 /* Leaving for the other host. my.uday.gift and uday.gift are different
    origins, so a cross-document view transition is not available (same-origin
@@ -5065,7 +5069,7 @@ if(IS_PERSONAL){
   // the personal page IS the calendar: fold the marketing page away
   document.querySelector('.hero').hidden = true;
   document.querySelector('.proofbar').hidden = true;
-  ['story','forge','rooms','commlist'].forEach(id => {
+  ['story','forge','roadmap','rooms','commlist'].forEach(id => {
     const s = document.getElementById(id); if(s) s.hidden = true;
   });
   // the holder calendar leads; the global wall waits behind a toggle
@@ -5092,6 +5096,25 @@ if(IS_PERSONAL){
 /// 366-cell wall — and on a room every one of those cells was being built into
 /// a section commLayout() had already hidden. So the room boots from its own
 /// file, immediately, and never waits on the index for anything it can draw.
+/// Every band draws its own top rule, as the first child of its shell — the
+/// separator belongs to the section BELOW it, not between two sections. So
+/// whichever band happens to be first on a page hangs a line under the header
+/// with nothing above it, which is what folding the marketing sections away
+/// exposes. Idempotent: it sets the flag both ways, so a later reveal fixes
+/// itself. (Two earlier versions of this looked for a rule with no section
+/// before it and could never fire — a section is always before its own child.)
+function tidyRules(){
+  const main = document.querySelector('main');
+  if(!main) return;
+  const shown = el => !el.hidden && el.offsetParent !== null;
+  const secs = [...main.querySelectorAll('section')].filter(shown);
+  secs.forEach((sec, i) => {
+    const r = sec.querySelector(':scope > .shell > .rule');
+    if(r) r.hidden = (i === 0);
+  });
+  document.documentElement.classList.add('filled');
+}
+
 async function bootCommunity(){
   commLayout();
   await loadXLinks();
@@ -5099,6 +5122,7 @@ async function bootCommunity(){
     document.getElementById('commnew').hidden = false;
     cnewInit();
     await renderCommList();
+    tidyRules();
     return;
   }
   COMM = await loadCommunity();
@@ -5107,6 +5131,7 @@ async function bootCommunity(){
     document.getElementById('comm-title').textContent = t('comm.missing');
     document.getElementById('community').hidden = false;
   }
+  tidyRules();
 }
 
 /// The collection index. Everything here is gated on what the page will
@@ -5138,8 +5163,7 @@ async function loadIndex(){
       return;
     }
 
-    renderRoad();
-    if(!IS_PERSONAL) renderStory();      // #story is folded away there
+    if(!IS_PERSONAL){ renderRoad(); renderStory(); }   // both fold away there
     renderLiveTags();
     renderDayStatus();
     // On the personal page the whole-collection wall lives behind a toggle, so
@@ -5147,6 +5171,7 @@ async function loadIndex(){
     if(!IS_PERSONAL) renderYear();
     if(IS_PERSONAL){
       document.getElementById('mine').hidden = false;
+      tidyRules();
       if(mineAddr) renderMine();
       renderGift();
       loadStars().then(paintStars);
