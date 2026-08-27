@@ -928,7 +928,7 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 .yearcell--star::after{
   content:''; position:absolute; inset:2%;
   background:url('/assets/star.svg') center/contain no-repeat;
-  image-rendering:pixelated;
+  /* vector now — the points are geometry, not pixels; no pixelated hint */
 }
 .commjoin__days--mine{ max-height:none; margin-top:4px; }
 .commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
