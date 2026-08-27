@@ -1,0 +1,10 @@
+{
+  "name": "uday-site",
+  "private": true,
+  "type": "module",
+  "description": "The site itself is still one static file with no build. This manifest exists only so the /api serverless functions can verify a wallet signature; nothing here is served to a browser.",
+  "dependencies": {
+    "@noble/curves": "1.9.2",
+    "@noble/hashes": "1.8.0"
+  }
+}
