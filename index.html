@@ -940,6 +940,14 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
    assets/star.svg is generated with mkglyphs' MOSAIC palette, its md5 pick()
    per 2x2 block, and the cream-then-dark contour every glyph wears. A chosen
    day is a piece of the art, not a text character. */
+/* A face in a 30px cell: cropped square, gold rim so it still reads as a lit
+   day rather than a photo dropped on the grid. Not pixelated — this is the one
+   image on the site that is not pixel art. */
+.yearcell--face{
+  background-size:cover !important; background-position:center;
+  border-color:var(--gold);
+  box-shadow:inset 0 0 0 1px rgba(8,6,15,.55);
+}
 .yearcell--star{
   position:relative; overflow:hidden;
   background:var(--gold) !important;      /* chosen outranks heat (inline style) */
@@ -965,7 +973,14 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
    image on the site that is not pixel art and must not be treated as such. */
 .xface__pfp{ width:26px; height:26px; border-radius:50%; flex:none;
   border:1px solid rgba(232,185,63,.45); background:var(--night); object-fit:cover; }
-.commjoin__x{ display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-top:12px; }
+/* The X row is a different subject from joining, and it sits between the
+   membership sentence and LEAVE — so it gets a rule above and real air below,
+   or "remove" and "leave" read as two halves of one control. */
+.commjoin__x{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  margin:16px 0 20px; padding-top:16px;
+  border-top:1px solid rgba(232,185,63,.14);
+}
 .commjoin__xon{ white-space:nowrap; flex:none; }
 /* Silkscreen has no CJK, so a mixed label already falls through per character —
    and its Latin X is a symmetric glyph that reads as a CLOSE icon next to
@@ -1608,9 +1623,9 @@ const I18N = {
     'people.sub.none':'Whose day this is. Nobody here has shown an X account yet.',
     'people.congrats':'WISH THEM WELL',
     'people.greet':'happy {day} — your day is lit onchain',
-    'join.member.pending':'Joining as {days} — on the calendar once the index catches up, usually within the hour.',
-    'join.member.both':'On the calendar as {days}. {coming} is on its way — it appears once the index catches up, usually within the hour.',
-    'join.leave':'LEAVE','join.left':'You have left. Your days come off the calendar next cycle.',
+    'join.member.pending':'Joining as {days} — the chain has it; it joins the wall on the next index build.',
+    'join.member.both':'On the calendar as {days}. {coming} is on its way — the chain has it, and it joins the wall on the next index build.',
+    'join.leave':'LEAVE THIS ROOM','join.left':'You have left. Your days come off the calendar next cycle.',
     'join.needuday':'Every member of every room holds at least one uDAY — that part is enforced by the contract, not by us.',
     'join.getuday':'GET A uDAY',
     'join.noday':'You hold uDAY, but none of your pieces have revealed their date yet. A day has to be yours before it can stand here.',
@@ -1818,9 +1833,9 @@ const I18N = {
     'people.sub.none':'这是谁的日子。这里还没有人显示 X 帐号。',
     'people.congrats':'去祝贺',
     'people.greet':'{day} 快乐——你的日子在链上亮着',
-    'join.member.pending':'将以 {days} 站上日历——索引跟上后就会出现，通常一小时内。',
-    'join.member.both':'日历上是 {days}。{coming} 正在路上——索引跟上后就会出现，通常一小时内。',
-    'join.leave':'离开','join.left':'你已离开。你的日子会在下一轮从日历上消失。',
+    'join.member.pending':'将以 {days} 站上日历——链上已经有了，下一轮索引建好就会出现。',
+    'join.member.both':'日历上是 {days}。{coming} 正在路上——链上已经有了，下一轮索引建好就会出现。',
+    'join.leave':'离开社区','join.left':'你已离开。你的日子会在下一轮从日历上消失。',
     'join.needuday':'每个房间的每个成员都至少持有一枚 uDAY——这一点由合约强制，不是由我们。',
     'join.getuday':'去拿一枚 uDAY',
     'join.noday':'你持有 uDAY，但还没有任何一枚揭晓日期。一天要先属于你，才能站在这里。',
@@ -2840,6 +2855,20 @@ function buildWall(grid, byDay, opts){
         const heat = .16 + .74 * Math.sqrt(n / max);         // sqrt: one-of-many days stay visible
         cell.style.background = 'rgba(232,185,63,' + heat.toFixed(2) + ')';
         list = byDay[key].slice().sort((a,b) => a.id - b.id);
+        // On a ROOM the lit cells are people, so a cell wears the face of
+        // whoever's day it is. The url is only ever built from a value that
+        // matched pbs.twimg.com with no quotes or parens available, so it
+        // cannot break out of the css string.
+        if(opts.people){
+          const x = xOf(byDay[key][0].owner);
+          if(x && xAvatarOk(x.avatar)){
+            cell.classList.add('yearcell--face');
+            cell.style.backgroundImage = 'url("' + x.avatar + '")';
+            const more = n > 1 ? ' +' + (n - 1) : '';
+            cell.setAttribute('aria-label', dayLabel(m, d) + ' \u00b7 @' + x.handle + more);
+            if(!CAN_HOVER) cell.title = dayLabel(m, d) + ' \u00b7 @' + x.handle + more;
+          }
+        }
       }
       attachCellAction(cell, key, n ? 'lit' : ember ? 'ember' : 'free', list, n, opts.people);
       grid.appendChild(cell);
