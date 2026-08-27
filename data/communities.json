@@ -28,7 +28,15 @@
     "telegram": "https://t.me/unipeglive",
     "x": "https://x.com/unipegv4"
    },
-   "members": [],
+   "members": [
+    {
+     "addr": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+     "days": [
+      "04-03",
+      "09-08"
+     ]
+    }
+   ],
    "minBalance": "1000000000000000000",
    "name": "Unipeg Community",
    "slug": "unipeg",

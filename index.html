@@ -902,6 +902,20 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 /* A ★ day fills its whole cell — these are the days someone chose to stand
    for, and a corner speck undersold them. The star is inked dark against the
    cell's own gold heat, like a mark pressed into the leaf. */
+/* A day that is yours on the chain but not yet on the published wall
+   breathes — the change is real, the page is only waiting to say so. */
+.yearcell--pending{
+  border-color:var(--gold) !important;
+  animation:cell-breathe 2.2s ease-in-out infinite;
+}
+@keyframes cell-breathe{
+  0%, 100%{ background:rgba(232,185,63,.12); }
+  50%    { background:rgba(232,185,63,.6); }
+}
+@media (prefers-reduced-motion:reduce){
+  .yearcell--pending{ animation:none; background:rgba(232,185,63,.35); }
+}
+
 /* The ★ is drawn in the SAME mosaic language as the on-chain date glyphs:
    assets/star.svg is generated with mkglyphs' MOSAIC palette, its md5 pick()
    per 2x2 block, and the cream-then-dark contour every glyph wears. A chosen
@@ -2989,6 +3003,23 @@ function commOwnedDays(id){
     .sort();
 }
 
+/// Breathes the cells that are COMING: the chain already knows these days
+/// are yours, the index just has not published them. The wall builder lays
+/// every month as one label plus 31 slots, so (m,d) maps straight to a child
+/// index — no aria-label matching needed.
+function markPendingDays(keys){
+  const grid = document.getElementById('comm-grid');
+  if(!grid) return;
+  grid.querySelectorAll('.yearcell--pending').forEach(c =>
+    c.classList.remove('yearcell--pending'));
+  (keys || []).forEach(k => {
+    const m = +k.slice(0, 2), d = +k.slice(3);
+    const cell = grid.children[(m - 1) * 32 + d];
+    if(cell && cell.classList.contains('yearcell'))
+      cell.classList.add('yearcell--pending');
+  });
+}
+
 async function renderJoin(){
   const box = document.getElementById('comm-join');
   if(!COMM || !await ensureCommContract()){ box.hidden = true; return; }
@@ -3011,6 +3042,7 @@ async function renderJoin(){
   };
   box.hidden = false;
 
+  markPendingDays([]);
   if(!me){
     line.textContent = t('join.connect');
     if(mineEth) act(t('gift.modal.connect'), 'btn--gold', () => mineConnect.click());
@@ -3047,11 +3079,13 @@ async function renderJoin(){
       (COMM.members || []).some(m => m.addr === me && (m.days || []).includes(k)));
     if(held.length){
       line.textContent = t('join.member');
+      const pending = held.filter(k => !published.includes(k));
+      markPendingDays(pending);
       const shown = published.length ? published : held;
       const p = document.createElement('p');
       p.className = 'commjoin__mine';
       const days = shown.map(k => '\u2605' + dayLabel(+k.slice(0,2), +k.slice(3))).join(', ');
-      p.textContent = t(published.length ? 'join.member.days' : 'join.member.pending',
+      p.textContent = t(pending.length === 0 ? 'join.member.days' : 'join.member.pending',
                         { days: days });
       box.insertBefore(p, box.firstChild.nextSibling);
     }else{
