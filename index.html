@@ -1120,24 +1120,16 @@ html.pre-personal #rooms, html.pre-personal #forge,
 html.pre-comm .hero, html.pre-comm .proofbar, html.pre-comm #story,
 html.pre-comm #rooms, html.pre-comm #forge, html.pre-comm #roadmap{ display:none; }
 
-/* Even with the layout committed, a room and a holder wall are both built from
-   the index, so they arrive one fetch late. Hold the column back and let it
-   come in as one piece rather than assembling itself in public.
-   The failsafe is the point of the animation: it reveals the page at 1.8s on
-   its own, so a JS failure before page-in can never leave a blank column. */
-/* The footer is held with it, and only here: until the column has its content
-   the document is barely a screen tall, so the footer paints tucked under the
-   header for a frame and then drops. It is NOT part of the leave fade — this
-   is about arriving, not departing. */
-html.pre-personal main, html.pre-comm main,
-html.pre-personal .foot, html.pre-comm .foot{
-  opacity:0; transform:translateY(10px);
-  transition:opacity .42s ease-out, transform .42s cubic-bezier(.22,1,.36,1);
-  animation:pagein 0s 1.8s forwards;
-}
-/* !important beats an animation's fill — that is what lets JS reveal early */
-html.page-in main, html.page-in .foot{ opacity:1 !important; transform:none !important; }
-@keyframes pagein{ to{ opacity:1; transform:none; } }
+/* A room and a holder wall are both built from the index, so they arrive one
+   fetch late and the document is barely a screen tall until they do — which
+   used to leave the footer tucked under the header for a frame before it
+   dropped. Reserving a screen of height fixes that with no timing in it.
+   An earlier version held the whole column at opacity 0 and faded it in when
+   the content landed. On a throttled phone that was a BLANK PAGE for 2.4s on
+   4G and 5.8s on 3G: the CSS failsafe meant to cap it at 1.8s cannot keep time
+   while the main thread is busy parsing the index. Never trade a visible page
+   for a smoother reflow — the reflow is cheaper than the wait. */
+html.pre-personal main, html.pre-comm main{ min-height:100svh; }
 
 /* Leaving for the other host. my.uday.gift and uday.gift are different
    origins, so a cross-document view transition is not available (same-origin
@@ -1145,11 +1137,7 @@ html.page-in main, html.page-in .foot{ opacity:1 !important; transform:none !imp
    ONLY the column fades. The topbar and the footer are the same chrome on
    every page and stay put: fading them says "the whole page was replaced",
    when what actually changed is the content inside a frame that never moved. */
-/* !important, and AFTER the page-in rule: that rule needs its own !important
-   to beat the reveal animation's fill, and it would otherwise pin main at
-   opacity 1 for the rest of the page's life — leaving the fade below a silent
-   no-op. Equal specificity, so source order decides between the two. */
-html.leaving main{ opacity:0 !important; transition:opacity .17s ease-in; }
+html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
 @view-transition{ navigation:auto; }   /* same-origin hops: uday.gift <-> /c */
 /* Same reason on the same-origin path: a named element is carried across
    instead of being cross-faded with the rest of the page. The topbar is
@@ -1160,11 +1148,7 @@ html.leaving main{ opacity:0 !important; transition:opacity .17s ease-in; }
 .topbar{ view-transition-name:topbar; }
 
 @media (prefers-reduced-motion:reduce){
-  html.pre-personal main, html.pre-comm main,
-  html.pre-personal .foot, html.pre-comm .foot{
-    opacity:1; transform:none; transition:none; animation:none;
-  }
-  html.leaving main{ opacity:1 !important; transition:none; }
+  html.leaving main{ opacity:1; transition:none; }
   @view-transition{ navigation:none; }
 }
 
@@ -4113,9 +4097,16 @@ function goPersonal(addr){
 }
 
 async function navGo(dest){
+  // COMMUNITIES is a public index — it needs no identity and must never wait
+  // for one. Asking first meant tapping it popped a wallet prompt, and
+  // dismissing that prompt left you on the page you started from, silently.
+  if(dest === 'comm'){
+    leaveTo(/(^|\.)uday\.gift$/.test(location.hostname) ? 'https://uday.gift/c' : '/c');
+    return;
+  }
   const id = mineIdentity();
   if(!id){
-    if(!mineEth) { dest === 'mine' ? goPersonal(null) : leaveTo('/c'); return; }
+    if(!mineEth) { goPersonal(null); return; }
     let acc;
     try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
     catch(e){ return; }                          // declined; stay put
@@ -4123,11 +4114,6 @@ async function navGo(dest){
     mineWallet = acc[0].toLowerCase();
     mineWalletUI();
     setMineAddr(acc[0], 'wallet');
-  }
-  if(dest === 'comm'){
-    leaveTo(/(^|\.)uday\.gift$/.test(location.hostname)
-      ? 'https://uday.gift/c' : '/c');
-    return;
   }
   // MY CALENDAR carries the handoff the address chip used to carry: neither
   // wallet auth nor localStorage crosses the subdomain boundary
@@ -5086,14 +5072,7 @@ async function loadIndex(){
     // piece. On the slow path (default already up) this repaints over it.
     heroPaint(heroDaySpec(), { stagger: reduced ? 0 : 260 });
   }catch(e){ /* no index yet — the static page stands on its own */ }
-  finally{ pageIn(); }
 }
-
-/// The held-back column comes in once its layout is final. Safe to call twice:
-/// the CSS failsafe already reveals the page at 1.8s regardless, so this only
-/// ever makes the reveal EARLIER, never conditional on it.
-function pageIn(){ document.documentElement.classList.add('page-in'); }
-setTimeout(pageIn, 1500);          // slow index: beat the CSS failsafe
 
 /// Leaving for the other host. my.uday.gift and uday.gift are separate
 /// origins, so a cross-document view transition cannot apply (same-origin
@@ -5108,7 +5087,6 @@ function leaveTo(url){
 // A bfcache restore replays the faded-out document — undo it on the way back
 addEventListener('pageshow', () => {
   document.documentElement.classList.remove('leaving');
-  pageIn();
 });
 // The two doors are not the only way across: the brand mark and the gift
 // modal both link host-to-host. One delegated listener covers every such link,
