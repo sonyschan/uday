@@ -899,11 +899,22 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
 .daymodal__starglyph.is-on{ color:var(--gold); }
 .daymodal__startxt{ flex:1; min-width:200px; font-size:var(--fs-sub); color:#e6dbc2; }
 .daymodal__starspin{ width:18px; height:18px; }
-.yearcell--star{ position:relative; }
+/* A ★ day fills its whole cell — these are the days someone chose to stand
+   for, and a corner speck undersold them. The star is inked dark against the
+   cell's own gold heat, like a mark pressed into the leaf. */
+.yearcell--star{
+  position:relative; overflow:hidden; container-type:size;
+  /* a chosen day outranks its heat: full gold, always — !important because
+     buildWall writes the heat as an inline background */
+  background:var(--gold) !important;
+  border-color:var(--gold) !important;
+}
 .yearcell--star::after{
-  content:'\2605'; position:absolute; top:-7px; right:-5px;
-  font-size:11px; color:var(--gold);
-  text-shadow:0 0 4px rgba(8,6,15,.9);
+  content:'\2605'; position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:92cqh; line-height:1;   /* the star scales with its cell */
+  color:rgba(8,6,15,.82);
+  text-shadow:0 0 2px rgba(232,185,63,.6);
 }
 .commjoin__days--mine{ max-height:none; margin-top:4px; }
 .commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
