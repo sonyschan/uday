@@ -30,6 +30,13 @@
    },
    "members": [
     {
+     "addr": "0x014af640c4b57b3bc3adaee1ab9d9f1eef25be23",
+     "days": [
+      "07-02",
+      "07-03"
+     ]
+    },
+    {
      "addr": "0xe72d42810212c856636cd9d019e98cfe985535fd",
      "days": [
       "04-03",
