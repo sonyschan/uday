@@ -952,8 +952,21 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   0%, 100%{ background:rgba(232,185,63,.12); }
   50%    { background:rgba(232,185,63,.6); }
 }
+/* Leaving reads as the opposite of pending: no gold rim, and dimming rather
+   than breathing. It is a day on its way OFF the wall. */
+.yearcell--leaving{
+  /* still clearly a lit day, just draining — an earlier version dimmed to
+     near-invisible, which reads as "already gone" rather than "on its way" */
+  border-color:rgba(243,231,205,.3) !important;
+  animation:cell-fading 2.2s ease-in-out infinite;
+}
+@keyframes cell-fading{
+  0%, 100%{ background:rgba(232,185,63,.55); }
+  50%    { background:rgba(232,185,63,.18); }
+}
 @media (prefers-reduced-motion:reduce){
   .yearcell--pending{ animation:none; background:rgba(232,185,63,.35); }
+  .yearcell--leaving{ animation:none; background:rgba(232,185,63,.28); }
 }
 
 /* The ★ is drawn in the SAME mosaic language as the on-chain date glyphs:
@@ -1012,6 +1025,7 @@ html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
 .commjoin__xwhy{ color:var(--muted); font-size:var(--fs-micro); }
 .commjoin__xerr{ color:#e8a0a0; font-size:var(--fs-micro); margin:10px 0 0; }
 .commjoin__wait{ color:var(--muted); animation:waitpulse 1.6s ease-in-out infinite; }
+.commjoin__leaving{ color:var(--muted); margin:0 0 4px; }
 @keyframes waitpulse{ 0%,100%{opacity:.5} 50%{opacity:1} }
 @media (prefers-reduced-motion:reduce){ .commjoin__wait{ animation:none; opacity:.75 } }
 .commjoin__xoff{ background:none; border:0; padding:0; cursor:pointer;
@@ -1661,6 +1675,7 @@ const I18N = {
     'join.leave':'LEAVE THIS ROOM','join.left':'You have left. Your days come off the calendar next cycle.',
     'join.short':'This room needs {min} of {token} on {chain}. This wallet holds none.',
     'join.member.short':'You are in this room, but hold none of {token}. Your days stay off the wall until you do.',
+    'join.left.pending':'You have left. {days} comes off this calendar on the next index build.',
     'join.needuday':'Every member of every room holds at least one uDAY — that part is enforced by the contract, not by us.',
     'join.getuday':'GET A uDAY',
     'join.noday':'You hold uDAY, but none of your pieces have revealed their date yet. A day has to be yours before it can stand here.',
@@ -1872,6 +1887,7 @@ const I18N = {
     'join.leave':'离开社区','join.left':'你已离开。你的日子会在下一轮从日历上消失。',
     'join.short':'这个房间需要在 {chain} 上持有 {min} 枚 {token}，而这个钱包一枚也没有。',
     'join.member.short':'你在这个房间里，但没有持有 {token}。在持有之前，你的日子不会出现在日历上。',
+    'join.left.pending':'你已经离开。{days} 会在下一轮索引建好后从这张日历上消失。',
     'join.needuday':'每个房间的每个成员都至少持有一枚 uDAY——这一点由合约强制，不是由我们。',
     'join.getuday':'去拿一枚 uDAY',
     'join.noday':'你持有 uDAY，但还没有任何一枚揭晓日期。一天要先属于你，才能站在这里。',
@@ -3526,16 +3542,23 @@ function commOwnedDays(id){
 /// are yours, the index just has not published them. The wall builder lays
 /// every month as one label plus 31 slots, so (m,d) maps straight to a child
 /// index — no aria-label matching needed.
-function markPendingDays(keys){
+function markPendingDays(keys){ markDays('yearcell--pending', keys); }
+
+/// The mirror of pending, and it was missing: the chain says you have left,
+/// the published wall has not caught up, so your days sit there looking like
+/// membership. They fade instead, and the panel says why — the change is real
+/// either way, the page is only waiting to be able to show it.
+function markLeavingDays(keys){ markDays('yearcell--leaving', keys); }
+
+function markDays(cls, keys){
   const grid = document.getElementById('comm-grid');
   if(!grid) return;
-  grid.querySelectorAll('.yearcell--pending').forEach(c =>
-    c.classList.remove('yearcell--pending'));
+  grid.querySelectorAll('.' + cls).forEach(c => c.classList.remove(cls));
   (keys || []).forEach(k => {
     const m = +k.slice(0, 2), d = +k.slice(3);
+    // the wall is a label plus 31 slots per month, so (m,d) maps to a child index
     const cell = grid.children[(m - 1) * 32 + d];
-    if(cell && cell.classList.contains('yearcell'))
-      cell.classList.add('yearcell--pending');
+    if(cell && cell.classList.contains('yearcell')) cell.classList.add(cls);
   });
 }
 
@@ -3667,6 +3690,24 @@ async function renderJoin(){
     xRow(box);
     act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
     return;
+  }
+
+  // Left, but still on the published wall. Everyone else sees the old file
+  // until the next index build; the person who left is the one who knows, so
+  // the page tells them rather than looking like the leave did not take.
+  const stillListed = (COMM.members || [])
+    .filter(m => m.addr === me).flatMap(m => m.days || []);
+  if(stillListed.length){
+    markLeavingDays(stillListed);
+    const p = document.createElement('p');
+    p.className = 'commjoin__leaving';
+    p.textContent = t('join.left.pending', {
+      days: stillListed.map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
+    // above the invitation, not below it: what already happened reads first,
+    // or "joining puts your days here" lands before "you have left"
+    box.insertBefore(p, box.firstChild);
+  }else{
+    markLeavingDays([]);
   }
 
   // the uDAY floor is the half consensus enforces, so it is checked first
