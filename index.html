@@ -4475,7 +4475,12 @@ function mineIdentity(){ return mineWallet || (IS_PERSONAL ? mineAddr : null); }
    A hint on the shared parent domain lets the FIRST paint be right. It is
    deliberately not an identity: only these buttons trust it, everything
    downstream still asks mineIdentity(), and the restore below decides. */
-const CONN_HINT = /(?:^|;\s*)uday_conn=1\b/.test(document.cookie);
+/// Is someone signed in? Read LIVE, because signing out clears this cookie
+/// mid-session and a constant captured at boot would still say yes.
+const connHint = () => /(?:^|;\s*)uday_conn=1\b/.test(document.cookie);
+/// ...and the boot-time snapshot, used only to paint the header before the
+/// wallet has answered.
+const CONN_HINT = connHint();
 let walletSettled = false;
 function setConnHint(on){
   sharedCookie('uday_conn', on ? '1' : '', on ? 2592000 : 0);
@@ -4667,6 +4672,10 @@ async function ensureChain(){
 }
 if(mineEth && mineEth.on) mineEth.on('accountsChanged', a => {
   if(a && a[0]){
+    // Switching accounts in the wallet is not a way to sign in. Without this,
+    // a signed-out visitor who flipped accounts was silently signed back in
+    // as a wallet that never signed anything — the same hole the restore had.
+    if(!connHint()) return;
     mineWallet = a[0].toLowerCase();
     mineWalletUI();
     setMineAddr(a[0], 'wallet');
@@ -4674,12 +4683,23 @@ if(mineEth && mineEth.on) mineEth.on('accountsChanged', a => {
     mineDisconnect();                  // the wallet side logged out
   }
 });
-// Silent session restore: eth_accounts never prompts — it only reports an
-// authorization that already exists, so a reload keeps the logged-in chip.
+// Silent session restore — and the thing it must NOT do.
+//
+// eth_accounts reports a wallet AUTHORIZATION, not a session, and signing out
+// cannot revoke one: EIP-1193 has no programmatic disconnect. So adopting
+// whatever it returned logged a signed-out visitor straight back in on the
+// next page load — reported as "I log out, tap the logo, and the header says
+// LOG OUT again". Logging out worked; it just could not survive a navigation.
+//
+// The hint cookie is what tells the two apart. It sits on .uday.gift beside
+// the session for the same thirty days, is written when someone signs in and
+// erased the moment they sign out — and being shared, signing out on one host
+// signs you out on the other. It still invents no identity: the address comes
+// from the wallet, and every server call re-checks the real session.
 if(mineEth && mineEth.request){
   const settle = () => { walletSettled = true; mineWalletUI(); };
   mineEth.request({ method: 'eth_accounts' })
-    .then(a => { if(a && a[0]) mineWallet = a[0].toLowerCase(); settle(); })
+    .then(a => { if(a && a[0] && connHint()) mineWallet = a[0].toLowerCase(); settle(); })
     .catch(settle);
   // A wallet that never answers must not leave a stale hint standing forever.
   // Late and correct beats indefinitely optimistic.
