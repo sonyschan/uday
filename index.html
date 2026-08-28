@@ -4748,6 +4748,9 @@ const connHint = () => /(?:^|;\s*)uday_conn=1\b/.test(document.cookie);
 /// wallet has answered.
 const CONN_HINT = connHint();
 let walletSettled = false;
+/// Whether eth_accounts actually replied, as opposed to the deadline giving up
+/// on it. Only a reply is allowed to write the hint cookie.
+let walletAnswered = false;
 function setConnHint(on){
   sharedCookie('uday_conn', on ? '1' : '', on ? 2592000 : 0);
 }
@@ -4756,7 +4759,12 @@ function mineWalletUI(){
   const id = mineIdentity();
   // optimistic only while the answer is genuinely unknown, and only here
   const connected = !!id || (!!mineEth && !walletSettled && CONN_HINT);
-  if(walletSettled) setConnHint(!!mineWallet);
+  // Only a wallet that actually ANSWERED may write this cookie. The 2.5s
+  // deadline settles the chrome so an unanswering wallet cannot look connected
+  // forever — but it knows nothing, and letting it write "not connected" erased
+  // the very cookie the late answer needs to be believed, turning a slow wallet
+  // into a permanent sign-out on both hosts.
+  if(walletSettled && walletAnswered) setConnHint(!!mineWallet);
   mineConnect.hidden = connected || !mineEth;
   const dis = document.getElementById('mine-disconnect');
   dis.hidden = !connected;
@@ -4965,14 +4973,26 @@ if(mineEth && mineEth.on) mineEth.on('accountsChanged', a => {
 if(mineEth && mineEth.request){
   const settle = () => { walletSettled = true; mineWalletUI(); };
   mineEth.request({ method: 'eth_accounts' })
-    .then(a => { if(a && a[0] && connHint()) mineWallet = a[0].toLowerCase(); settle(); })
+    .then(a => {
+      // an empty list is a real answer — the wallet was disconnected elsewhere,
+      // and clearing the hint is exactly right. A rejection is not an answer.
+      walletAnswered = true;
+      if(a && a[0] && connHint()) mineWallet = a[0].toLowerCase();
+      settle();
+    })
     .catch(settle);
-  // A wallet that never answers must not leave a stale hint standing forever.
-  // Late and correct beats indefinitely optimistic.
+  // A wallet that never answers must not look connected forever, so the chrome
+  // settles here — but it settles WITHOUT deciding anything, and a late answer
+  // still restores the session when it arrives.
   setTimeout(() => { if(!walletSettled) settle(); }, 2500);
 }else{
   walletSettled = true;                 // no provider: nothing to wait for
-  setConnHint(false);
+  // ...and nothing to conclude either. `window.ethereum` is read once at parse
+  // time and some wallet apps inject theirs later, so "no provider" can simply
+  // mean "not yet" — in the in-app browsers most of this audience uses. It used
+  // to clear the hint here, which signed those visitors out of BOTH hosts for
+  // being early. A stale hint costs nothing without a provider: the connect
+  // button is hidden outright and the optimistic paint needs mineEth anyway.
 }
 
 document.getElementById('poster-go').addEventListener('click', openPoster);
