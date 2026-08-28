@@ -4631,9 +4631,17 @@ mineConnect.addEventListener('click', async () => {
   mineConnect.disabled = false;
   mineConnect.textContent = was;
   if(!ok) return;                                  // declined; nothing changes
-  // On the main site, signing in means going to YOUR page.
-  if(!IS_PERSONAL){ goPersonal(mineWallet); return; }
-  ensureChain();   // best effort — viewing needs no chain, claiming re-checks
+  // On the main site, signing in means going to YOUR page — but a community
+  // page is not "the main site", and it was swept in here by being merely
+  // NOT personal. You pressed sign in because a room asked you to, so being
+  // carried off to my.uday.gift abandons the join you were three taps into
+  // and looks like the button did the wrong thing. Stay put: signIn has
+  // already refreshed the join panel and the rooms list through mineWalletUI.
+  const onComm = !!COMM_SLUG || COMM_NEW;
+  if(!IS_PERSONAL && !onComm){ goPersonal(mineWallet); return; }
+  // The chain is only worth asking for where a transaction is about to be
+  // offered; a room's own join button asks when it needs it.
+  if(IS_PERSONAL) ensureChain();   // viewing needs no chain, claiming re-checks
 });
 
 /// Puts the wallet on Robinhood Chain (4663). Returns false if the user
