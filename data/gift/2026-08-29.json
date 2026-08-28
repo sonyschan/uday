@@ -1,0 +1,62 @@
+{
+ "claims": {
+  "0x63c9c98c84fae150f0649560b94bacd42c467654": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0xe7019e4d3a110e1c7e0fb1e1b0ead63a49d4c0aae6184f436e390a28c5fd3a96",
+    "0x6809b5ea9d679f2505d49ecd22b0ae47a4189e992bbaa1febf223e33ab65a0e7",
+    "0xd48bd126a083973dd04555541e69a24149f1314c75286d900de42cd7c858cb5a"
+   ]
+  },
+  "0x82a8767a54b18aeb0b5ad60891433f35c85812f5": {
+   "amount": 2000000,
+   "count": 2,
+   "proof": [
+    "0x388165b5c711f46ab75621d2edcb6d733ce90f3abe1fc7d0daf5916ed53b4689",
+    "0x6809b5ea9d679f2505d49ecd22b0ae47a4189e992bbaa1febf223e33ab65a0e7",
+    "0xd48bd126a083973dd04555541e69a24149f1314c75286d900de42cd7c858cb5a"
+   ]
+  },
+  "0x8b20c990c95d0c97af12dface0d2f0399a3cb870": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0xda0a190a4f3e5cf9b3b17f5e588400fc334e52e8a4296d4b649839a59443152f",
+    "0x469256207891d591f86c34a80a9ea8bf41599e7d0057deb0e6a71872beac7b50",
+    "0xd48bd126a083973dd04555541e69a24149f1314c75286d900de42cd7c858cb5a"
+   ]
+  },
+  "0xa8256e332c905ff31b7a3e3f2c6aa1c71f7920d5": {
+   "amount": 2000000,
+   "count": 2,
+   "proof": [
+    "0x792236a7a97a50e123e4e65d55c8c72369e6d53906a1e6f2eac7a88cb7d8be0d",
+    "0x469256207891d591f86c34a80a9ea8bf41599e7d0057deb0e6a71872beac7b50",
+    "0xd48bd126a083973dd04555541e69a24149f1314c75286d900de42cd7c858cb5a"
+   ]
+  },
+  "0xac42b1c6f2931505334971443d6f2026e76c23e3": {
+   "amount": 3000000,
+   "count": 3,
+   "proof": [
+    "0x1feb3d89fd77000a0a1a3aed0cb644106a989874340736ce18838b39765870ad",
+    "0x9d6373fc4fc437ccde7af5be22cd331767a17e9aac3baf0ab223a4776f376cbf"
+   ]
+  },
+  "0xe72d42810212c856636cd9d019e98cfe985535fd": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x7e1da44436a7e500cab66bf6a2dc2d142cccf10d8e0f5aca54bbb5194ae6e136",
+    "0x9d6373fc4fc437ccde7af5be22cd331767a17e9aac3baf0ab223a4776f376cbf"
+   ]
+  }
+ },
+ "day": "08-29",
+ "dayId": 20260829,
+ "root": "0xff5f82995062ad8f7bf2a95f48b5e91d88ae2ca75fc50c0bda64023d97c82f34",
+ "total": 10000000,
+ "totalPieces": 10,
+ "unit": 1000000
+}
