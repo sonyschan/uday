@@ -3096,6 +3096,12 @@ async function loadXLinks(){
   // deployed yet — a minute or so. Without this the visitor lands on a page
   // that shows no sign anything happened and tries again. Cosmetic and local:
   // the fragment is trivially forgeable, and forging it fools only yourself.
+  // Your OWN link comes from the session, not from the deployed file: the
+  // binding is per wallet, but the file only shows it after its commit
+  // deploys — so walking into a second room right after linking asked you to
+  // link again. This is the same answer on any browser, not just this one.
+  await mergeMyXLink();
+
   const h = location.hash || '';
   const m = h.match(/^#x=([A-Za-z0-9_]{1,15})$/);
   const err = h.match(/^#x-err=([a-z]{1,12})$/);
@@ -3114,6 +3120,18 @@ async function loadXLinks(){
 const X_ERRS = ['signin', 'config', 'sig', 'stale', 'nouday', 'chain', 'state',
                 'token', 'profile', 'record', 'cancelled', 'failed'];
 let X_ERR = null;
+/// The session knows the signed-in wallet and can read the repo directly, so
+/// it answers with that wallet's link — no deploy in the way. Failure is
+/// silent: the committed file is still there and still correct, just later.
+async function mergeMyXLink(){
+  try{
+    const r = await fetch('/api/session', { cache: 'no-store' });
+    if(!r.ok) return;
+    const j = await r.json();
+    if(j && j.addr && j.x && j.x.handle) X_LINKS[String(j.addr).toLowerCase()] = j.x;
+  }catch(e){ /* the deployed file remains the fallback */ }
+}
+
 /// Checked HERE as well as in the function that writes the file. These land in
 /// an href, and one filter is one edit away from being no filter — the same
 /// lesson a javascript: url in the room links already taught this project once.

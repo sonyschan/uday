@@ -44,8 +44,36 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     const addr = sessionAddr(req, SECRET);
+    // ...and the X link for THIS wallet, read from the repo rather than from
+    // the deployed copy of data/x-links.json.
+    //
+    // The page reads that file for everyone else, and it is correct for
+    // everyone else. But it only becomes visible after the commit deploys, so
+    // right after linking you would walk into the next room and be asked to
+    // link again — the binding is per WALLET, and the page had no way to know
+    // it already existed. Asking the session removes the wait entirely, and
+    // works from any browser, not just the one that did the linking.
+    let x = null;
+    if (addr && process.env.GITHUB_REPO) {
+      try {
+        const r = await fetch('https://api.github.com/repos/' + process.env.GITHUB_REPO +
+                              '/contents/data/x-links.json', {
+          headers: {
+            ...(process.env.GITHUB_TOKEN ? { Authorization: 'Bearer ' + process.env.GITHUB_TOKEN } : {}),
+            Accept: 'application/vnd.github+json', 'User-Agent': 'uday-session',
+          },
+        });
+        if (r.ok) {
+          const j = await r.json();
+          const links = JSON.parse(Buffer.from(j.content, 'base64').toString());
+          x = links[addr] || null;
+        }
+      } catch (e) { /* the page falls back to the deployed file */ }
+    }
     res.setHeader('Content-Type', 'application/json');
-    return res.status(200).end(JSON.stringify({ addr: addr }));
+    // never cached: it is per-visitor and it changes the moment they link
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).end(JSON.stringify({ addr: addr, x: x }));
   }
 
   if (req.method !== 'POST') return fail(res, 405, 'method not allowed');
