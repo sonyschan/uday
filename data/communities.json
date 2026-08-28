@@ -127,11 +127,44 @@
     "telegram": "https://t.me/unisoccs",
     "x": "https://x.com/unisoccs"
    },
-   "members": [],
+   "members": [
+    {
+     "addr": "0x2b535697a5febdf96012f5a60af530bad52d462d",
+     "days": [
+      "04-16"
+     ]
+    }
+   ],
    "minBalance": "1000000000000000000",
    "name": "unisoccs",
    "slug": "unisoccs",
    "token": "0x4c2d0c58ebe95b9c0eeea4ee08d22072efb0affe",
+   "tokenDecimals": 18,
+   "tokenKind": "erc20"
+  },
+  {
+   "chainId": 4663,
+   "createdAt": 1787890741,
+   "creator": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+   "gatedOnchain": true,
+   "id": "0x2861398a378c5e84266fd76e7f6c9130c56bae6cb0a3e7f696aec10eb144b016",
+   "links": {
+    "other": "https://app.icebreaker.xyz/profiles/fTu9Z9w4XNzzURf8lfaS6",
+    "telegram": "https://t.me/NORMANCOMICS",
+    "x": "https://x.com/KEKBONDS"
+   },
+   "members": [
+    {
+     "addr": "0x2b535697a5febdf96012f5a60af530bad52d462d",
+     "days": [
+      "04-16"
+     ]
+    }
+   ],
+   "minBalance": "1000000000000000000",
+   "name": "uNORMAN",
+   "slug": "unrmn",
+   "token": "0x7ed16d612215b650434d7e45827cf080ea0d0f63",
    "tokenDecimals": 18,
    "tokenKind": "erc20"
   }
