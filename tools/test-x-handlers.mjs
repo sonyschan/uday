@@ -1,4 +1,5 @@
-import start, { linkMessage } from '../api/x/start.js';
+import start from '../api/x/start.js';
+import session, { signInMessage } from '../api/session.js';
 import callback from '../api/x/callback.js';
 import unlink from '../api/x/unlink.js';
 import { seal } from '../api/_lib.js';
@@ -9,6 +10,7 @@ const ok = (n, c, extra) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : 
 
 const KEY = '0x4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318';
 const ADDR = execSync(`cast wallet address --private-key ${KEY}`).toString().trim().toLowerCase();
+const OTHER = '0x1111111111111111111111111111111111111111';
 const sign = m => execFileSync('cast', ['wallet', 'sign', '--private-key', KEY, m]).toString().trim();
 
 function mkRes() {
@@ -29,6 +31,52 @@ const withEnv = async (env, fn) => {
   try { return await fn(); } finally { process.env = old; }
 };
 
+// ---- session ----
+await withEnv({ X_STATE_SECRET: '' }, async () => {
+  const r = mkRes(); await session({ method: 'POST', query: {}, headers: {} }, r);
+  ok('session: unconfigured -> 503', r.code === 503, r.code);
+});
+let COOKIE = null;
+await withEnv(ENV, async () => {
+  const ts = Date.now();
+  const sig = sign(signInMessage(ADDR, ts));
+  let r = mkRes();
+  await session({ method: 'POST', query: { addr: ADDR, sig, ts: ts - 3600000 }, headers: {} }, r);
+  ok('session: stale signature -> 400', r.code === 400, r.code);
+
+  r = mkRes();
+  await session({ method: 'POST', query: { addr: OTHER, sig, ts }, headers: {} }, r);
+  ok('session: signature for a DIFFERENT wallet -> 403', r.code === 403, r.code + ' ' + r.body);
+
+  r = mkRes();
+  await session({ method: 'POST', query: { addr: ADDR, sig, ts }, headers: {} }, r);
+  ok('session: valid signature -> 200 + cookie', r.code === 200 && /uday_s=/.test(r.headers['set-cookie'] || ''), r.code);
+  ok('session cookie is HttpOnly+Secure+Lax and shared',
+     /HttpOnly/.test(r.headers['set-cookie']) && /Secure/.test(r.headers['set-cookie']) &&
+     /SameSite=Lax/.test(r.headers['set-cookie']) && /Domain=\.uday\.gift/.test(r.headers['set-cookie']),
+     r.headers['set-cookie']);
+  COOKIE = (r.headers['set-cookie'] || '').split(';')[0];
+
+  r = mkRes(); await session({ method: 'GET', query: {}, headers: { cookie: COOKIE } }, r);
+  ok('session: GET reports the signed-in address', JSON.parse(r.body).addr === ADDR, r.body);
+
+  r = mkRes(); await session({ method: 'GET', query: {}, headers: {} }, r);
+  ok('session: GET with no cookie reports null', JSON.parse(r.body).addr === null, r.body);
+
+  r = mkRes(); await session({ method: 'DELETE', query: {}, headers: { cookie: COOKIE } }, r);
+  ok('session: DELETE clears the cookie', /Max-Age=0/.test(r.headers['set-cookie']), r.headers['set-cookie']);
+
+  // a forged cookie must not become a session
+  const forged = 'uday_s=' + seal({ addr: OTHER, exp: 2e9 }, 'not-the-secret');
+  r = mkRes(); await session({ method: 'GET', query: {}, headers: { cookie: forged } }, r);
+  ok('session: a cookie sealed with the wrong secret is refused', JSON.parse(r.body).addr === null, r.body);
+
+  // an expired one either
+  const stale = 'uday_s=' + seal({ addr: ADDR, exp: 1 }, ENV.X_STATE_SECRET);
+  r = mkRes(); await session({ method: 'GET', query: {}, headers: { cookie: stale } }, r);
+  ok('session: an expired session is refused', JSON.parse(r.body).addr === null, r.body);
+});
+
 // ---- start ----
 await withEnv({ X_OAUTH_CLIENT_ID: '', X_STATE_SECRET: '' }, async () => {
   const r = mkRes(); await start({ query: {}, headers: {} }, r);
@@ -36,47 +84,30 @@ await withEnv({ X_OAUTH_CLIENT_ID: '', X_STATE_SECRET: '' }, async () => {
      r.code === 302 && /#x-err=config$/.test(r.headers.location || ''), r.code + ' ' + r.headers.location);
 });
 await withEnv(ENV, async () => {
-  let r = mkRes(); await start({ query: { addr: 'nope' }, headers: {} }, r);
-  ok('start: bad address -> #x-err=sig', r.code === 302 && /#x-err=sig$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
+  let r = mkRes(); await start({ query: { back: '/c/unipeg' }, headers: {} }, r);
+  ok('start: no session -> #x-err=signin',
+     r.code === 302 && /#x-err=signin$/.test(r.headers.location || ''), r.code + ' ' + r.headers.location);
 
-  const ts = Date.now();
-  const sig = sign(linkMessage(ADDR, ts));
-  r = mkRes(); await start({ query: { addr: ADDR, sig, ts: ts - 3600000 }, headers: {} }, r);
-  ok('start: stale timestamp -> #x-err=stale', r.code === 302 && /#x-err=stale$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
+  r = mkRes(); await start({ query: { back: 'https://evil.example/x' }, headers: {} }, r);
+  ok('start: bounce refuses an absolute `back`', r.headers.location === '/c#x-err=signin', r.headers.location);
 
-  r = mkRes(); await start({ query: { addr: ADDR, sig: sign('something else'), ts }, headers: {} }, r);
-  ok('start: signature over other text -> #x-err=sig', r.code === 302 && /#x-err=sig$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
-
-  const other = '0x1111111111111111111111111111111111111111';
-  r = mkRes(); await start({ query: { addr: other, sig, ts }, headers: {} }, r);
-  ok('start: signature for a DIFFERENT wallet -> #x-err=sig', r.code === 302 && /#x-err=sig$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
-
-  // real signature, wallet holds nothing
   const realFetch = globalThis.fetch;
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ result: '0x0' }) });
-  r = mkRes(); await start({ query: { addr: ADDR, sig, ts }, headers: {} }, r);
-  ok('start: holds 0 uDAY -> #x-err=nouday', r.code === 302 && /#x-err=nouday$/.test(r.headers.location||''), r.code + ' ' + r.headers.location);
+  r = mkRes(); await start({ query: { back: '/c/unipeg' }, headers: { cookie: COOKIE } }, r);
+  ok('start: signed in but holds 0 uDAY -> #x-err=nouday',
+     r.code === 302 && /#x-err=nouday$/.test(r.headers.location || ''), r.code + ' ' + r.headers.location);
 
-  // real signature, wallet holds 5 uDAY
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ result: '0x' + (5n * 10n ** 18n).toString(16) }) });
-  r = mkRes(); await start({ query: { addr: ADDR, sig, ts, back: '/c/unipeg' }, headers: {} }, r);
+  r = mkRes(); await start({ query: { back: '/c/unipeg' }, headers: { cookie: COOKIE } }, r);
   const loc = r.headers.location || '';
-  ok('start: holder -> 302 to x.com authorize', r.code === 302 && loc.startsWith('https://x.com/i/oauth2/authorize'), r.code + ' ' + r.body + loc.slice(0, 60));
+  ok('start: signed-in holder -> 302 to x.com authorize',
+     r.code === 302 && loc.startsWith('https://x.com/i/oauth2/authorize'), r.code + ' ' + r.body + loc.slice(0, 60));
   const u = new URL(loc || 'https://x/');
-  ok('start: PKCE S256 challenge present', u.searchParams.get('code_challenge_method') === 'S256' && (u.searchParams.get('code_challenge') || '').length > 20);
+  ok('start: PKCE S256 challenge present',
+     u.searchParams.get('code_challenge_method') === 'S256' && (u.searchParams.get('code_challenge') || '').length > 20);
   ok('start: scope is read-only, no offline', u.searchParams.get('scope') === 'tweet.read users.read', u.searchParams.get('scope'));
-  ok('start: state cookie is HttpOnly+Secure+Lax', /HttpOnly/.test(r.headers['set-cookie']) && /Secure/.test(r.headers['set-cookie']) && /SameSite=Lax/.test(r.headers['set-cookie']));
-
-
-  // a bounce must stay on this site even when `back` was never sanitised
-  r = mkRes(); await start({ query: { addr: 'nope', back: 'https://evil.example/x' }, headers: {} }, r);
-  ok('start: bounce refuses an absolute `back`', r.headers.location === '/c#x-err=sig', r.headers.location);
-
-  // open-redirect attempt in `back`
-  r = mkRes(); await start({ query: { addr: ADDR, sig, ts, back: 'https://evil.example/x' }, headers: {} }, r);
-  const jarRaw = (r.headers['set-cookie'] || '').split(';')[0].split('=').slice(1).join('=');
-  const jar = JSON.parse(Buffer.from(jarRaw.split('.')[0], 'base64url').toString());
-  ok('start: absolute `back` is discarded', jar.back === '/c', jar.back);
+  ok('start: state cookie is HttpOnly+Secure+Lax',
+     /HttpOnly/.test(r.headers['set-cookie']) && /Secure/.test(r.headers['set-cookie']) && /SameSite=Lax/.test(r.headers['set-cookie']));
   globalThis.fetch = realFetch;
 });
 
@@ -152,10 +183,8 @@ await withEnv(ENV, async () => {
 
 // ---- unlink ----
 await withEnv(ENV, async () => {
-  const ts = Date.now();
-  const sig = sign(linkMessage(ADDR, ts));
-  let r = mkRes(); await unlink({ query: { addr: ADDR, sig: sign('nope'), ts }, headers: {} }, r);
-  ok('unlink: wrong signature -> 403/400', r.code === 403 || r.code === 400, r.code);
+  let r = mkRes(); await unlink({ query: {}, headers: {} }, r);
+  ok('unlink: no session -> 401', r.code === 401, r.code);
 
   const realFetch = globalThis.fetch;
   let body = null;
@@ -164,9 +193,9 @@ await withEnv(ENV, async () => {
     return { ok: true, status: 200, json: async () => ({ sha: 'a',
       content: Buffer.from(JSON.stringify({ [ADDR]: { handle: 'x' }, '0xother': { handle: 'y' } })).toString('base64') }) };
   };
-  r = mkRes(); await unlink({ query: { addr: ADDR, sig, ts }, headers: {} }, r);
+  r = mkRes(); await unlink({ query: {}, headers: { cookie: COOKIE } }, r);
   const after = body ? JSON.parse(Buffer.from(body.content, 'base64').toString()) : null;
-  ok('unlink: valid signature removes only that wallet',
+  ok('unlink: a session removes only that wallet',
      r.code === 200 && after && !after[ADDR] && after['0xother'], JSON.stringify(after));
   globalThis.fetch = realFetch;
 });

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { linkMessage } from '../api/x/start.js';
+import { signInMessage } from '../api/session.js';
 import { seal, unseal, okHandle, okAvatar, recoverPersonalSign } from '../api/_lib.js';
 
 let pass = 0, fail = 0;
@@ -7,18 +7,22 @@ const ok = (name, cond) => { cond ? pass++ : fail++; console.log((cond ? '  ok  
 
 // A. the page and the server must build the SAME string
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const block = html.match(/async function xSign\(addr\)\{([\s\S]*?)\n\}/)[1];
+const block = html.match(/async function signIn\(\)\{([\s\S]*?)\n\}/)[1];
+// pull just the message out of signIn(), which also does wallet calls
 const clientMsg = new Function('addr', 'ts', block
-  .replace(/const ts = Date\.now\(\);/, '')
-  .replace(/const sig = await[\s\S]*$/, '')
+  .replace(/^[\s\S]*?const msg =/, 'const msg =')
+  .replace(/;\s*let sig[\s\S]*$/, ';')
   + '\nreturn msg;');
 const A = '0xE72D42810212C856636CD9D019E98CFE985535FD', TS = 1756300000000;
-ok('client message === server message', clientMsg(A, TS) === linkMessage(A, TS));
-if (clientMsg(A, TS) !== linkMessage(A, TS)) {
-  console.log('   client:', JSON.stringify(clientMsg(A, TS)));
-  console.log('   server:', JSON.stringify(linkMessage(A, TS)));
+// the page lowercases before building the message, so feed it the same
+ok('page sign-in message === server sign-in message',
+   clientMsg(A.toLowerCase(), TS) === signInMessage(A, TS));
+ok('the page lowercases the address before signing', /toLowerCase\(\)/.test(block));
+if (clientMsg(A.toLowerCase(), TS) !== signInMessage(A, TS)) {
+  console.log('   client:', JSON.stringify(clientMsg(A.toLowerCase(), TS)));
+  console.log('   server:', JSON.stringify(signInMessage(A, TS)));
 }
-ok('message lowercases the address', linkMessage(A, TS).includes(A.toLowerCase()));
+ok('message lowercases the address', signInMessage(A, TS).includes(A.toLowerCase()));
 
 // B. sealed state survives a round trip and refuses tampering
 const S = 'test-secret-'.repeat(3);

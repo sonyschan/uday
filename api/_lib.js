@@ -70,10 +70,13 @@ export const b64url = b => Buffer.from(b).toString('base64url');
 export const pkceVerifier = () => b64url(randomBytes(32));
 export const pkceChallenge = v => b64url(createHash('sha256').update(v).digest());
 
-export function cookie(name, value, maxAge) {
+export function cookie(name, value, maxAge, shared) {
   // Lax survives the top-level GET that x.com redirects us back with, and
   // refuses to ride along on anyone else's cross-site request.
-  return `${name}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
+  // `shared` widens it to the parent domain — the session has to be readable
+  // on my.uday.gift too, and a cookie is the one store the siblings share.
+  const dom = shared ? '; Domain=.uday.gift' : '';
+  return `${name}=${value}; Path=/${dom}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
 }
 export function readCookie(req, name) {
   const raw = req.headers.cookie || '';

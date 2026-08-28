@@ -1,14 +1,13 @@
 // Taking the link back off.
 //
-// This exists because the link is public and permanent-looking: it puts a
-// wallet's whole history one click from a name and a face. A door in without
-// a door out would make linking a decision nobody should be asked to make
-// once. Same proof as linking — only the wallet can undo the wallet.
-import { recoverPersonalSign, fail } from '../_lib.js';
-import { linkMessage } from './start.js';
+// This exists because the link is public: it puts a wallet's whole history one
+// click from a name and a face. A door in without a door out would make
+// linking a decision nobody should be asked to make once. The session says
+// which wallet is asking — only the wallet can undo the wallet.
+import { fail } from '../_lib.js';
+import { sessionAddr } from '../session.js';
 
 const FILE = 'data/x-links.json';
-const FRESH_MS = 10 * 60 * 1000;
 
 async function gh(path, init) {
   return fetch('https://api.github.com/repos/' + process.env.GITHUB_REPO + path, {
@@ -23,20 +22,11 @@ async function gh(path, init) {
 }
 
 export default async function handler(req, res) {
-  const { GITHUB_TOKEN, GITHUB_REPO } = process.env;
+  const { GITHUB_TOKEN, GITHUB_REPO, X_STATE_SECRET } = process.env;
   if (!GITHUB_TOKEN || !GITHUB_REPO) return fail(res, 503, 'X login is not configured');
 
-  const q = req.query || {};
-  const addr = String(q.addr || '').toLowerCase();
-  const ts = Number(q.ts || 0);
-  if (!/^0x[0-9a-f]{40}$/.test(addr)) return fail(res, 400, 'bad address');
-  if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > FRESH_MS)
-    return fail(res, 400, 'that signature is stale — try again');
-
-  let signer;
-  try { signer = recoverPersonalSign(linkMessage(addr, ts), String(q.sig || '')); }
-  catch { return fail(res, 400, 'bad signature'); }
-  if (signer.toLowerCase() !== addr) return fail(res, 403, 'signature does not match that wallet');
+  const addr = sessionAddr(req, X_STATE_SECRET);
+  if (!addr) return fail(res, 401, 'sign in first');
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const cur = await gh('/contents/' + FILE);

@@ -1465,7 +1465,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
       <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
         <p class="kicker" data-i18n="mine.kicker">Your days</p>
         <h2 data-i18n="mine.title">Which days are already yours?</h2>
-        <p data-i18n="mine.blurb">Connect a wallet — or paste your address. The lookup runs entirely in your browser against the same public index the wall uses. There is no account here and no login: connecting only lets your wallet hand this page an address, and it asks you again before anything else.</p>
+        <p data-i18n="mine.blurb">Sign in with your wallet to see the days you own — or paste any address to look.</p>
       </div>
       <div class="mine__controls rise">
         <input class="mine__addr" id="mine-addr" placeholder="0x…" spellcheck="false" autocomplete="off" aria-label="Wallet address">
@@ -1637,9 +1637,10 @@ const I18N = {
     'x.link':'LINK AN X ACCOUNT',
     'x.unlink':'remove',
     'x.working':'WAITING FOR YOUR SIGNATURE…',
-    'x.why':'Two steps: sign with your wallet so we know which one to link — no gas, nothing moves — then authorise at X. After that the room shows your name instead of your address, and you can remove it any time.',
+    'x.why':'Rooms show your name instead of your address. Removable any time.',
     'x.failed':'that did not go through',
     'x.needwallet':'connect a wallet first',
+    'x.err.signin':'Sign in again, then try that once more.',
     'x.err.config':'X login is not switched on yet. Nothing was sent.',
     'x.err.sig':'That signature did not match your wallet. Try again.',
     'x.err.stale':'That took too long — sign again.',
@@ -1715,9 +1716,9 @@ const I18N = {
     'year.tip.ember':'Went dark {ago} — this day’s last piece was sold and burned. The v4 hook mints on buy and burns on sell; a new mint can relight it.',
     'mine.kicker':'Your days',
     'mine.title':'Which days are already yours?',
-    'mine.blurb':'Connect a wallet \u2014 or paste your address. The lookup runs entirely in your browser against the same public index the wall uses. There is no account here and no login: connecting only lets your wallet hand this page an address, and it asks you again before anything else.',
-    'mine.connect':'CONNECT','mine.view':'VIEW',
-    'mine.disconnect':'LOG OUT','mine.wallet.back':'Back to my days',
+    'mine.blurb':'Sign in with your wallet to see the days you own \u2014 or paste any address to look.',
+    'mine.connect':'SIGN IN','mine.signingin':'SIGNING IN…','mine.view':'VIEW',
+    'mine.disconnect':'SIGN OUT','mine.wallet.back':'Back to my days',
     'mine.btn.view':'VIEW YOUR PIECE',
     'proof.supply':'10,000 max','proof.lp':'LP burned','proof.art':'Art onchain',
     'rooms.kicker':'Communities','rooms.title':'A calendar of the people you know',
@@ -1732,7 +1733,7 @@ const I18N = {
     'gift.modal.title':'TODAY’S GIFT · {day}','gift.modal.claimed.title':'YOURS · {day}',
     'gift.modal.p1':'Every uDAY is a calendar date. When the real calendar reaches that date, its holders share the day’s gift — today belongs to holders of {day}.',
     'gift.modal.p2':'The gift grows and changes with the uDAY ecosystem — today it is USDG; tomorrow it may be something more.',
-    'gift.modal.connect':'CONNECT WALLET TO CLAIM',
+    'gift.modal.connect':'SIGN IN TO CLAIM',
     'gift.snap':'The day’s list freezes at 00:00 (UTC+8). A piece revealed or moved after that claims when its day comes around again.',
     'gift.next':'Your next gift arrives in {n} days — {day}.',
     'gift.next.tomorrow':'Your next gift arrives tomorrow — {day}.',
@@ -1849,9 +1850,10 @@ const I18N = {
     'x.link':'连接 X 帐号',
     'x.unlink':'移除',
     'x.working':'等待你签名…',
-    'x.why':'两步：先用钱包签名，让我们知道要连到哪个钱包——不花 gas，也不动任何东西——再去 X 授权。之后房间里显示的就是你的名字，不是一串地址，随时可以移除。',
+    'x.why':'房间里显示你的名字，不是一串地址。随时可以移除。',
     'x.failed':'没有成功',
     'x.needwallet':'请先连接钱包',
+    'x.err.signin':'请重新登入，然后再试一次。',
     'x.err.config':'X 登录还没启用，什么都没有送出。',
     'x.err.sig':'签名和你的钱包对不上，再试一次。',
     'x.err.stale':'隔太久了，请重新签一次。',
@@ -1923,8 +1925,8 @@ const I18N = {
     'year.tip.ember':'{ago}熄灭——这一天的最后一枚被卖出烧毁了。v4 hook 买入即铸造、卖出即销毁；新的铸造能让它重生。',
     'mine.kicker':'你的收藏',
     'mine.title':'哪些日子已经是你的？',
-    'mine.blurb':'连接钱包，或直接粘贴你的地址。比对完全在你的浏览器里进行——用的就是年历墙的同一份公开索引。这里没有帐号，也没有登入：连接只是让钱包把一个地址交给这个页面，之后每一步它都会再问你一次。',
-    'mine.connect':'连接钱包','mine.view':'查看',
+    'mine.blurb':'用钱包登入，看看哪些日子已经是你的——或者贴上任何地址来看看。',
+    'mine.connect':'登入','mine.signingin':'登入中…','mine.view':'查看',
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日历',
     'mine.btn.view':'查看你的这一枚',
     'proof.supply':'上限 10,000','proof.lp':'流动性已烧毁','proof.art':'艺术全在链上',
@@ -1940,7 +1942,7 @@ const I18N = {
     'gift.modal.title':'今日礼物 · {day}','gift.modal.claimed.title':'已归你 · {day}',
     'gift.modal.p1':'每枚 uDAY 都是一个日期。当现实的日历走到那一天，拥有它们的主人们就能分享当天的礼物——今天属于 {day} 的持有者。',
     'gift.modal.p2':'礼物会随 uDAY 生态一起成长变化——今天是 USDG，明天也许更有趣。',
-    'gift.modal.connect':'连接钱包领取',
+    'gift.modal.connect':'登入后领取',
     'gift.snap':'当日名单在 00:00（UTC+8）定格。此后才揭晓或转手的日期，等它的日子再次到来时领取。',
     'gift.next':'你的下一份礼物在 {n} 天后 · {day}。',
     'gift.next.tomorrow':'你的下一份礼物就在明天 · {day}。',
@@ -3093,7 +3095,7 @@ async function loadXLinks(){
 }
 // t() falls back to the key itself, which would print "x.err.token" at
 // somebody. Only codes with copy are honoured; anything else reads as failed.
-const X_ERRS = ['config', 'sig', 'stale', 'nouday', 'chain', 'state',
+const X_ERRS = ['signin', 'config', 'sig', 'stale', 'nouday', 'chain', 'state',
                 'token', 'profile', 'record', 'cancelled', 'failed'];
 let X_ERR = null;
 /// Checked HERE as well as in the function that writes the file. These land in
@@ -3185,23 +3187,6 @@ function openPeopleModal(key, list){
   va('event', { name: 'people_modal', data: { day: key, n: seen.size, named: named } });
 }
 
-/// The wallet signs this before either endpoint will touch anything. Without
-/// it a stranger could hang their own X account on somebody else's address —
-/// or tear off a link that is not theirs. The text is duplicated in
-/// api/x/start.js and must stay character-identical: one byte apart and the
-/// server recovers a different, perfectly valid-looking wallet.
-async function xSign(addr){
-  const ts = Date.now();
-  const msg = 'uday.gift\n\n' +
-    'Link an X account to this wallet.\n\n' +
-    'wallet: ' + addr.toLowerCase() + '\n' +
-    'issued: ' + ts + '\n\n' +
-    'Signing proves the wallet is yours. It costs no gas, moves nothing, and\n' +
-    'authorises nothing else.';
-  const sig = await mineEth.request({ method: 'personal_sign', params: [msg, addr] });
-  return { ts: ts, sig: sig };
-}
-
 /// Link / unlink, inside the member panel. Deliberately here and nowhere else:
 /// showing a face is a thing you do for a room you already stand in.
 function xRow(box){
@@ -3226,13 +3211,10 @@ function xRow(box){
     off.className = 'commjoin__xoff';
     off.textContent = t('x.unlink');
     off.addEventListener('click', async () => {
-      if(!mineEth) return;
       off.disabled = true;
       off.textContent = t('x.working');
       try{
-        const { ts, sig } = await xSign(me);
-        const r = await fetch('/api/x/unlink?addr=' + me + '&sig=' + sig + '&ts=' + ts,
-                              { method: 'POST' });
+        const r = await fetch('/api/x/unlink', { method: 'POST' });
         if(!r.ok) throw new Error(await r.text());
         delete X_LINKS[me];
         renderJoin();
@@ -3248,19 +3230,11 @@ function xRow(box){
     b.type = 'button';
     b.className = 'btn btn--ghost commjoin__xon';
     b.textContent = t('x.link');
-    b.addEventListener('click', async () => {
-      if(!mineEth){ row.appendChild(xNote(t('x.needwallet'))); return; }
+    b.addEventListener('click', () => {
       b.disabled = true;
-      b.textContent = t('x.working');
-      try{
-        const { ts, sig } = await xSign(me);
-        // a full page trip: the OAuth handshake cannot happen in this tab
-        leaveTo('/api/x/start?addr=' + me + '&sig=' + sig + '&ts=' + ts +
-                '&back=' + encodeURIComponent(location.pathname));
-      }catch(e){
-        b.disabled = false;
-        b.textContent = t('x.link');
-      }
+      // one hop: the session already says which wallet, so all that is left is
+      // X's own consent screen
+      leaveTo('/api/x/start?back=' + encodeURIComponent(location.pathname));
     });
     row.appendChild(b);
     const why = document.createElement('span');
@@ -4254,9 +4228,45 @@ function mineWalletUI(){
   if(typeof renderJoin === 'function' && COMM) renderJoin();
   if(IS_PERSONAL && typeof loadStars === 'function') loadStars(true).then(paintStars);
 }
+/// Signing in: wallet consent, then ONE signature that the server can check.
+/// That signature is the whole session — nothing afterwards has to ask again,
+/// which is the difference between this and the old "connect", where the page
+/// knew who you were and no server did.
+///
+/// The text is duplicated in api/session.js and must stay character-identical:
+/// one byte apart and the server recovers a different, valid-looking wallet.
+async function signIn(){
+  if(!mineEth) return false;
+  let acc;
+  try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
+  catch(e){ return false; }                       // declined at the wallet
+  if(!(acc && acc[0])) return false;
+  const addr = acc[0].toLowerCase();
+  const ts = Date.now();
+  const msg = 'uday.gift\n\n' +
+    'Sign in.\n\n' +
+    'wallet: ' + addr + '\n' +
+    'issued: ' + ts + '\n\n' +
+    'This proves the wallet is yours. It costs no gas and moves nothing.';
+  let sig;
+  try{ sig = await mineEth.request({ method: 'personal_sign', params: [msg, acc[0]] }); }
+  catch(e){ return false; }                       // declined the signature
+  try{
+    const r = await fetch('/api/session?addr=' + addr + '&ts=' + ts + '&sig=' + sig,
+                          { method: 'POST' });
+    if(!r.ok) return false;
+  }catch(e){ return false; }                      // no session: the page still works, X linking will not
+  mineWallet = addr;
+  mineWalletUI();
+  setMineAddr(acc[0], 'wallet');
+  return true;
+}
+
 function mineDisconnect(){
-  // EIP-1193 has no programmatic disconnect: logging out means forgetting —
-  // the address, the stored copy, the share URL, and the rendered wall.
+  // Signing out drops the server session AND forgets everything locally.
+  // EIP-1193 has no programmatic disconnect, so the local half is the address,
+  // the stored copy, the share URL and the rendered wall.
+  try{ fetch('/api/session', { method: 'DELETE' }); }catch(e){}
   mineWallet = null;
   mineAddr = null;
   document.getElementById('mine-addr').value = '';
@@ -4308,13 +4318,7 @@ async function navGo(dest){
   const id = mineIdentity();
   if(!id){
     if(!mineEth) { goPersonal(null); return; }
-    let acc;
-    try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
-    catch(e){ return; }                          // declined; stay put
-    if(!(acc && acc[0])) return;
-    mineWallet = acc[0].toLowerCase();
-    mineWalletUI();
-    setMineAddr(acc[0], 'wallet');
+    if(!await signIn()) return;                  // declined; stay put
   }
   // MY CALENDAR carries the handoff the address chip used to carry: neither
   // wallet auth nor localStorage crosses the subdomain boundary
@@ -4341,17 +4345,15 @@ if(mineEth){
   document.getElementById('mine-view').hidden = CONN_HINT;
 }
 mineConnect.addEventListener('click', async () => {
-  let acc;
-  try{
-    acc = await mineEth.request({ method: 'eth_requestAccounts' });
-  }catch(e){ return; /* user declined — nothing to show */ }
-  if(!(acc && acc[0])) return;
-  // On the main site, logging in means going to YOUR page. The address rides
-  // in the URL because neither wallet auth nor localStorage crosses origins.
-  if(!IS_PERSONAL){ goPersonal(acc[0].toLowerCase()); return; }
-  mineWallet = acc[0].toLowerCase();
-  mineWalletUI();
-  setMineAddr(acc[0], 'wallet');
+  const was = mineConnect.textContent;
+  mineConnect.disabled = true;
+  mineConnect.textContent = t('mine.signingin');
+  const ok = await signIn();
+  mineConnect.disabled = false;
+  mineConnect.textContent = was;
+  if(!ok) return;                                  // declined; nothing changes
+  // On the main site, signing in means going to YOUR page.
+  if(!IS_PERSONAL){ goPersonal(mineWallet); return; }
   ensureChain();   // best effort — viewing needs no chain, claiming re-checks
 });
 

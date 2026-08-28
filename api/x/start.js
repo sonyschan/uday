@@ -1,28 +1,15 @@
 // Step one of linking an X account to a wallet.
 //
-// The wallet has to PROVE itself here. Without that, anyone could call this
-// endpoint with somebody else's address and hang their own X handle on it —
-// the page would then show a stranger's account next to that person's day.
-// So: a personal_sign the visitor produced seconds ago, recovered server-side,
-// and a uDAY balance, which is the same floor joining a room already charges.
+// The wallet is already proven: signing in put a signed session cookie on
+// .uday.gift, and that is what says which wallet is asking. This endpoint used
+// to demand its own personal_sign because there WAS no sign-in — which is how
+// linking an X account ended up needing two approvals and a paragraph to
+// explain them.
 import {
-  recoverPersonalSign, seal, cookie, pkceVerifier, pkceChallenge,
-  udayWhole, bounce, b64url,
+  seal, cookie, pkceVerifier, pkceChallenge, udayWhole, bounce, b64url,
 } from '../_lib.js';
+import { sessionAddr } from '../session.js';
 import { randomBytes } from 'node:crypto';
-
-/// The exact text the wallet signs. Shared verbatim with the page — one
-/// character apart and the recovered address is a different, valid-looking
-/// wallet, which is the worst possible failure here.
-export const linkMessage = (addr, ts) =>
-  'uday.gift\n\n' +
-  'Link an X account to this wallet.\n\n' +
-  'wallet: ' + addr.toLowerCase() + '\n' +
-  'issued: ' + ts + '\n\n' +
-  'Signing proves the wallet is yours. It costs no gas, moves nothing, and\n' +
-  'authorises nothing else.';
-
-const FRESH_MS = 10 * 60 * 1000;
 
 export default async function handler(req, res) {
   const q = req.query || {};
@@ -39,18 +26,8 @@ export default async function handler(req, res) {
   } = process.env;
   if (!CLIENT_ID || !SECRET) return bounce(res, back, 'config', 'missing client id or state secret');
 
-  const addr = String(q.addr || '').toLowerCase();
-  const sig = String(q.sig || '');
-  const ts = Number(q.ts || 0);
-
-  if (!/^0x[0-9a-f]{40}$/.test(addr)) return bounce(res, back, 'sig', 'bad address');
-  if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > FRESH_MS)
-    return bounce(res, back, 'stale');
-
-  let signer;
-  try { signer = recoverPersonalSign(linkMessage(addr, ts), sig); }
-  catch (e) { return bounce(res, back, 'sig', e.message); }
-  if (signer.toLowerCase() !== addr) return bounce(res, back, 'sig', 'recovered ' + signer);
+  const addr = sessionAddr(req, SECRET);
+  if (!addr) return bounce(res, back, 'signin', 'no session');
 
   // Same floor the community contract enforces for joining. It is not really
   // about spam: a wallet with no uDAY has no day on any calendar, so there is
