@@ -6,7 +6,14 @@
 name: post-gift
 on:
   schedule:
-    - cron: '5 16 * * *'   # 00:05 UTC+8 — GHA cron jitter can add ~30-40 min
+    # 00:05 UTC+8 in theory. Measured on 2026-08-27/28 the daily jobs ran up to
+    # 8.5 HOURS late — GitHub deprioritises cron hard. Never treat this as the
+    # time the gift appears.
+    - cron: '5 16 * * *'
+  # So a deploy also makes sure today's root is up. Safe to run repeatedly:
+  # ci-post-gift.sh reads roots(dayId) first and exits if the day is posted.
+  push:
+    branches: [main]
   workflow_dispatch: {}    # manual runs from the Actions tab (posts TODAY's root)
 permissions:
   contents: write
@@ -19,7 +26,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # PINNED. The unpinned action installs the latest cast, and a release
+      # after 2026-08-26 probes the endpoint with anvil_nodeInfo to work out
+      # the network family. Robinhood's RPC answers that with a 400, so every
+      # cast call died with "failed to determine network family from endpoint"
+      # and a whole day's gift never got posted. This chain will never
+      # implement anvil methods, so the version is ours to choose.
       - uses: foundry-rs/foundry-toolchain@v1   # cast: keccak for the tree, send for the root
+        with:
+          version: v1.7.1
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
