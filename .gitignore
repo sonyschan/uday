@@ -22,6 +22,7 @@ cache/
 # repo). build_gift_root.py is COMMITTED since the GHA gift automation — its
 # formula was already public through every data/gift/*.json anyway.
 CLAUDE.md
+notes/
 tools/post-gift.sh
 tools/deploy-community.sh
 tools/deploy-gift.sh
