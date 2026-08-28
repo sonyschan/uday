@@ -52,6 +52,26 @@ const deadPrefixes = [...asked].filter(k => k.endsWith('.') &&
 ok('every runtime key prefix matches something', deadPrefixes.length === 0, deadPrefixes.join(', '));
 ok('every key the page asks for exists', unknown.length === 0, unknown.join(', '));
 
+// The markup carries an English fallback for every translated node — what a
+// no-JS visitor reads, and what shows for a frame before applyLang runs. It
+// rots silently: SIGN IN shipped while the markup still said CONNECT.
+//
+// Checked, never auto-fixed. A regex sweep over the whole file once ate a
+// script line that was BUILDING markup — the page carries strings containing
+// data-i18n="..." inside JS, so only the region before the main script counts.
+const markupEnd = html.lastIndexOf('<script>');
+const markup = html.slice(0, markupEnd);
+const stale = [];
+for (const m of markup.matchAll(/data-i18n="([a-z][a-zA-Z0-9._]+)"[^>]*>([^<>]*)</g)) {
+  const [, key, txt] = m;
+  // the dictionary is read as SOURCE, so \u2014 has to be decoded before the
+  // markup's literal em dash can match it
+  const want = (vals.en[key] || '').replace(/\\u([0-9a-fA-F]{4})/g,
+    (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\'/g, "'");
+  if (txt.trim() && want && txt !== want) stale.push(key + ': ' + txt.slice(0, 30));
+}
+ok('markup fallbacks match the English dictionary', stale.length === 0, [...new Set(stale)].join(', '));
+
 // The page must never go below its text-size floors by shipping an empty string.
 const empties = keys.en.filter(k => !vals.en[k].trim() || !(vals.zh[k] || '').trim());
 ok('no empty strings in either dictionary', empties.length === 0, empties.join(', '));

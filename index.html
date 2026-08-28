@@ -1221,17 +1221,17 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
     <nav class="tb-nav">
       <button type="button" class="tb-nav__a" id="nav-mine">
         <span class="tb-nav__long" data-i18n="nav.mine">MY CALENDAR</span>
-        <span class="tb-nav__short" data-i18n="nav.mine.short">个人</span>
+        <span class="tb-nav__short" data-i18n="nav.mine.short">MINE</span>
       </button>
       <button type="button" class="tb-nav__a" id="nav-comm">
         <span class="tb-nav__long" data-i18n="nav.comm">COMMUNITIES</span>
-        <span class="tb-nav__short" data-i18n="nav.comm.short">社区</span>
+        <span class="tb-nav__short" data-i18n="nav.comm.short">ROOMS</span>
       </button>
     </nav>
     <div class="tb-wallet">
-      <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>CONNECT</button>
+      <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>SIGN IN</button>
       <button type="button" class="btn btn--ghost tb-out" id="mine-disconnect" hidden>
-        <span data-i18n="mine.disconnect">LOG OUT</span>
+        <span data-i18n="mine.disconnect">SIGN OUT</span>
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
              stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -1250,7 +1250,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
       <div class="hero__copy">
         <p class="kicker" data-i18n="hero.kicker">Onchain art on Robinhood Chain</p>
         <h1 class="hero__title">u<em>DAY</em></h1>
-        <p class="hero__lede" data-i18n="hero.lede">Some days are just dates. Some become part of your story.</p>
+        <p class="hero__lede" data-i18n="hero.lede">Some days are just dates. Some become part of your story. And when the calendar comes back around, your day gives back.</p>
       </div>
       <div class="hero__act">
         <div class="daypick">
@@ -1368,8 +1368,8 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
     <div class="shell">
       <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
         <p class="kicker" data-i18n="cnew.kicker">Start a community</p>
-        <h2 data-i18n="cnew.title">A room nobody runs</h2>
-        <p data-i18n="cnew.blurb">Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.</p>
+        <h2 data-i18n="cnew.title">An onchain calendar your members own</h2>
+        <p data-i18n="cnew.blurb">Your holders put the days that matter to them on one calendar, and every one of those days is a reason to come back. Pick a token and a minimum; the rules are fixed the moment you create it, and nobody — not you, not us — can remove anyone.</p>
       </div>
       <div class="cnew rise">
         <label class="cnew__row"><span data-i18n="cnew.f.slug">URL</span>
@@ -1395,7 +1395,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
           <input id="cnew-tg" placeholder="https://t.me/…" spellcheck="false" autocomplete="off"></label>
         <label class="cnew__row"><span data-i18n="cnew.f.other">Website</span>
           <span><input id="cnew-other" placeholder="https://…" spellcheck="false" autocomplete="off">
-            <small class="cnew__kind" data-i18n="cnew.links.note">Optional, https only.</small></span></label>
+            <small class="cnew__kind" data-i18n="cnew.links.note">Optional, https only. You can change these later; nothing else about the room can change.</small></span></label>
         <div class="cnew__actions">
           <button type="button" class="btn btn--gold" id="cnew-go" data-i18n="cnew.go">CREATE</button>
         </div>
@@ -1412,7 +1412,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
       <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
         <p class="kicker" data-i18n="year.kicker">The year</p>
         <h2 id="year-title" data-i18n="year.title">A year, lighting up</h2>
-        <p data-i18n="year.blurb">Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. Tap a day to visit its earliest piece.</p>
+        <p data-i18n="year.blurb">Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. A day whose last piece was just sold still glows faintly — an ember, for seven days. Tap a day to visit its earliest piece.</p>
       </div>
       <div class="yearwall__stats rise" id="year-stats"></div>
       <div class="yearwall rise">
@@ -1445,7 +1445,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
       <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
         <p class="kicker" data-i18n="rooms.kicker">Communities</p>
         <h2 data-i18n="rooms.title">A calendar of the people you know</h2>
-        <p data-i18n="rooms.blurb">Open a room gated by any token — on Robinhood Chain or Ethereum, ERC-20 or ERC-721 — and everyone who holds it can put their day on one shared calendar. You always know whose is next.</p>
+        <p data-i18n="rooms.blurb">Open a room gated by any token. Everyone who holds it can put their day on one shared calendar — so you always know whose day is next.</p>
       </div>
       <div class="rooms rise">
         <p class="rooms__rule" data-i18n="rooms.rule">1 uDAY to stand on a room’s calendar. 10 to open one.</p>
@@ -1517,7 +1517,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
       <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
         <p class="kicker" data-i18n="forge.kicker">The composer</p>
         <h2 data-i18n="forge.title">Four layers, two of them optional</h2>
-        <p data-i18n="forge.blurb">Every uDAY is a plate, a frame, a month and a date, painted one on top of the next. Pick a day and watch it assemble — the same order the contract uses.</p>
+        <p data-i18n="forge.blurb">Plate, frame, month, date — painted in that order, the plate on 80% of pieces and the frame on only 20%. 95,232 ways for a day to look. Build one.</p>
       </div>
 
       <!-- the seven styles lead: they are the art. The composer is a tool,
@@ -1542,11 +1542,11 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
 
         <div>
           <div class="field">
-            <div class="field__label"><span data-i18n="field.plate">Plate</span><b id="out-plate">unicorn</b></div>
+            <div class="field__label"><span data-i18n="field.plate">Plate (80% of pieces)</span><b id="out-plate">unicorn</b></div>
             <div class="chips" id="pick-plate"></div>
           </div>
           <div class="field">
-            <div class="field__label"><span data-i18n="field.frame">Frame</span><b id="out-frame">classic</b></div>
+            <div class="field__label"><span data-i18n="field.frame">Frame (20% of pieces)</span><b id="out-frame">classic</b></div>
             <div class="chips" id="pick-frame"></div>
           </div>
           <div class="field">
@@ -1574,7 +1574,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
             <button class="btn btn--gold" id="btn-download" data-i18n="forge.download">DOWNLOAD PNG</button>
             <button class="btn btn--ghost" id="btn-random" data-i18n="forge.random">SURPRISE ME</button>
           </div>
-          <p class="note" data-i18n="forge.note">Exports at 768x768, pixel-perfect. This composer previews the art system — the piece you actually own is minted and rendered onchain.</p>
+          <p class="note" data-i18n="forge.note">ON-CHAIN 96 is what the contract draws. HD 300 is the same four layers, redrawn denser.</p>
         </div>
       </div>
 
@@ -1666,7 +1666,7 @@ const I18N = {
     'join.noday':'You hold uDAY, but none of your pieces have revealed their date yet. A day has to be yours before it can stand here.',
     'join.nostar':'You can join — but the calendar shows \u2605 days, and you have not set one yet. Set it on your own calendar; it will stand on every room you join.',
     'join.member.nostar':'You are in this room, but the calendar has no \u2605 day of yours yet. Set one on your own calendar and it appears here.',
-    'join.ready':'Join, and your {days} stands on this calendar.',
+    'join.ready':'Joining writes you into this community onchain, and your {days} stands on this calendar.',
     'join.go':'JOIN',
     'join.noslots':'Every day you can declare is already spoken for. Hold more uDAY for another, or free one on your own calendar.',
     'join.mining':'On its way to the chain — this is usually seconds.',
@@ -1680,8 +1680,8 @@ const I18N = {
     'comm.missing':'No community here yet.',
     'comm.back':'← COMMUNITIES','clist.kicker':'Communities','clist.title':'The rooms so far',
     'clist.members':'{n} MEMBERS',
-    'cnew.kicker':'Start a community','cnew.title':'A room nobody runs',
-    'cnew.blurb':'Pick a token and a minimum. Anyone who holds that much can join, and nobody — not you, not us — can remove them. These rules are fixed forever the moment you create it.',
+    'cnew.kicker':'Start a community','cnew.title':'An onchain calendar your members own',
+    'cnew.blurb':'Your holders put the days that matter to them on one calendar, and every one of those days is a reason to come back. Pick a token and a minimum; the rules are fixed the moment you create it, and nobody — not you, not us — can remove anyone.',
     'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'Website',
     'cnew.links.note':'Optional, https only. You can change these later; nothing else about the room can change.',
     'cnew.err.link':'Links must start with https://',
@@ -1829,13 +1829,13 @@ const I18N = {
     'status.btn.offer':'把它带回家','status.btn.mint':'铸造一天',
     'live.lit':'全年点亮 {lit}/366 天','live.alive':'已诞生 {n} 枚','live.sealed':'{n} 枚待揭晓','live.owners':'收藏者 {n} 位',
     'year.mine.q':'这些格子里，哪几格是你的？',
-    'comm.kicker':'一个社群','comm.blurb':'每一格亮起的日子，都是这里的某个人认定属于自己的一天。这个房间没有管理员：持有代币你就在里面，也只有你自己能离开。',
+    'comm.kicker':'一个社区','comm.blurb':'每一格亮起的日子，都是这里的某个人认定属于自己的一天。这个房间没有管理员：持有代币你就在里面，也只有你自己能离开。',
     'comm.stat.members':'{n} 位成员','comm.stat.days':'{n} 天已被认领',
     'comm.next':'下一个在 {n} 天后——{day} 属于 {who}。',
     'comm.next.tomorrow':'就在明天——{day} 属于 {who}。',
     'comm.next.today':'今天属于 {who}。',
     'comm.note':'一天只有在那个人仍然持有该日期的 uDAY 时才会出现在这里。',
-    'comm.gate':'持有 {min} 枚 {token} 即可加入。这些规则在社群创建时就已固定，永远无法更改。',
+    'comm.gate':'持有 {min} 枚 {token} 即可加入。这些规则在社区创建时就已固定，永远无法更改。',
     'comm.gate.onchain':'每一次有人加入，合约本身都会检查那个余额——没有人绕得过去。',
     'comm.gate.index':'由公开索引每一轮核对——{chain} 不在本合约的范围内。',
     'comm.gate.floor':'无论哪一种，持有 uDAY 都是必要条件，而那一半是链上强制的。',
@@ -1877,22 +1877,22 @@ const I18N = {
     'join.noday':'你持有 uDAY，但还没有任何一枚揭晓日期。一天要先属于你，才能站在这里。',
     'join.nostar':'你可以加入——但日历显示的是 \u2605 日子，而你还没有设。到你自己的日历上设一颗，它会站上你加入的每个房间。',
     'join.member.nostar':'你已经在这个房间里，但日历上还没有你的 \u2605 日子。到你自己的日历设一颗，它就会出现在这里。',
-    'join.ready':'加入后，你的 {days} 就会站上这张日历。',
+    'join.ready':'加入会在链上建立你与这个社区的关系，你的 {days} 就会站上这张日历。',
     'join.go':'加入',
     'join.noslots':'你能宣告的日子都已经用完了。持有更多 uDAY 换一个名额，或在自己的日历上腾出一个。',
     'join.mining':'正在上链——通常只要几秒。',
     'star.count':'\u2605 {n}/{m}',
-    'star.on':'已经刻在链上，属于你——它站在你加入的每一个社群日历上。',
-    'star.off':'把这一天刻上链，成为你的。它会站上你加入的每个社群日历。（已用 {n}/{m}）',
+    'star.on':'已经刻在链上，属于你——它站在你加入的每一个社区日历上。',
+    'star.off':'把这一天刻上链，成为你的。它会站上你加入的每个社区日历。（已用 {n}/{m}）',
     'star.full':'你的 \u2605 都用完了（{n}/{m}）。持有更多 uDAY 换名额，或先收回一颗。',
     'star.set':'刻上链','star.remove':'从链上收回',
     'join.clear.tip':'放掉这一天——名额会回来，你就能改宣告别的日子。',
     'join.sent':'已送出。索引跟上后你就会出现在日历上——通常一小时内。',
-    'comm.missing':'这里还没有社群。',
+    'comm.missing':'这里还没有社区。',
     'comm.back':'← 社区日历','clist.kicker':'社区','clist.title':'目前的房间',
     'clist.members':'{n} 位成员',
-    'cnew.kicker':'创建社群','cnew.title':'一个没有管理员的房间',
-    'cnew.blurb':'选一个代币和一个门槛。持有足够数量的人都能加入，而没有任何人——包括你、包括我们——能把他们移出去。这些规则在创建的那一刻就永久固定。',
+    'cnew.kicker':'创建社区','cnew.title':'一个属于社区成员的链上日历',
+    'cnew.blurb':'让你的持有者把在意的日子放上同一张日历，每一个日子都是一次回来的理由。选一个代币和一个门槛；规则在创建的那一刻就固定，没有任何人——包括你、包括我们——能把谁移出去。',
     'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'网站',
     'cnew.links.note':'选填，只接受 https。这些之后可以改；房间的其他一切都不能改。',
     'cnew.err.link':'连结必须以 https:// 开头。',
@@ -1905,11 +1905,11 @@ const I18N = {
     'cnew.err.slug':'网址只能用 a-z、0-9 和连字号。',
     'cnew.err.name':'给它一个名字。','cnew.err.token':'这不是一个合约地址。',
     'cnew.err.min':'门槛必须是大于 0 的数字——0 等于没有门槛。',
-    'cnew.err.nocontract':'社群功能尚未在这条链上启用。',
+    'cnew.err.nocontract':'社区功能尚未在这条链上启用。',
     'cnew.err.nowallet':'这个浏览器里找不到钱包。',
     'cnew.err.chain':'请切换到 Robinhood Chain。',
     'cnew.err.tx':'交易没有送出。',
-    'cnew.err.gate':'这个地址在所选的链上不回应 balanceOf——以它为门槛的社群将永远没有人能加入，而规则也永远无法修复。',
+    'cnew.err.gate':'这个地址在所选的链上不回应 balanceOf——以它为门槛的社区将永远没有人能加入，而规则也永远无法修复。',
     'cnew.checking':'检查中…',
     'cnew.kind.20':'ERC-20，{d} 位小数','cnew.kind.721':'ERC-721——门槛以「件」计',
     'cnew.kind.bad':'这个地址在这里不回应 balanceOf。',
