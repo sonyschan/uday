@@ -1074,6 +1074,16 @@ html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
   transition:border-color .16s;
 }
 .clist__row:hover{ border-color:rgba(232,185,63,.5); }
+/* Your rooms sit at the top. The label says why they are there; the gold edge
+   keeps each row legible as yours once the label has scrolled away. The left
+   border eats 2px, so the padding gives them back and the names stay aligned
+   with the group below. */
+.clist__band{ font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-wide); text-transform:uppercase; color:var(--muted);
+  margin:10px 0 -2px; }
+.clist__band:first-child{ margin-top:0; }
+.clist__row--mine{ border-left:3px solid var(--gold); padding-left:14px;
+  background:rgba(232,185,63,.06); }
 .clist__name{ font-family:var(--display); font-size:var(--fs-sub); color:var(--vellum); }
 .clist__mark{ display:inline-flex; align-items:center; flex:none; color:var(--gold); }
 .clist__mark--chain{ color:var(--muted); }
@@ -1704,6 +1714,7 @@ const I18N = {
     'comm.missing':'No community here yet.',
     'comm.back':'← COMMUNITIES','clist.kicker':'Communities','clist.title':'The rooms so far',
     'clist.members':'{n} MEMBERS',
+    'clist.mine':'Yours','clist.rest':'More rooms',
     'cnew.kicker':'Start a community','cnew.title':'An onchain calendar your members own',
     'cnew.blurb':'Your holders put the days that matter to them on one calendar, and every one of those days is a reason to come back.',
     'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'Website',
@@ -1921,6 +1932,7 @@ const I18N = {
     'comm.missing':'这里还没有社区。',
     'comm.back':'← 社区日历','clist.kicker':'社区','clist.title':'目前的房间',
     'clist.members':'{n} 位成员',
+    'clist.mine':'你加入的','clist.rest':'其他社区',
     'cnew.kicker':'创建社区','cnew.title':'一个属于社区成员的链上日历',
     'cnew.blurb':'让你的持有者把在意的日子放上同一张日历，每一个日子都是一次回来的理由。',
     'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'网站',
@@ -3834,6 +3846,45 @@ function parseDeclared(hex){
   return out;
 }
 
+/// A membership change the chain has confirmed but the index has not published
+/// yet. Without this, joining a room and walking back to /c shows it unmarked
+/// and sorted among the strangers for the next quarter of an hour — the same
+/// shape as a day that stayed on a calendar after its owner left. Only the
+/// person who made the change carries the record, which is exactly the only
+/// person the gap affects; everyone else is already correct from the file.
+///
+/// Flips expire, and that is what keeps this honest: after three hours the
+/// index is the truth again, so a join made on another device — or undone
+/// there — can never be contradicted by a note this browser wrote once.
+const FLIP_KEY = 'uday.commflips', FLIP_LIFE = 3 * 3600 * 1000;
+function commFlips(addr){
+  const out = {};
+  if(!addr) return out;
+  let all;
+  try{ all = JSON.parse(localStorage.getItem(FLIP_KEY) || '{}'); }catch(e){ return out; }
+  const mine = all[addr.toLowerCase()] || {};
+  const now = Date.now();
+  for(const slug in mine){
+    const f = mine[slug];
+    if(f && typeof f.at === 'number' && now - f.at < FLIP_LIFE) out[slug] = !!f.in;
+  }
+  return out;
+}
+function commFlip(addr, slug, isIn){
+  if(!addr || !slug) return;
+  try{
+    const all = JSON.parse(localStorage.getItem(FLIP_KEY) || '{}');
+    const key = addr.toLowerCase();
+    const mine = all[key] || (all[key] = {});
+    mine[slug] = { in: !!isIn, at: Date.now() };
+    // never let this grow without bound: a wallet's expired flips are dead
+    const now = Date.now();
+    for(const a in all) for(const s in all[a])
+      if(now - (all[a][s].at || 0) >= FLIP_LIFE) delete all[a][s];
+    localStorage.setItem(FLIP_KEY, JSON.stringify(all));
+  }catch(e){ }
+}
+
 async function commSend(data, wantMember){
   if(!await ensureChain()) return;
   const box = document.getElementById('comm-join');
@@ -3860,7 +3911,11 @@ async function commSend(data, wantMember){
       };
   for(let i = 0; i < 30; i++){
     await new Promise(r => setTimeout(r, 2500));
-    if(await done()){ renderJoin(); return; }
+    if(await done()){
+      // a boolean wantMember IS a membership flip; a predicate is a day change
+      if(typeof wantMember === 'boolean') commFlip(me, COMM_SLUG, wantMember);
+      renderJoin(); return;
+    }
   }
   // ~75s without a flip: the transaction may just be slow — stop spinning and
   // say what is known instead of spinning forever
@@ -4073,20 +4128,59 @@ function cnewWaiting(slug, hash){
 
 /// /c lists the rooms that exist. It is the parent every /c/<slug> points
 /// back to, so it has to be a real place, not just a form.
+/// Fetched once. The list repaints when the wallet resolves — `eth_accounts`
+/// cannot be asked synchronously, so the first paint happens before anyone
+/// knows who is looking — and refetching the file to answer that would be
+/// asking the network a question only the browser can answer.
+/// `var`, deliberately: mineWalletUI reads this and is declared far above, so
+/// a `let` here would be in its temporal dead zone if the wallet ever answers
+/// before this line runs — and that throw kills the entire script, not just
+/// the list. This file has already lost a page that way once.
+var CLIST_ROOMS = null;
+
 async function renderCommList(){
   const sec = document.getElementById('commlist');
   try{
-    const r = await fetch('/data/communities.json', { cache: 'no-cache' });
-    if(!r.ok) return;
-    const j = await r.json();
-    const rooms = j.communities || [];
+    if(!CLIST_ROOMS){
+      const r = await fetch('/data/communities.json', { cache: 'no-cache' });
+      if(!r.ok) return;
+      const j = await r.json();
+      CLIST_ROOMS = j.communities || [];
+    }
+    const rooms = CLIST_ROOMS;
     if(!rooms.length) return;
     const host = document.getElementById('clist');
     host.textContent = '';
-    rooms.slice().sort((a, b) => (b.members || []).length - (a.members || []).length)
-      .forEach(c => {
+
+    // Your rooms first, and each group still ordered by size. Membership comes
+    // from the published file, corrected by any change this browser just made
+    // and the file has not caught up with.
+    const me = (mineIdentity() || '').toLowerCase();
+    const flips = commFlips(me);
+    const joined = c => {
+      if(!me) return false;
+      if(c.slug in flips) return flips[c.slug];
+      return (c.members || []).some(m => String(m.addr).toLowerCase() === me);
+    };
+    const size = c => (c.members || []).length;
+    const ordered = rooms.slice()
+      .sort((a, b) => (joined(b) - joined(a)) || (size(b) - size(a)));
+    // Labelling one group only leaves the rest unnamed, so both appear or
+    // neither does — and neither is the whole story until a wallet is here.
+    const split = ordered.some(joined) && ordered.some(c => !joined(c));
+
+    let band = null;
+    ordered.forEach(c => {
+        const mine = joined(c);
+        if(split && band !== mine){
+          band = mine;
+          const h = document.createElement('p');
+          h.className = 'clist__band';
+          h.textContent = t(mine ? 'clist.mine' : 'clist.rest');
+          host.appendChild(h);
+        }
         const a = document.createElement('a');
-        a.className = 'clist__row';
+        a.className = 'clist__row' + (mine ? ' clist__row--mine' : '');
         a.href = '/c/' + c.slug;
         const name = document.createElement('span');
         name.className = 'clist__name';
@@ -4342,6 +4436,9 @@ function mineWalletUI(){
   if(DAYS){ renderDayStatus(); if(mineAddr) renderMine(); }
   if(typeof renderGift === 'function') renderGift();
   if(typeof renderJoin === 'function' && COMM) renderJoin();
+  // the rooms list is drawn before eth_accounts answers, so it cannot know
+  // whose rooms are whose until this runs
+  if(typeof renderCommList === 'function' && CLIST_ROOMS) renderCommList();
   if(IS_PERSONAL && typeof loadStars === 'function') loadStars(true).then(paintStars);
 }
 /// Signing in: wallet consent, then ONE signature that the server can check.
