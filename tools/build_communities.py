@@ -108,6 +108,31 @@ def _decimals(chain_id, token):
     return int(r[-2:], 16)
 
 
+def _symbol(chain_id, token):
+    """What the token calls itself, so a room can say uPEG instead of forty
+    characters of hex. Two encodings in the wild: the ABI string every modern
+    token returns, and a raw bytes32 from the pre-standard ones (MKR and
+    friends) — a decoder that only knows the first reads those as garbage.
+
+    Sanitised like the links are, and for the same reason: this string is
+    written by a stranger and rendered on a page other strangers open. Printable
+    ASCII only and short; anything else falls back to the address, which is ugly
+    but cannot lie."""
+    r = _one_call(chain_id, token, "0x95d89b41")
+    if not r:
+        return ""
+    body = r[2:]
+    try:
+        if len(body) >= 128 and dec_uint(body[:64]) == 32:
+            s = dec_str(body, 32)
+        else:
+            s = bytes.fromhex(body[:64]).rstrip(b"\x00").decode("ascii")
+    except Exception:
+        return ""
+    s = "".join(c for c in s if 32 <= ord(c) < 127).strip()
+    return s[:12]
+
+
 def _links(contract, cid):
     try:
         raw = eth_call(contract, SEL_LINKS + cid)
@@ -186,6 +211,8 @@ def main():
             # different things; the page cannot render it without knowing which
             "tokenKind": "erc721" if _is721(chain, token) else "erc20",
             "tokenDecimals": _decimals(chain, token),
+            # "hold 1 uPEG" instead of "hold 1 0x44b28991…5505"
+            "tokenSymbol": _symbol(chain, token),
             "creator": dec_addr(w[3]),
             "createdAt": dec_uint(w[4]),
             "slug": dec_str(blob, dec_uint(w[5])),

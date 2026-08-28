@@ -1662,10 +1662,9 @@ const I18N = {
     'comm.next.tomorrow':'Tomorrow — {day} belongs to {who}.',
     'comm.next.today':'Today belongs to {who}.',
     
-    'comm.gate':'Anyone holding {min} of {token} can join. The rules can never change.',
-    'comm.gate.onchain':'Checked by the contract at every join.',
-    'comm.gate.index':'Checked against {chain} by a public list, rechecked every cycle.',
-    'comm.gate.floor':'A uDAY is needed either way.',
+    'comm.gate':'Hold {min} {token}, plus one uDAY, and you are in.',
+    'comm.gate.onchain':'The contract checks the moment you join, and nobody can change the rules.',
+    'comm.gate.index':'Balances on {chain} are checked by a public list, and nobody can change the rules.',
     'comm.link.site':'Website',
     
     'join.connect':'Connect a wallet to see whether you can stand on this calendar.',
@@ -1883,10 +1882,9 @@ const I18N = {
     'comm.next.tomorrow':'就在明天——{day} 属于 {who}。',
     'comm.next.today':'今天属于 {who}。',
     
-    'comm.gate':'持有 {min} 枚 {token} 即可加入。规则永远不会变。',
-    'comm.gate.onchain':'每一次加入，合约都会检查。',
-    'comm.gate.index':'由一份公开名单对照 {chain} 上的余额，每一轮重新核对。',
-    'comm.gate.floor':'两种情况都需要持有 uDAY。',
+    'comm.gate':'持有 {min} 枚 {token}，再加 1 枚 uDAY，你就在里面了。',
+    'comm.gate.onchain':'加入的那一刻合约当场核对，规则谁也改不了。',
+    'comm.gate.index':'{chain} 上的余额由一份公开名单核对，规则谁也改不了。',
     'comm.link.site':'网站',
     
     'join.connect':'连接钱包，看看你能不能站上这张日历。',
@@ -3522,11 +3520,21 @@ function renderCommunity(){
   // rerunnable by anyone against open code, but ours to run. Saying "onchain"
   // for both would be the one dishonest sentence on this page.
   const gate = document.getElementById('comm-gate');
-  const unit = COMM.tokenKind === 'erc721' ? '' : ' ';
   const amount = gateAmount(COMM);
-  gate.textContent = t('comm.gate', { min: amount, token: COMM.token }) + ' ' +
-    t(COMM.gatedOnchain ? 'comm.gate.onchain' : 'comm.gate.index',
-      { chain: chainName(COMM.chainId) }) + ' ' + t('comm.gate.floor');
+  // A gating token names itself, so a room can say uPEG instead of forty
+  // characters of hex. Checked HERE as well as in the index — the same rule the
+  // links follow, because one filter is one edit away from being no filter.
+  const raw = COMM.tokenSymbol;
+  let tok = (typeof raw === 'string' && /^[\x20-\x7e]{1,12}$/.test(raw.trim()))
+    ? raw.trim() : '';
+  // ...and anyone can deploy a token that calls itself uDAY. That one name
+  // belongs to one address; every impostor goes back to being an address.
+  if(tok.toLowerCase() === 'uday' &&
+     String(COMM.token).toLowerCase() !== UDAY_ADDR.toLowerCase()) tok = '';
+  gate.title = COMM.token;              // the address is always one hover away
+  gate.textContent = t('comm.gate', { min: amount, token: tok || shortAddr(COMM.token) }) +
+    ' ' + t(COMM.gatedOnchain ? 'comm.gate.onchain' : 'comm.gate.index',
+            { chain: chainName(COMM.chainId) });
   // Links are the ONE thing about a room its creator can still change, so the
   // page attributes them rather than presenting them as part of the rules.
   // The index only ever publishes https:// strings — these are written by

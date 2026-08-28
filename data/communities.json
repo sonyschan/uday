@@ -15,7 +15,8 @@
    "slug": "test-1",
    "token": "0x44b28991b167582f18ba0259e0173176ca125505",
    "tokenDecimals": 18,
-   "tokenKind": "erc20"
+   "tokenKind": "erc20",
+   "tokenSymbol": "uPEG"
   },
   {
    "chainId": 1,
@@ -50,7 +51,8 @@
    "slug": "unipeg",
    "token": "0x44b28991b167582f18ba0259e0173176ca125505",
    "tokenDecimals": 18,
-   "tokenKind": "erc20"
+   "tokenKind": "erc20",
+   "tokenSymbol": "uPEG"
   },
   {
    "chainId": 4663,
@@ -77,7 +79,8 @@
    "slug": "index",
    "token": "0x56910d4409f3a0c78c64dd8d0545ff0705389870",
    "tokenDecimals": 18,
-   "tokenKind": "erc20"
+   "tokenKind": "erc20",
+   "tokenSymbol": "Index"
   },
   {
    "chainId": 1,
@@ -104,7 +107,8 @@
    "slug": "akcb",
    "token": "0x77372a4cc66063575b05b44481f059be356964a4",
    "tokenDecimals": 0,
-   "tokenKind": "erc721"
+   "tokenKind": "erc721",
+   "tokenSymbol": "AKCB"
   },
   {
    "chainId": 1,
@@ -122,7 +126,8 @@
    "slug": "nakamigos",
    "token": "0xd774557b647330c91bf44cfeab205095f7e6c367",
    "tokenDecimals": 0,
-   "tokenKind": "erc721"
+   "tokenKind": "erc721",
+   "tokenSymbol": "NKMGS"
   },
   {
    "chainId": 4663,
@@ -155,7 +160,8 @@
    "slug": "unisoccs",
    "token": "0x4c2d0c58ebe95b9c0eeea4ee08d22072efb0affe",
    "tokenDecimals": 18,
-   "tokenKind": "erc20"
+   "tokenKind": "erc20",
+   "tokenSymbol": "SOCCS"
   },
   {
    "chainId": 4663,
@@ -189,7 +195,8 @@
    "slug": "unrmn",
    "token": "0x7ed16d612215b650434d7e45827cf080ea0d0f63",
    "tokenDecimals": 18,
-   "tokenKind": "erc20"
+   "tokenKind": "erc20",
+   "tokenSymbol": "uNRMN"
   }
  ],
  "contract": "0xa8c69d7afef3efc22cace7eb314a97a5ef640cfd"
