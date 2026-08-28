@@ -170,6 +170,19 @@ await withEnv(ENV, async () => {
      r.code === 302 && seen.join(',') === 'basic,body', r.code + ' ' + seen.join(','));
   globalThis.fetch = realFetch;
 
+  // the handle already belongs to another wallet: refuse, do not move it
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    if (u.includes('oauth2/token')) return { ok: true, status: 200, json: async () => ({ access_token: 'tok' }) };
+    if (u.includes('users/me')) return { ok: true, status: 200, json: async () => ({ data: { username: 'h2crypto_eth', name: 'S', profile_image_url: 'https://pbs.twimg.com/profile_images/1/a_normal.jpg' } }) };
+    if ((init && init.method) === 'PUT') { throw new Error('TEST: it tried to write'); }
+    return { ok: true, status: 200, json: async () => ({ sha: 'a',
+      content: Buffer.from(JSON.stringify({ '0xsomebodyelse': { handle: 'h2crypto_eth' } })).toString('base64') }) };
+  };
+  r = mkRes(); await callback({ query: { code: 'c', state: 'realstate' }, headers: { cookie: cookieHdr } }, r);
+  ok('callback: a handle held by another wallet -> #x-err=taken, no write',
+     r.code === 302 && /#x-err=taken$/.test(r.headers.location || ''), r.code + ' ' + r.headers.location);
+
   // a hostile /2/users/me response must never reach the file
   globalThis.fetch = async (url, init) => {
     if (String(url).includes('oauth2/token')) return { ok: true, status: 200, json: async () => ({ access_token: 'tok' }) };

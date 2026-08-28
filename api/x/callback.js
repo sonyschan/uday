@@ -37,13 +37,15 @@ async function commitLink(addr, entry) {
       throw new Error('github read ' + cur.status);
     }
 
-    // One X account cannot stand on two wallets: the newer claim wins and the
-    // older is dropped, or the same handle would appear twice on one calendar
-    // with only one of them real.
-    for (const k of Object.keys(links)) {
-      if (k !== addr && links[k] && links[k].handle &&
-          links[k].handle.toLowerCase() === entry.handle.toLowerCase()) delete links[k];
-    }
+    // One X account cannot stand on two wallets, and the FIRST one keeps it.
+    //
+    // This used to let the newer claim win and drop the older silently, which
+    // meant linking from a second wallet quietly took your face off every
+    // calendar the first one stood on — and told you nothing. Refusing is the
+    // honest half: the wallet that holds it can unlink, and then it is free.
+    const taken = Object.keys(links).find(k => k !== addr && links[k] && links[k].handle &&
+      links[k].handle.toLowerCase() === entry.handle.toLowerCase());
+    if (taken) { const e = new Error('taken:' + taken); e.taken = taken; throw e; }
     links[addr] = entry;
 
     const ordered = {};
@@ -140,7 +142,10 @@ export default async function handler(req, res) {
   };
 
   try { await commitLink(jar.addr, entry); }
-  catch (e) { return bounce(res, back, 'record', e.message); }
+  catch (e) {
+    if (e.taken) return bounce(res, back, 'taken', '@' + entry.handle + ' is on ' + e.taken);
+    return bounce(res, back, 'record', e.message);
+  }
 
   // The commit needs a deploy before the file is public, so the page is told
   // the handle directly and shows it at once rather than looking broken.
