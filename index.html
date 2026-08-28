@@ -1026,6 +1026,10 @@ html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
 .commjoin__xerr{ color:#e8a0a0; font-size:var(--fs-micro); margin:10px 0 0; }
 .commjoin__wait{ color:var(--muted); animation:waitpulse 1.6s ease-in-out infinite; }
 .commjoin__leaving{ color:var(--muted); margin:0 0 4px; }
+.commjoin__as{
+  margin:0 0 10px; color:var(--muted);
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+}
 @keyframes waitpulse{ 0%,100%{opacity:.5} 50%{opacity:1} }
 @media (prefers-reduced-motion:reduce){ .commjoin__wait{ animation:none; opacity:.75 } }
 .commjoin__xoff{ background:none; border:0; padding:0; cursor:pointer;
@@ -1678,6 +1682,7 @@ const I18N = {
     'join.leave':'LEAVE THIS ROOM','join.left':'You have left. Your days come off the calendar next cycle.',
     'join.short':'This room needs {min} of {token} on {chain}. This wallet holds none.',
     'join.member.short':'You are in this room, but hold none of {token}. Your days stay off the wall until you do.',
+    'join.as':'as {addr}',
     'join.left.pending':'You have left. {days} comes off this calendar on the next index build.',
     'join.needuday':'Every member of every room holds at least one uDAY — that part is enforced by the contract, not by us.',
     'join.getuday':'GET A uDAY',
@@ -1893,6 +1898,7 @@ const I18N = {
     'join.leave':'离开社区','join.left':'你已离开。你的日子会在下一轮从日历上消失。',
     'join.short':'这个房间需要在 {chain} 上持有 {min} 枚 {token}，而这个钱包一枚也没有。',
     'join.member.short':'你在这个房间里，但没有持有 {token}。在持有之前，你的日子不会出现在日历上。',
+    'join.as':'以 {addr} 的身分',
     'join.left.pending':'你已经离开。{days} 会在下一轮索引建好后从这张日历上消失。',
     'join.needuday':'每个房间的每个成员都至少持有一枚 uDAY——这一点由合约强制，不是由我们。',
     'join.getuday':'去拿一枚 uDAY',
@@ -3645,6 +3651,18 @@ async function renderJoin(){
   // none, which is not a slower truth, it is a wrong one.
   if(!DAYS){ joinWaiting(); return; }
   const me = mineIdentity();
+  // Every sentence below is about ONE wallet, and with two in a browser there
+  // was no way to tell which. The wall shows the room's members; the panel
+  // shows whoever the wallet has selected — both correct, and together they
+  // read as a contradiction. So the panel says whose account it is speaking
+  // for. (The header lost its address chip when it became two doors; this is
+  // the place that actually needed it.)
+  if(me){
+    const who = document.createElement('p');
+    who.className = 'commjoin__as';
+    who.textContent = t('join.as', { addr: shortAddr(me) });
+    box.appendChild(who);
+  }
   const line = document.createElement('p');
   line.className = 'commjoin__line';
   box.appendChild(line);
