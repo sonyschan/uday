@@ -487,6 +487,22 @@ section{ position:relative; }
 }
 .daymodal__close:hover{ color:var(--vellum); }
 .daymodal__sub{ font-size:var(--fs-micro); color:var(--muted); margin:4px 0 14px; }
+
+.mine__poster{ display:flex; justify-content:center; margin-top:18px; }
+/* The poster is 3300px wide; a panel that fits the day gallery would show a
+   stamp of it. */
+.poster__panel{ max-width:min(1240px, 96vw); }
+/* Fit to the panel on a desktop; on a phone that would be a 276px thumbnail of
+   a 3400px image, so it keeps a readable floor and scrolls sideways INSIDE its
+   own box — the document itself never scrolls horizontally. */
+.poster__wrap{ border:1px solid var(--rule); border-radius:8px; overflow:auto;
+  scrollbar-width:thin; scrollbar-color:rgba(232,185,63,.4) transparent; }
+/* Fit-to-width means the art IS downscaled here, and `pixelated` sampling
+   would turn every 1px gold line into noise at this ratio — so the preview
+   lets the browser average instead. The DOWNLOAD is untouched: it is the
+   canvas itself, 96px art in 96px cells, 1:1. */
+.poster__wrap canvas{ display:block; width:100%; min-width:760px; height:auto; image-rendering:auto; }
+.poster__dl{ display:block; margin:16px auto 0; }
 .daymodal__grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(126px,1fr)); gap:12px; }
 .daymodal__item{
   display:flex; flex-direction:column;
@@ -1535,6 +1551,9 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
             <div class="yearwall__grid" id="mine-grid"></div>
           </div>
         </div>
+        <div class="mine__poster" id="mine-poster" hidden>
+          <button type="button" class="btn btn--ghost" id="poster-go"></button>
+        </div>
         <div class="mine__sealedwall" id="mine-sealed" hidden></div>
         <p class="mine__sealedhint" id="mine-sealed-hint" hidden></p>
       </div>
@@ -1873,6 +1892,10 @@ const I18N = {
     'fact.art':'Art','fact.art.v':'Stored fully onchain',
     'fact.art.sub':'Written at creation, unchangeable after.',
     'foot.docs':'HOW IT WORKS','foot.sig':'A DATE. AN ARTWORK. A GIFT.',
+    'poster.btn':'MAKE MY ART CALENDAR','poster.making':'DRAWING\u2026',
+    'poster.head':'MY uDAY YEAR','poster.headsub':'{n} days, drawn from the chain',
+    'poster.sub':'{n} of your days, each one its own piece. Download it full size.',
+    'poster.dl':'DOWNLOAD THE CALENDAR',
     'hero.cap':'THE uDAY PIECE FOR TODAY',
     'hero.cap.day':'THE uDAY PIECE FOR {date}',
     'hero.cap.what':'What is this?'
@@ -2095,6 +2118,10 @@ const I18N = {
     'fact.art':'艺术','fact.art.v':'完整存储于链上',
     'fact.art.sub':'创建时写入，之后无法更改。',
     'foot.docs':'运作方式','foot.sig':'一个日期。一件作品。一份礼物。',
+    'poster.btn':'生成 uDAY 艺术日历','poster.making':'正在生成…',
+    'poster.head':'我的 uDAY 一年','poster.headsub':'{n} 天，全部来自链上',
+    'poster.sub':'你的 {n} 天，每一天都是它自己那一枚。可下载原始尺寸。',
+    'poster.dl':'下载这张日历',
     'hero.cap':'代表今天的 uDAY 藏品',
     'hero.cap.day':'代表{date}的 uDAY 藏品',
     'hero.cap.what':'这是什么？'
@@ -2578,6 +2605,198 @@ function renderDayStatus(){
   // who asked for the detail is still asking for it about the next day
   line.hidden = !capOpen;
   box.hidden = false;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   the art calendar — a year of your own pieces, drawn as one image
+
+   uToken's collection banner is a mosaic of the art itself, and a wall of
+   gold squares is a chart of the same thing with the art taken out. This
+   puts it back: every day you own, rendered from its own recipe.
+
+   ONE canvas, not 372 of them. It is the thing being downloaded anyway, and
+   compositing 240 pieces into DOM nodes to then screenshot them would be the
+   long way round to the same pixels.
+   ───────────────────────────────────────────────────────────────────── */
+const POSTER = { tile: 96, gap: 6, pad: 44, label: 148, head: 92, foot: 64 };
+let posterModal = null, posterCanvas = null, posterBusy = false;
+
+/// The best-dressed piece of a day: most layers, oldest wins ties. Same rule
+/// the daily X card uses, and for the same reason — plate and frame are
+/// optional (80% / 20%), so a day's FIRST piece is often two bare glyphs and
+/// makes a poor tile.
+function bestPiece(list){
+  const dress = e => (e.p ? 1 : 0) + (e.f ? 1 : 0);
+  return list.slice().sort((a, b) => dress(b) - dress(a) || a.id - b.id)[0];
+}
+
+async function buildPoster(byDay){
+  const { tile: T, gap: G, pad: P, label: L, head: HD, foot: FT } = POSTER;
+  const W = P + L + 31 * (T + G) - G + P;
+  const H = P + HD + 12 * (T + G) - G + FT + P;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  // the tiles are drawn 1:1 — 96px art into a 96px cell. Pixel art must never
+  // be downscaled, and an integer cell is what keeps that promise here.
+  ctx.imageSmoothingEnabled = false;
+
+  ctx.fillStyle = '#0b0916';
+  ctx.fillRect(0, 0, W, H);
+
+  // Silkscreen is a webfont; canvas draws whatever is loaded at call time, so
+  // a poster built before the font arrives silently ships in a fallback face.
+  try{ await document.fonts.ready; }catch(e){}
+
+  const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
+  const owned = [];
+  for(let m = 1; m <= 12; m++){
+    for(let d = 1; d <= DIM[m-1]; d++){
+      const key = pad2(m) + '-' + pad2(d);
+      const list = byDay[key];
+      if(list && list.length) owned.push({ m, d, key, spec: recipeSpec(key, bestPiece(list), 'onchain') });
+    }
+  }
+  // every distinct layer file once, not once per tile — 240 days share about
+  // a hundred images between them
+  const paths = [...new Set(owned.flatMap(o => layerPaths(o.spec)))];
+  const imgs = new Map();
+  (await Promise.all(paths.map(load))).forEach((im, i) => imgs.set(paths[i], im));
+
+  const gx = P + L, gy = P + HD;
+  const cellX = d => gx + (d - 1) * (T + G);
+  const cellY = m => gy + (m - 1) * (T + G);
+
+  // the empty grid first, so the calendar keeps its shape where you own nothing
+  for(let m = 1; m <= 12; m++){
+    for(let d = 1; d <= DIM[m-1]; d++){
+      ctx.fillStyle = 'rgba(243,231,205,.045)';
+      ctx.fillRect(cellX(d), cellY(m), T, T);
+    }
+  }
+  for(const o of owned){
+    for(const path of layerPaths(o.spec)){
+      const im = imgs.get(path);
+      if(im) ctx.drawImage(im, cellX(o.d), cellY(o.m), T, T);
+    }
+  }
+
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#9d93b8';
+  ctx.font = '28px "Silkscreen", monospace';
+  for(let m = 1; m <= 12; m++){
+    const lab = lang === 'zh' ? m + '月' : MONTHS_EN[m-1];
+    ctx.textAlign = 'right';
+    ctx.fillText(lab, gx - 22, cellY(m) + T / 2);
+  }
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#e8b93f';
+  ctx.font = '52px "Silkscreen", monospace';
+  ctx.fillText(t('poster.head'), P, P + 34);
+  ctx.fillStyle = '#9d93b8';
+  ctx.font = '26px "Silkscreen", monospace';
+  ctx.fillText(t('poster.headsub', { n: owned.length }), P, P + 74);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#6f6790';
+  ctx.font = '26px "Silkscreen", monospace';
+  ctx.fillText('uday.gift', W - P, H - P - 12);
+
+  return { canvas: cv, days: owned.length };
+}
+
+function ensurePoster(){
+  if(posterModal) return;
+  posterModal = document.createElement('div');
+  posterModal.className = 'daymodal poster';
+  posterModal.hidden = true;
+  const panel = document.createElement('div');
+  panel.className = 'daymodal__panel poster__panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  const head = document.createElement('div');
+  head.className = 'daymodal__head';
+  const title = document.createElement('span');
+  title.className = 'daymodal__title';
+  title.id = 'poster-title';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'daymodal__close';
+  close.textContent = '×';
+  close.addEventListener('click', closePoster);
+  head.append(title, close);
+  const sub = document.createElement('p');
+  sub.className = 'daymodal__sub';
+  sub.id = 'poster-sub';
+  const wrap = document.createElement('div');
+  wrap.className = 'poster__wrap';
+  wrap.id = 'poster-wrap';
+  const dl = document.createElement('button');
+  dl.type = 'button';
+  dl.className = 'btn btn--gold poster__dl';
+  dl.id = 'poster-dl';
+  panel.append(head, sub, wrap, dl);
+  posterModal.appendChild(panel);
+  posterModal.addEventListener('click', e => { if(e.target === posterModal) closePoster(); });
+  addEventListener('keydown', e => { if(e.key === 'Escape') closePoster(); });
+  document.body.appendChild(posterModal);
+}
+function closePoster(){
+  if(!posterModal || posterModal.hidden) return;
+  posterModal.hidden = true;
+  document.body.style.overflow = '';
+}
+
+async function openPoster(){
+  if(posterBusy || !DAYS || !mineAddr) return;
+  const btn = document.getElementById('poster-go');
+  posterBusy = true;
+  const was = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = t('poster.making');
+  try{
+    const mine = {};
+    for(const k in DAYS){
+      if(!isRealDate(k)) continue;
+      const own = DAYS[k].filter(e => e.owner === mineAddr);
+      if(own.length) mine[k] = own;
+    }
+    const { canvas, days } = await buildPoster(mine);
+    ensurePoster();
+    posterCanvas = canvas;
+    document.getElementById('poster-title').textContent = t('poster.head');
+    document.getElementById('poster-sub').textContent = t('poster.sub', { n: days });
+    const wrap = document.getElementById('poster-wrap');
+    wrap.textContent = '';
+    wrap.appendChild(canvas);
+    const dl = document.getElementById('poster-dl');
+    dl.textContent = t('poster.dl');
+    // A blob, not a data: URL. This canvas is ~5M pixels and toDataURL would
+    // hand the browser a multi-megabyte string to put in an href — the small
+    // piece downloads get away with it, this would not, least of all in the
+    // wallet webviews most of this audience reads the site in.
+    dl.onclick = () => {
+      const done = url => {
+        const a = document.createElement('a');
+        a.download = 'uDAY-calendar-' + mineAddr.slice(0, 6) + '.png';
+        a.href = url;
+        a.click();
+        if(url.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(url), 60000);
+        va('event', { name: 'poster_download', data: { days: days } });
+      };
+      if(canvas.toBlob) canvas.toBlob(b => done(b ? URL.createObjectURL(b)
+                                                 : canvas.toDataURL('image/png')), 'image/png');
+      else done(canvas.toDataURL('image/png'));
+    };
+    posterModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    va('event', { name: 'poster_open', data: { days: days } });
+  }finally{
+    posterBusy = false;
+    btn.disabled = false;
+    btn.textContent = was;
+  }
 }
 
 /// The story's body carries live onchain numbers — how many pieces are
@@ -4464,6 +4683,12 @@ function renderMine(){
   if(!pieces && sealed){ empty.textContent = t('mine.sealed.only', { n: sealed }); empty.hidden = false; }
   else if(!pieces){ empty.textContent = t('mine.empty'); empty.hidden = false; }
   else empty.hidden = true;
+  // Nothing to draw a calendar out of if no day here is yours
+  const pw = document.getElementById('mine-poster');
+  if(pw){
+    document.getElementById('poster-go').textContent = t('poster.btn');
+    pw.hidden = !lit;
+  }
   // The sealed pieces get a face: a mosaic of "?" tiles, one per sealed
   // piece (capped — a whale's 200 tiles teach nothing 48 don't), each one a
   // door to uToken where the reveal actually happens.
@@ -4750,6 +4975,7 @@ if(mineEth && mineEth.request){
   setConnHint(false);
 }
 
+document.getElementById('poster-go').addEventListener('click', openPoster);
 document.getElementById('mine-view').addEventListener('click', () =>
   setMineAddr(document.getElementById('mine-addr').value.trim(), 'manual'));
 document.getElementById('mine-addr').addEventListener('keydown', e => {
