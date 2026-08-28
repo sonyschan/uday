@@ -16,12 +16,18 @@ const ok = (name, cond, extra) => {
 const block = html.match(/const I18N = \{[\s\S]*?\n\};/)[0];
 const enStart = block.indexOf('  en: {'), zhStart = block.indexOf('  zh: {');
 const parts = { en: block.slice(enStart, zhStart), zh: block.slice(zhStart) };
-const KEY = /'([a-z][a-zA-Z0-9._]*)'\s*:\s*'((?:[^'\\]|\\.)*)'/g;
+// Both quote styles. A double-quoted entry used to be invisible to every
+// assertion below — the key looked missing while the page rendered it fine,
+// so the suite reported the wrong failure and would have waved through a real
+// one (a Chinese string in the English block) written the same way.
+const KEY = /'([a-z][a-zA-Z0-9._]*)'\s*:\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/g;
 
 const keys = {}, vals = {};
 for (const loc of ['en', 'zh']) {
   keys[loc] = []; vals[loc] = {};
-  for (const m of parts[loc].matchAll(KEY)) { keys[loc].push(m[1]); vals[loc][m[1]] = m[2]; }
+  for (const m of parts[loc].matchAll(KEY)) {
+    keys[loc].push(m[1]); vals[loc][m[1]] = m[2] !== undefined ? m[2] : m[3];
+  }
   const dupes = keys[loc].filter((k, i) => keys[loc].indexOf(k) !== i);
   ok(`${loc}: no duplicate keys`, dupes.length === 0, [...new Set(dupes)].join(', '));
 }
