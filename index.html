@@ -1465,7 +1465,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
       <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
         <p class="kicker" data-i18n="mine.kicker">Your days</p>
         <h2 data-i18n="mine.title">Which days are already yours?</h2>
-        <p data-i18n="mine.blurb">Connect a wallet — or paste your address. The lookup runs entirely in your browser against the same public index the wall uses; nothing is sent anywhere.</p>
+        <p data-i18n="mine.blurb">Connect a wallet — or paste your address. The lookup runs entirely in your browser against the same public index the wall uses. There is no account here and no login: connecting only lets your wallet hand this page an address, and it asks you again before anything else.</p>
       </div>
       <div class="mine__controls rise">
         <input class="mine__addr" id="mine-addr" placeholder="0x…" spellcheck="false" autocomplete="off" aria-label="Wallet address">
@@ -1715,7 +1715,7 @@ const I18N = {
     'year.tip.ember':'Went dark {ago} — this day’s last piece was sold and burned. The v4 hook mints on buy and burns on sell; a new mint can relight it.',
     'mine.kicker':'Your days',
     'mine.title':'Which days are already yours?',
-    'mine.blurb':'Connect a wallet \u2014 or paste your address. The lookup runs entirely in your browser against the same public index the wall uses; nothing is sent anywhere.',
+    'mine.blurb':'Connect a wallet \u2014 or paste your address. The lookup runs entirely in your browser against the same public index the wall uses. There is no account here and no login: connecting only lets your wallet hand this page an address, and it asks you again before anything else.',
     'mine.connect':'CONNECT','mine.view':'VIEW',
     'mine.disconnect':'LOG OUT','mine.wallet.back':'Back to my days',
     'mine.btn.view':'VIEW YOUR PIECE',
@@ -1923,7 +1923,7 @@ const I18N = {
     'year.tip.ember':'{ago}熄灭——这一天的最后一枚被卖出烧毁了。v4 hook 买入即铸造、卖出即销毁；新的铸造能让它重生。',
     'mine.kicker':'你的收藏',
     'mine.title':'哪些日子已经是你的？',
-    'mine.blurb':'连接钱包，或直接粘贴你的地址。比对完全在你的浏览器里进行——用的就是年历墙的同一份公开索引，不会发送任何数据。',
+    'mine.blurb':'连接钱包，或直接粘贴你的地址。比对完全在你的浏览器里进行——用的就是年历墙的同一份公开索引。这里没有帐号，也没有登入：连接只是让钱包把一个地址交给这个页面，之后每一步它都会再问你一次。',
     'mine.connect':'连接钱包','mine.view':'查看',
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日历',
     'mine.btn.view':'查看你的这一枚',
@@ -4123,9 +4123,13 @@ const IS_PERSONAL = location.hostname === PERSONAL_HOST ||
 /* Cross-subdomain handoff rides a short-lived cookie on .uday.gift, not URL
    params — cookies are the one storage siblings share, so the redirect can
    target the bare https://my.uday.gift/ and the address bar never flashes
-   ?lang=&addr= at all. ?addr= keeps working as the share-link fallback. */
+   ?lang=&addr= at all. ?addr= keeps working as the share-link fallback.
+   A cookie IS sent to the server, so this is the one moment an address leaves
+   the browser without being asked for. takeHandoff clears it on arrival, which
+   makes its real life one navigation; 60s is only the fallback for a trip
+   nobody completes. The page must not claim "nothing is sent anywhere". */
 function setHandoff(addr){
-  sharedCookie('uday_h', addr + '|' + lang, 300);
+  sharedCookie('uday_h', addr + '|' + lang, 60);
 }
 const HANDOFF = (function takeHandoff(){
   if(!IS_PERSONAL) return null;
