@@ -177,11 +177,26 @@ await withEnv(ENV, async () => {
     if (u.includes('users/me')) return { ok: true, status: 200, json: async () => ({ data: { username: 'h2crypto_eth', name: 'S', profile_image_url: 'https://pbs.twimg.com/profile_images/1/a_normal.jpg' } }) };
     if ((init && init.method) === 'PUT') { throw new Error('TEST: it tried to write'); }
     return { ok: true, status: 200, json: async () => ({ sha: 'a',
-      content: Buffer.from(JSON.stringify({ '0xsomebodyelse': { handle: 'h2crypto_eth' } })).toString('base64') }) };
+      content: Buffer.from(JSON.stringify({ [OTHER]: { handle: 'h2crypto_eth' } })).toString('base64') }) };
   };
   r = mkRes(); await callback({ query: { code: 'c', state: 'realstate' }, headers: { cookie: cookieHdr } }, r);
-  ok('callback: a handle held by another wallet -> #x-err=taken, no write',
-     r.code === 302 && /#x-err=taken$/.test(r.headers.location || ''), r.code + ' ' + r.headers.location);
+  ok('callback: a handle held by another wallet -> #x-err=taken.<holder>, no write',
+     r.code === 302 && r.headers.location === '/c/unipeg#x-err=taken.' + OTHER,
+     r.code + ' ' + r.headers.location);
+
+
+  // bounce() puts its argument straight into a URL, so anything that is not a
+  // bare code (optionally with a public address) has to be flattened
+  const { bounce } = await import('../api/_lib.js');
+  for (const [bad, why] of [['taken.notanaddress', 'malformed address'],
+                            ['a b c', 'spaces'], ['<script>', 'markup'],
+                            ['x'.repeat(40), 'overlong']]) {
+    const rr = mkRes(); bounce(rr, '/c', bad);
+    ok('bounce flattens a bad code (' + why + ')',
+       rr.headers.location === '/c#x-err=failed', rr.headers.location);
+  }
+  const good = mkRes(); bounce(good, '/c', 'taken.0x' + 'ab'.repeat(20));
+  ok('bounce keeps code.address intact', /#x-err=taken\.0x[0-9a-f]{40}$/.test(good.headers.location), good.headers.location);
 
   // a hostile /2/users/me response must never reach the file
   globalThis.fetch = async (url, init) => {

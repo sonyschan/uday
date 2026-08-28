@@ -119,6 +119,8 @@ export function fail(res, code, why) {
 export function bounce(res, back, code, detail) {
   if (detail) console.error('[x] ' + code + ': ' + detail);
   const to = /^\/[A-Za-z0-9\-/_]{0,64}$/.test(back || '') ? back : '/c';
-  res.status(302).setHeader('Location', to + '#x-err=' + code);
+  // a code, optionally with a public address after a dot (see `taken`)
+  const safe = /^[a-z]{1,12}(\.0x[0-9a-fA-F]{40})?$/.test(code) ? code : 'failed';
+  res.status(302).setHeader('Location', to + '#x-err=' + safe);
   res.end();
 }

@@ -72,6 +72,16 @@ for (const m of markup.matchAll(/data-i18n="([a-z][a-zA-Z0-9._]+)"[^>]*>([^<>]*)
 }
 ok('markup fallbacks match the English dictionary', stale.length === 0, [...new Set(stale)].join(', '));
 
+// A string with {placeholders} must never be rendered without them — t()
+// leaves the braces on the page, which is how "{addr}" reached a visitor.
+// Every such key has to be called WITH a vars object somewhere.
+const placeholderKeys = keys.en.filter(k => /\{[a-z]+\}/.test(vals.en[k]));
+const calledBare = placeholderKeys.filter(k => {
+  const re = new RegExp("t\\(\\s*'" + k.replace(/\./g, '\\.') + "'\\s*\\)", 'g');
+  return re.test(html);
+});
+ok('no {placeholder} string is called without vars', calledBare.length === 0, calledBare.join(', '));
+
 // The page must never go below its text-size floors by shipping an empty string.
 const empties = keys.en.filter(k => !vals.en[k].trim() || !(vals.zh[k] || '').trim());
 ok('no empty strings in either dictionary', empties.length === 0, empties.join(', '));

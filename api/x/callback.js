@@ -143,7 +143,10 @@ export default async function handler(req, res) {
 
   try { await commitLink(jar.addr, entry); }
   catch (e) {
-    if (e.taken) return bounce(res, back, 'taken', '@' + entry.handle + ' is on ' + e.taken);
+    // the holding wallet rides back in the fragment. It is already in the
+    // public x-links.json, so naming it discloses nothing new — and without it
+    // "another wallet" is advice nobody can act on.
+    if (e.taken) return bounce(res, back, 'taken.' + e.taken, '@' + entry.handle + ' is on ' + e.taken);
     return bounce(res, back, 'record', e.message);
   }
 

@@ -1659,7 +1659,8 @@ const I18N = {
     'x.failed':'that did not go through',
     'x.needwallet':'connect a wallet first',
     'x.err.signin':'Sign in again, then try that once more.',
-    'x.err.taken':'That X account is already on another wallet. Unlink it there first.',
+    'x.err.taken':'That X account is on {addr}. Sign in as that wallet and unlink it first.',
+    'x.err.takenanon':'That X account is already on another wallet. Unlink it there first.',
     'x.signinhere':'SIGN IN AS THIS WALLET',
     'x.othersession':'You are signed in as {addr}. Linking would bind X to that one.',
     'x.err.config':'X login is not switched on yet. Nothing was sent.',
@@ -1875,7 +1876,8 @@ const I18N = {
     'x.failed':'没有成功',
     'x.needwallet':'请先连接钱包',
     'x.err.signin':'请重新登入，然后再试一次。',
-    'x.err.taken':'这个 X 帐号已经绑在另一个钱包上。要先在那边解除。',
+    'x.err.taken':'这个 X 帐号绑在 {addr} 上。要先用那个钱包登入并解除。',
+    'x.err.takenanon':'这个 X 帐号已经绑在另一个钱包上。要先在那边解除。',
     'x.signinhere':'用这个钱包登入',
     'x.othersession':'你目前登入的是 {addr}。在这里连结会绑到那一个。',
     'x.err.config':'X 登录还没启用，什么都没有送出。',
@@ -3116,7 +3118,7 @@ async function loadXLinks(){
 
   const h = location.hash || '';
   const m = h.match(/^#x=([A-Za-z0-9_]{1,15})$/);
-  const err = h.match(/^#x-err=([a-z]{1,12})$/);
+  const err = h.match(/^#x-err=([a-z]{1,12})(?:\.(0x[0-9a-fA-F]{40}))?$/);
   if(m){
     const me = mineIdentity();
     if(me && !X_LINKS[me]) X_LINKS[me] = { handle: m[1], name: '', avatar: '', at: 0 };
@@ -3124,6 +3126,7 @@ async function loadXLinks(){
     // a code, never a sentence: the fragment is a URL somebody may paste, and
     // the server detail belongs in the logs where it can actually be read
     X_ERR = X_ERRS.includes(err[1]) ? err[1] : 'failed';
+    X_ERR_ADDR = err[2] ? err[2].toLowerCase() : null;
   }
   if(m || err) history.replaceState(null, '', location.pathname + location.search);
 }
@@ -3131,7 +3134,7 @@ async function loadXLinks(){
 // somebody. Only codes with copy are honoured; anything else reads as failed.
 const X_ERRS = ['signin', 'taken', 'config', 'sig', 'stale', 'nouday', 'chain', 'state',
                 'token', 'profile', 'record', 'cancelled', 'failed'];
-let X_ERR = null;
+let X_ERR = null, X_ERR_ADDR = null;
 /// The session knows the signed-in wallet and can read the repo directly, so
 /// it answers with that wallet's link — no deploy in the way. Failure is
 /// silent: the committed file is still there and still correct, just later.
@@ -3242,7 +3245,7 @@ function openPeopleModal(key, list){
 
 /// Link / unlink, inside the member panel. Deliberately here and nowhere else:
 /// showing a face is a thing you do for a room you already stand in.
-function xRow(box){
+function xRow(box, run){
   const me = mineIdentity();
   if(!me) return;
   const row = document.createElement('div');
@@ -3252,9 +3255,14 @@ function xRow(box){
   if(X_ERR){
     const e = document.createElement('p');
     e.className = 'commjoin__xerr';
-    e.textContent = t('x.err.' + X_ERR);
+    e.textContent = (X_ERR === 'taken' && !X_ERR_ADDR)
+      ? t('x.err.takenanon')
+      : t('x.err.' + X_ERR, X_ERR_ADDR ? { addr: shortAddr(X_ERR_ADDR) } : null);
     box.appendChild(e);
-    X_ERR = null;                       // said once, not on every re-render
+    // cleared only by the run that is still the current one: a render that
+    // gets lapped would otherwise consume the message and the winner would
+    // show nothing. Rare, and it happened once in four tries.
+    if(run === joinRun){ X_ERR = null; X_ERR_ADDR = null; }
   }
   const cur = xOf(me);
   if(cur){
@@ -3723,7 +3731,7 @@ async function renderJoin(){
       line.textContent = t('join.member.short',
         { min: gateAmount(COMM), token: shortAddr(COMM.token), chain: chainName(COMM.chainId) });
       markPendingDays([]);
-      xRow(box);
+      xRow(box, run);
       act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
       return;
     }
@@ -3754,7 +3762,7 @@ async function renderJoin(){
       line.textContent = t('join.member.nostar');
       mineDoor();
     }
-    xRow(box);
+    xRow(box, run);
     act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
     return;
   }
