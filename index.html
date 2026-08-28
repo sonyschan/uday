@@ -278,6 +278,18 @@ section{ position:relative; }
   padding:7px 11px; border:1px solid var(--rule); border-radius:3px;
   color:var(--gold); background:rgba(232,185,63,.05);
 }
+/* The ★ tag is a button — a <button> brings its own UA chrome, so the shared
+   .tag rule is restated here rather than inherited by luck. */
+.tag--stars{ display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid);
+  line-height:1.2; }
+.tag__i{ display:inline-flex; align-items:center; opacity:.7; }
+.tag--stars:hover .tag__i, .tag--stars[aria-expanded="true"] .tag__i{ opacity:1; }
+/* Answers the tag directly beneath it: no positioning, nothing to clip, and
+   it reads the same at 360 as it does on a desktop. */
+.starnote{ max-width:62ch; margin:-18px 0 26px; color:var(--muted);
+  font-size:var(--fs-small); line-height:1.65; }
+
 .hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:26px; }
 
 /* The hook. First screen, above the fold, before anything else asks for a tap. */
@@ -1709,6 +1721,9 @@ const I18N = {
     'star.off':'Write this day onto the chain as yours. It stands on every community calendar you join. ({n}/{m} used)',
     'star.full':'All your \u2605 are placed ({n}/{m}). Hold more uDAY for another, or take one back first.',
     'star.set':'WRITE IT ONCHAIN','star.remove':'TAKE IT BACK OFFCHAIN',
+    'star.what':'What is this?',
+    'star.note':'A ★ is a day written on the chain as yours, and it stands on every community calendar you join. How many you get follows the uDAY you hold: 1 token for one, 10 for two, 100 for three.',
+    'star.note.more':'Hold {n} uDAY for another.','star.note.max':'Three is the most anyone can hold.',
     'join.clear.tip':'Let this day go — the slot comes back, and you can declare another.',
     'join.sent':'Sent. You appear on the calendar shortly.',
     'comm.missing':'No community here yet.',
@@ -1927,6 +1942,9 @@ const I18N = {
     'star.off':'把这一天刻上链，成为你的。它会站上你加入的每个社区日历。（已用 {n}/{m}）',
     'star.full':'你的 \u2605 都用完了（{n}/{m}）。持有更多 uDAY 换名额，或先收回一颗。',
     'star.set':'刻上链','star.remove':'从链上收回',
+    'star.what':'这是什么？',
+    'star.note':'★ 是刻在链上属于你的日子，它会站上你加入的每个社区日历。名额看你持有多少 uDAY：1 枚换 1 个，10 枚换 2 个，100 枚换 3 个。',
+    'star.note.more':'再持有 {n} 枚 uDAY 就多一个名额。','star.note.max':'3 个是所有人的上限。',
     'join.clear.tip':'放掉这一天——名额会回来，你就能改宣告别的日子。',
     'join.sent':'已送出。稍后你就会出现在日历上。',
     'comm.missing':'这里还没有社区。',
@@ -3413,6 +3431,14 @@ function kindMark(kind){
                  '<path d="M2.1 7.8v3.5c0 1.27 2.64 2.3 5.9 2.3s5.9-1.03 5.9-2.3V7.8" fill="none" stroke="currentColor" stroke-width="1.5"/>', 'Token', 20);
 }
 
+/// The "tap me" affordance on the ★ tag. Drawn rather than typed, because a
+/// letter small enough to sit inside a 17px ring would break the text floor.
+function infoMark(){
+  return svgMark('<circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+                 '<rect x="7.2" y="6.9" width="1.6" height="4.6" fill="currentColor"/>' +
+                 '<rect x="7.2" y="4.3" width="1.6" height="1.7" fill="currentColor"/>', '', 17);
+}
+
 /// The half of the gate consensus cannot enforce.
 ///
 /// On a foreign-chain room the contract CANNOT see the gating balance — a
@@ -3579,13 +3605,53 @@ function paintStars(){
   }
   const host = document.getElementById('mine-stats');
   if(host){
+    // "★ 1/3" is a number only we could read: the denominator is how many uDAY
+    // the wallet holds, and nothing on the page ever said so. A hover tooltip
+    // would have been the natural place — and would not exist, because this
+    // page is read inside wallet browsers on phones where there is no hover.
+    // So it is a tap, and it answers the useful question rather than the
+    // definitional one: what do I get, and what buys me the next one.
+    let note = document.getElementById('star-note');
     let tag = host.querySelector('.tag--stars');
     if(!tag){
-      tag = document.createElement('span');
+      tag = document.createElement('button');
+      tag.type = 'button';
       tag.className = 'tag tag--stars';
+      tag.setAttribute('aria-controls', 'star-note');
       host.appendChild(tag);
+      // renderMine empties the stats row, so the tag can be rebuilt while the
+      // note survives as its sibling — never create a second one
+      if(!note){
+        note = document.createElement('p');
+        note.id = 'star-note';
+        note.className = 'starnote';
+        host.insertAdjacentElement('afterend', note);
+      }
+      note.hidden = true;
+      tag.addEventListener('click', () => {
+        note.hidden = !note.hidden;
+        tag.setAttribute('aria-expanded', note.hidden ? 'false' : 'true');
+      });
     }
-    tag.textContent = t('star.count', { n: MY_STARS.length, m: MY_SLOTS });
+    tag.setAttribute('aria-expanded', note && !note.hidden ? 'true' : 'false');
+    tag.textContent = '';
+    const cnt = document.createElement('span');
+    cnt.textContent = t('star.count', { n: MY_STARS.length, m: MY_SLOTS });
+    const i = document.createElement('span');
+    i.className = 'tag__i';
+    i.setAttribute('aria-hidden', 'true');   // the button's own text names it
+    // an SVG, not a small letter: the page has a text-size floor and this
+    // glyph would sit under it
+    i.innerHTML = infoMark();
+    tag.append(cnt, i);
+    tag.title = t('star.what');
+    if(note){
+      // 1 / 10 / 100 whole uDAY buy 1 / 2 / 3 slots — verified against the
+      // contract, not recalled: 384 uDAY reads 3 slots and 50 reads 2
+      const next = MY_SLOTS < 1 ? 1 : MY_SLOTS < 2 ? 10 : MY_SLOTS < 3 ? 100 : 0;
+      note.textContent = t('star.note') + ' ' +
+        (next ? t('star.note.more', { n: next }) : t('star.note.max'));
+    }
   }
 }
 
