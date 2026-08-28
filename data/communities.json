@@ -127,7 +127,14 @@
     "telegram": "https://t.me/unisoccs",
     "x": "https://x.com/unisoccs"
    },
-   "members": [],
+   "members": [
+    {
+     "addr": "0x2b535697a5febdf96012f5a60af530bad52d462d",
+     "days": [
+      "04-16"
+     ]
+    }
+   ],
    "minBalance": "1000000000000000000",
    "name": "unisoccs",
    "slug": "unisoccs",
