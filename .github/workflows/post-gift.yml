@@ -3,13 +3,13 @@
 # low-privilege key: setRoot is append-only and gated to poster/owner, so it
 # can never rewrite a posted day or touch the float. Manual fallback stays
 # local: tools/post-gift.sh (owner keystore).
+# Timing moved to Google Cloud Scheduler on 2026-08-29 (project web3ai-469609,
+# job uday-post-gift). GitHub's own cron had drifted to 10-11 hour gaps against a
+# 15-minute schedule, which pushed three of six gift roots hours into the day
+# they were for. Cloud Scheduler POSTs to this workflow's dispatches endpoint,
+# so everything below still runs here — only the clock is elsewhere.
 name: post-gift
 on:
-  schedule:
-    # 00:05 UTC+8 in theory. Measured on 2026-08-27/28 the daily jobs ran up to
-    # 8.5 HOURS late — GitHub deprioritises cron hard. Never treat this as the
-    # time the gift appears.
-    - cron: '5 16 * * *'
   # So a deploy also makes sure today's root is up. Safe to run repeatedly:
   # ci-post-gift.sh reads roots(dayId) first and exits if the day is posted.
   push:

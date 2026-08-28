@@ -1,13 +1,13 @@
 # Rebuilds data/date-index.json from Robinhood Chain and commits it if changed.
 # The site serves the committed JSON statically — visitors never touch the RPC,
 # so public-RPC outages only ever delay the next refresh, never break the page.
+# Timing moved to Google Cloud Scheduler on 2026-08-29 (project web3ai-469609,
+# job uday-date-index). GitHub's own cron had drifted to 10-11 hour gaps against a
+# 15-minute schedule, which pushed three of six gift roots hours into the day
+# they were for. Cloud Scheduler POSTs to this workflow's dispatches endpoint,
+# so everything below still runs here — only the clock is elsewhere.
 name: date-index
 on:
-  schedule:
-    # Asks for every 15 min, but GitHub deprioritises cron on public repos:
-    # measured gaps on 2026-08-27 ran 28min, 35, 72, 93, 139, 185, 304, then
-    # nothing for 9 hours. Treat this as a floor, never as a schedule.
-    - cron: '7,22,37,52 * * * *'
   # So a deploy refreshes it too. No loop: this job commits with the default
   # GITHUB_TOKEN, and GitHub does not start workflows from those pushes.
   push:

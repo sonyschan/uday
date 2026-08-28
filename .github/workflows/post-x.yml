@@ -13,10 +13,13 @@
 #
 # Until the four X_* secrets exist the script prints and exits 0, so this
 # workflow stays green rather than failing red every morning.
+# Timing moved to Google Cloud Scheduler on 2026-08-29 (project web3ai-469609,
+# jobs uday-*). GitHub's own cron had drifted to 10-11 hour gaps against a
+# 15-minute schedule, which pushed three of six gift roots hours into the day
+# they were for. Cloud Scheduler POSTs to this workflow's dispatches endpoint,
+# so everything below still runs here — only the clock is elsewhere.
 name: post-x
 on:
-  schedule:
-    - cron: '20 16 * * *'   # 00:20 UTC+8, after post-gift's 00:05
   workflow_dispatch: {}
 permissions:
   contents: write        # the run commits data/x-posts.json

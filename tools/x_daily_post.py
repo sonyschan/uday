@@ -91,8 +91,14 @@ def main():
 
     seen = already_posted(day)
     if seen and "--force" not in sys.argv:
-        sys.exit("%s already posted (%s) — refusing to repeat. --force overrides."
-                 % (day, seen.get("id")))
+        # Exit 0. Already-posted is the guard WORKING, not a failure, and since
+        # Cloud Scheduler took over the timer this path is reached routinely —
+        # a manual run, a catch-up dispatch, a retry after GitHub accepted the
+        # first one. Exiting 1 painted those runs red, and a workflow that is
+        # red on ordinary days is a workflow nobody reads on the day it breaks.
+        print("%s already posted (%s) — nothing to do. --force overrides."
+              % (day, seen.get("id")))
+        return
 
     card = os.path.join(ROOT, "data", "x-card.png")
     meta = build(day, card)
