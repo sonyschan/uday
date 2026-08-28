@@ -488,7 +488,8 @@ section{ position:relative; }
 .daymodal__close:hover{ color:var(--vellum); }
 .daymodal__sub{ font-size:var(--fs-micro); color:var(--muted); margin:4px 0 14px; }
 
-.mine__poster{ display:flex; justify-content:center; margin-top:18px; }
+.mine__poster,
+.yearwall__poster{ display:flex; justify-content:center; margin:18px 0 0; }
 /* The poster is 3300px wide; a panel that fits the day gallery would show a
    stamp of it. */
 .poster__panel{ max-width:min(1240px, 96vw); }
@@ -1484,7 +1485,9 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
           <div class="yearwall__grid" id="year-grid"></div>
         </div>
         <p class="yearwall__glitchline" id="year-glitch" hidden></p>
-        <p class="yearwall__note" id="year-note"></p>
+        <p class="yearwall__poster">
+          <button type="button" class="btn btn--ghost" id="year-poster-go"></button>
+        </p>
         <!-- The one homepage mention of the personal calendar, placed at the
              moment the reader is looking at a calendar. A header label is
              navigation, not persuasion. -->
@@ -1781,7 +1784,6 @@ const I18N = {
     'cnew.unit.tokens':'in whole tokens','cnew.unit.items':'in items',
     'year.kicker':'The year','year.title':'A year, lighting up',
     'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. A day whose last piece was just sold still glows faintly — an ember, for seven days. Tap a day to visit its earliest piece.',
-    'year.note':'{lit} of 366 days lit \u00b7 updated hourly from Robinhood Chain',
     'year.glitch.cell':'A DAY THAT DOES NOT EXIST',
     'year.glitch.line':'{n} pieces are minted on days that do not exist \u2014 someone owns {day}.',
     'year.tip.first':'Earliest #{id}',
@@ -1895,6 +1897,8 @@ const I18N = {
     'poster.btn':'MAKE MY ART CALENDAR','poster.making':'DRAWING\u2026',
     'poster.head':'MY uDAY YEAR','poster.headsub':'{n} days, drawn from the chain',
     'poster.sub':'{n} of your days, each one its own piece. Download it full size.',
+    'poster.btn.all':'MAKE THE ART CALENDAR','poster.head.all':'THE uDAY YEAR',
+    'poster.sub.all':'{n} days, every one its own piece. 3:1 \u2014 it drops straight into an X banner.',
     'poster.dl':'DOWNLOAD THE CALENDAR',
     'hero.cap':'THE uDAY PIECE FOR TODAY',
     'hero.cap.day':'THE uDAY PIECE FOR {date}',
@@ -2007,7 +2011,6 @@ const I18N = {
     'cnew.unit.tokens':'以整枚代币计','cnew.unit.items':'以件计',
     'year.kicker':'一整年','year.title':'一年，正在点亮',
     'year.blurb':'每一格是一天。亮起代表这一天已在链上诞生，越亮代表这一天的 uDAY 越多。刚被卖掉最后一枚的日子还会微微发光——那是余烬，会亮七天。点一格，去看那一天诞生的每一枚。',
-    'year.note':'366 天已点亮 {lit} 天 · 每小时从 Robinhood Chain 更新',
     'year.glitch.cell':'不存在的日子',
     'year.glitch.line':'有 {n} 枚铸在不存在的日子上——有人真的拥有{day}。',
     'year.tip.first':'最早 #{id}',
@@ -2117,10 +2120,12 @@ const I18N = {
     'fact.market.sub':'流动性永久锁定。',
     'fact.art':'艺术','fact.art.v':'完整存储于链上',
     'fact.art.sub':'创建时写入，之后无法更改。',
-    'foot.docs':'运作方式','foot.sig':'一个日期。一件作品。一份礼物。',
+    'foot.docs':'运作方式','foot.sig':'一个日期。一件藏品。一份礼物。',
     'poster.btn':'生成 uDAY 艺术日历','poster.making':'正在生成…',
     'poster.head':'我的 uDAY 一年','poster.headsub':'{n} 天，全部来自链上',
     'poster.sub':'你的 {n} 天，每一天都是它自己那一枚。可下载原始尺寸。',
+    'poster.btn.all':'生成 uDAY 艺术日历','poster.head.all':'uDAY 的一年',
+    'poster.sub.all':'{n} 天，每一天都是它自己那一枚。3:1，直接可以当 X 横幅。',
     'poster.dl':'下载这张日历',
     'hero.cap':'代表今天的 uDAY 藏品',
     'hero.cap.day':'代表{date}的 uDAY 藏品',
@@ -2618,7 +2623,13 @@ function renderDayStatus(){
    compositing 240 pieces into DOM nodes to then screenshot them would be the
    long way round to the same pixels.
    ───────────────────────────────────────────────────────────────────── */
-const POSTER = { tile: 96, gap: 6, pad: 44, label: 148, head: 92, foot: 64 };
+/// 3:1 exactly, which is X's banner ratio (1500x500) — so the poster drops
+/// straight in with no crop. The geometry is DERIVED from the one thing that
+/// cannot move: a 96px tile drawn 1:1, because pixel art must never be
+/// downscaled. 31 columns and 12 rows of that fix the grid at 3096x1196; the
+/// height follows from the padding, and the width is three times it. Whatever
+/// is left over becomes the title panel — 584px, on the left.
+const POSTER = { tile: 96, gap: 4, pad: 56, label: 132 };
 let posterModal = null, posterCanvas = null, posterBusy = false;
 
 /// The best-dressed piece of a day: most layers, oldest wins ties. Same rule
@@ -2630,15 +2641,16 @@ function bestPiece(list){
   return list.slice().sort((a, b) => dress(b) - dress(a) || a.id - b.id)[0];
 }
 
-async function buildPoster(byDay){
-  const { tile: T, gap: G, pad: P, label: L, head: HD, foot: FT } = POSTER;
-  const W = P + L + 31 * (T + G) - G + P;
-  const H = P + HD + 12 * (T + G) - G + FT + P;
+async function buildPoster(byDay, headline, sub){
+  const { tile: T, gap: G, pad: P, label: L } = POSTER;
+  const gw = 31 * T + 30 * G, gh = 12 * T + 11 * G;
+  const H = P + gh + P;
+  const W = 3 * H;                       // the whole point
+  const panel = W - P - L - gw - P;      // what is left for the title
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  // the tiles are drawn 1:1 — 96px art into a 96px cell. Pixel art must never
-  // be downscaled, and an integer cell is what keeps that promise here.
+  // 96px art into a 96px cell. An integer cell is what keeps that promise.
   ctx.imageSmoothingEnabled = false;
 
   ctx.fillStyle = '#0b0916';
@@ -2654,20 +2666,20 @@ async function buildPoster(byDay){
     for(let d = 1; d <= DIM[m-1]; d++){
       const key = pad2(m) + '-' + pad2(d);
       const list = byDay[key];
-      if(list && list.length) owned.push({ m, d, key, spec: recipeSpec(key, bestPiece(list), 'onchain') });
+      if(list && list.length)
+        owned.push({ m, d, spec: recipeSpec(key, bestPiece(list), 'onchain') });
     }
   }
-  // every distinct layer file once, not once per tile — 240 days share about
-  // a hundred images between them
+  // every distinct layer file once, not once per tile — a full year shares
+  // about a hundred images between its 366 cells
   const paths = [...new Set(owned.flatMap(o => layerPaths(o.spec)))];
   const imgs = new Map();
   (await Promise.all(paths.map(load))).forEach((im, i) => imgs.set(paths[i], im));
 
-  const gx = P + L, gy = P + HD;
+  const gx = P + panel + L, gy = P;
   const cellX = d => gx + (d - 1) * (T + G);
   const cellY = m => gy + (m - 1) * (T + G);
 
-  // the empty grid first, so the calendar keeps its shape where you own nothing
   for(let m = 1; m <= 12; m++){
     for(let d = 1; d <= DIM[m-1]; d++){
       ctx.fillStyle = 'rgba(243,231,205,.045)';
@@ -2683,25 +2695,48 @@ async function buildPoster(byDay){
 
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#9d93b8';
-  ctx.font = '28px "Silkscreen", monospace';
+  ctx.font = '26px "Silkscreen", monospace';
+  ctx.textAlign = 'right';
   for(let m = 1; m <= 12; m++){
-    const lab = lang === 'zh' ? m + '月' : MONTHS_EN[m-1];
-    ctx.textAlign = 'right';
-    ctx.fillText(lab, gx - 22, cellY(m) + T / 2);
+    ctx.fillText(lang === 'zh' ? m + '月' : MONTHS_EN[m-1], gx - 20, cellY(m) + T / 2);
   }
 
+  // Everything sits in the TOP of the left panel on purpose: X lays the
+  // profile picture over the banner's bottom-left corner, and anything down
+  // there would be covered by it.
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#e8b93f';
-  ctx.font = '52px "Silkscreen", monospace';
-  ctx.fillText(t('poster.head'), P, P + 34);
-  ctx.fillStyle = '#9d93b8';
+  // No lookbehind. A regex literal the engine cannot parse is a SyntaxError at
+  // SCRIPT PARSE time, not at call time — it would take the whole page down,
+  // and the wallet webviews this site is read in are exactly where an older
+  // JavaScriptCore turns up. CJK breaks per character, Latin per word.
+  const wrap = (text, font, max) => {
+    ctx.font = font;
+    const tokens = text.match(/[一-鿿　-〿＀-￯]|[^一-鿿　-〿＀-￯\s]+|\s+/g) || [text];
+    const lines = []; let cur = '';
+    for(const w of tokens){
+      if(cur && ctx.measureText(cur + w).width > max){ lines.push(cur.trim()); cur = w.trim(); }
+      else cur += w;
+    }
+    if(cur.trim()) lines.push(cur.trim());
+    return lines;
+  };
+  let y = P + 84;
+  for(const ln of wrap(headline, '46px "Silkscreen", monospace', panel - 16)){
+    ctx.font = '46px "Silkscreen", monospace';
+    ctx.fillStyle = '#e8b93f';
+    ctx.fillText(ln, P, y);
+    y += 58;
+  }
+  y += 12;
+  for(const ln of wrap(sub, '26px "Silkscreen", monospace', panel - 16)){
+    ctx.font = '26px "Silkscreen", monospace';
+    ctx.fillStyle = '#9d93b8';
+    ctx.fillText(ln, P, y);
+    y += 36;
+  }
   ctx.font = '26px "Silkscreen", monospace';
-  ctx.fillText(t('poster.headsub', { n: owned.length }), P, P + 74);
-
-  ctx.textAlign = 'right';
   ctx.fillStyle = '#6f6790';
-  ctx.font = '26px "Silkscreen", monospace';
-  ctx.fillText('uday.gift', W - P, H - P - 12);
+  ctx.fillText('uday.gift', P, y + 26);
 
   return { canvas: cv, days: owned.length };
 }
@@ -2748,25 +2783,32 @@ function closePoster(){
   document.body.style.overflow = '';
 }
 
-async function openPoster(){
-  if(posterBusy || !DAYS || !mineAddr) return;
-  const btn = document.getElementById('poster-go');
+/// Two scopes, one poster. 'mine' draws the days this wallet holds; 'all'
+/// draws the whole collection, which is the same picture uToken puts across
+/// the top of its collection page — except laid out as the year it actually is.
+async function openPoster(scope){
+  if(posterBusy || !DAYS) return;
+  if(scope === 'mine' && !mineAddr) return;
+  const btn = document.getElementById(scope === 'mine' ? 'poster-go' : 'year-poster-go');
   posterBusy = true;
   const was = btn.textContent;
   btn.disabled = true;
   btn.textContent = t('poster.making');
   try{
-    const mine = {};
+    const byDay = {};
     for(const k in DAYS){
       if(!isRealDate(k)) continue;
-      const own = DAYS[k].filter(e => e.owner === mineAddr);
-      if(own.length) mine[k] = own;
+      const list = scope === 'mine' ? DAYS[k].filter(e => e.owner === mineAddr) : DAYS[k];
+      if(list.length) byDay[k] = list;
     }
-    const { canvas, days } = await buildPoster(mine);
+    const n = Object.keys(byDay).length;
+    const head = t(scope === 'mine' ? 'poster.head' : 'poster.head.all');
+    const { canvas, days } = await buildPoster(byDay, head, t('poster.headsub', { n: n }));
     ensurePoster();
     posterCanvas = canvas;
-    document.getElementById('poster-title').textContent = t('poster.head');
-    document.getElementById('poster-sub').textContent = t('poster.sub', { n: days });
+    document.getElementById('poster-title').textContent = head;
+    document.getElementById('poster-sub').textContent =
+      t(scope === 'mine' ? 'poster.sub' : 'poster.sub.all', { n: days });
     const wrap = document.getElementById('poster-wrap');
     wrap.textContent = '';
     wrap.appendChild(canvas);
@@ -2779,11 +2821,12 @@ async function openPoster(){
     dl.onclick = () => {
       const done = url => {
         const a = document.createElement('a');
-        a.download = 'uDAY-calendar-' + mineAddr.slice(0, 6) + '.png';
+        a.download = 'uDAY-calendar-' +
+          (scope === 'mine' ? mineAddr.slice(0, 6) : 'all') + '.png';
         a.href = url;
         a.click();
         if(url.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(url), 60000);
-        va('event', { name: 'poster_download', data: { days: days } });
+        va('event', { name: 'poster_download', data: { days: days, scope: scope } });
       };
       if(canvas.toBlob) canvas.toBlob(b => done(b ? URL.createObjectURL(b)
                                                  : canvas.toDataURL('image/png')), 'image/png');
@@ -2791,7 +2834,7 @@ async function openPoster(){
     };
     posterModal.hidden = false;
     document.body.style.overflow = 'hidden';
-    va('event', { name: 'poster_open', data: { days: days } });
+    va('event', { name: 'poster_open', data: { days: days, scope: scope } });
   }finally{
     posterBusy = false;
     btn.disabled = false;
@@ -4599,7 +4642,7 @@ function renderYear(){
   const sec = document.getElementById('year');
   const { lit } = buildWall(document.getElementById('year-grid'), DAYS,
                             { today: true, embers: INDEX_META.embers });
-  document.getElementById('year-note').textContent = t('year.note', { lit });
+  document.getElementById('year-poster-go').textContent = t('poster.btn.all');
   // The impossible days are the wall's most shareable fact \u2014 one loud line,
   // not a footnote. {day} names the first glitch day (FEB 30) as proof.
   const glitchDays = Object.keys(DAYS).filter(k => !isRealDate(k)).sort();
@@ -4995,7 +5038,8 @@ if(mineEth && mineEth.request){
   // button is hidden outright and the optimistic paint needs mineEth anyway.
 }
 
-document.getElementById('poster-go').addEventListener('click', openPoster);
+document.getElementById('poster-go').addEventListener('click', () => openPoster('mine'));
+document.getElementById('year-poster-go').addEventListener('click', () => openPoster('all'));
 document.getElementById('mine-view').addEventListener('click', () =>
   setMineAddr(document.getElementById('mine-addr').value.trim(), 'manual'));
 document.getElementById('mine-addr').addEventListener('keydown', e => {
