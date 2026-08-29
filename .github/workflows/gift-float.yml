@@ -1,0 +1,42 @@
+# Watches the gift contract's USDG and shouts when it runs low.
+#
+# Triggered by Google Cloud Scheduler (project web3ai-469609, job
+# uday-gift-float) at 09:00 UTC+8 — morning on purpose. The midnight digest is
+# read when you wake up anyway; this one exists to be acted on, and topping up
+# a float is a thing you do during the day.
+#
+# Deliberately a SEPARATE workflow from revenue-report rather than one more
+# step in it. Running dry means a holder cannot claim the one day of the year
+# that is theirs, so this check must not be able to die because something
+# unrelated in the digest broke.
+#
+# Silent when healthy — that is what was asked for. The number still arrives
+# daily inside the revenue digest, so a watcher that has quietly stopped
+# running can still be told apart from a quiet week.
+name: gift-float
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: gift-float
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Check the float
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+          ROBINHOOD_RPC_URL:  ${{ secrets.ROBINHOOD_RPC_URL }}
+        # A read failure exits non-zero rather than reporting a zero balance:
+        # a false "you are empty" every time the node blinks is how an alert
+        # gets muted, and this chain's RPC is documented as flaky.
+        run: python3 tools/gift_float.py --alert-below 15

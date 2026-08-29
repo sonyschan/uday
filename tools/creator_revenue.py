@@ -28,6 +28,8 @@ page that carries nothing new — never trust a count here, only ids.
 import argparse, json, os, sys, time
 import datetime as dt
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 try:
     import requests                      # urllib fails TLS on stock macOS python
 except ImportError:
@@ -150,6 +152,21 @@ def report(days):
             y, vol * CREATOR_SHARE, vol))
         wk = sum(sum(x["valueUsd"] for x in by[k]) for k in done)
         lines.append("last {} full days: ${:,.2f}".format(len(done), wk * CREATOR_SHARE))
+
+    # The float, one line. gift_float.py is what ALERTS on it, but an alerter
+    # that only speaks when something is wrong cannot be told apart from one
+    # that has stopped running — so the number rides along with the digest that
+    # arrives every day regardless. A chain hiccup must not take the digest
+    # down with it, hence the catch.
+    try:
+        from gift_float import state as float_state
+        f = float_state()
+        lines.append("")
+        lines.append("gift float: ${:,.2f} balance, ${:,.2f} free, {:.1f} days".format(
+            f["balance"], f["free"], f["runway"]))
+    except Exception as e:
+        lines.append("")
+        lines.append("gift float: unavailable ({})".format(str(e)[:60]))
 
     acc = accrued_eth()
     if acc is not None:
