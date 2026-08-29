@@ -1,0 +1,37 @@
+# The daily creator-fee digest, to Telegram.
+#
+# Triggered by Google Cloud Scheduler (project web3ai-469609, job
+# uday-revenue-report), like the other three. There is no schedule: block here
+# on purpose — GitHub's cron drifted to 10-11 hour gaps and a digest that
+# arrives at a random hour is one nobody reads.
+#
+# Runs at 00:30 UTC+8, after post-gift (00:05) and post-x (00:20), so the day
+# it reports on is closed and its gift file is already committed.
+#
+# Nothing is written back: this workflow only reads. If it fails, the failure
+# IS the alert — a silent digest that stopped arriving looks exactly like a
+# quiet day, which is why the script exits non-zero when the send fails.
+name: revenue-report
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: revenue-report
+  cancel-in-progress: false
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Send the digest
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+          ROBINHOOD_RPC_URL:  ${{ secrets.ROBINHOOD_RPC_URL }}
+        run: python3 tools/creator_revenue.py --days 7 --telegram
