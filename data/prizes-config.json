@@ -1,0 +1,10 @@
+{
+  "_comment": "Which pieces are in the prize pot. The chain is asked whether `holder` really holds each one; anything it does not is dropped and never published. Nothing enumerates an address's pieces, so they are named here and confirmed there.",
+  "holder": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+  "drawAt": "2026-08-31T00:00:00+08:00",
+  "prizes": [
+    { "token": "0x359211bb6b8cabce02dcbec1c55b50f2ec884146", "assetId": 18, "note": "preview" },
+    { "token": "0x359211bb6b8cabce02dcbec1c55b50f2ec884146", "assetId": 24, "note": "preview" },
+    { "token": "0x359211bb6b8cabce02dcbec1c55b50f2ec884146", "assetId": 99999, "note": "should be dropped" }
+  ]
+}

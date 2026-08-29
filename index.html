@@ -290,6 +290,42 @@ section{ position:relative; }
 .starnote{ max-width:62ch; margin:-18px 0 26px; color:var(--muted);
   font-size:var(--fs-small); line-height:1.65; }
 
+/* ── today's draw, on the first screen ─────────────────────────────── */
+.lotto{ margin-top:4px; }
+.lotto__kick{
+  font-family:var(--display); font-size:var(--fs-tiny); letter-spacing:var(--ls-mid);
+  text-transform:uppercase; color:var(--gold); margin-bottom:12px;
+}
+.lotto__prizes{ display:flex; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
+.lotto__prize{
+  display:block; border:1px solid var(--rule); border-radius:8px; padding:8px;
+  background:rgba(232,185,63,.05); text-align:center; text-decoration:none;
+}
+.lotto__prize:hover{ border-color:rgba(232,185,63,.5); }
+/* 96px art in a 96px box, then doubled. Integer upscale only — this is the
+   rule that killed the 30px topbar mark, and downscaling pixel art is what
+   turns a 1px gold line into noise. */
+.lotto__prize img{ display:block; width:192px; height:192px; image-rendering:pixelated; }
+/* On a short viewport the doubled tiles push both CTAs below the fold — 1280x800
+   is an ordinary laptop and had neither. 96px is the art's own resolution, so
+   this is 1x rather than a smaller-and-blurrier 1.5x: the scale steps available
+   to pixel art are whole numbers, and this one is free. */
+@media (max-height: 900px), (max-width: 880px){
+  .lotto__prize img{ width:96px; height:96px; }
+}
+.lotto__prize span{
+  display:block; margin-top:7px;
+  font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--muted);
+}
+.lotto__clock{
+  font-family:var(--display); font-size:var(--fs-sub); color:var(--vellum);
+  margin-bottom:14px;
+}
+.lotto__clock b{ color:var(--gold); font-weight:400; }
+.lotto__go:disabled{ opacity:.5; cursor:not-allowed; box-shadow:none; }
+.lotto__note{ margin-top:10px; font-size:var(--fs-micro); color:var(--muted); max-width:34ch; }
+
 .hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:26px; }
 
 /* The hook. First screen, above the fold, before anything else asks for a tap. */
@@ -1329,7 +1365,13 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
         <p class="hero__lede" data-i18n="hero.lede">Some days are just dates. Some become part of your story. And when the calendar comes back around, your day gives back.</p>
       </div>
       <div class="hero__act">
-        <div class="daypick">
+        <!-- The day picker used to live here. It let you look up any date and
+             see its pieces, which the year wall does better and further down;
+             on the first screen it asked for a decision before giving a reason
+             to make one. Hidden, not deleted: hero-month/hero-day and their
+             menus are still built and still drive the medallion, so heroPick()
+             and everything under it is unchanged. -->
+        <div class="daypick" id="daypick" hidden>
           <label class="daypick__q" for="hero-month" data-i18n="pick.q">Which day is yours?</label>
           <div class="daypick__row">
             <div class="sel">
@@ -1346,11 +1388,16 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
             </div>
           </div>
         </div>
-        <!-- One question, one interaction, one payoff. The collection's live
-             numbers live with the year wall; the mint/offer CTA is the day
-             status's answer. This single quiet link is the bridge down. -->
-        <div class="hero__cta">
-          <a class="btn btn--ghost" href="#year" data-i18n="cta.year">FIND YOUR DAY</a>
+
+        <!-- Today's draw. Renders only when the pot has something in it, which
+             is read from the pot itself — an empty pot is an absent block, not
+             an empty one. -->
+        <div class="lotto" id="lotto" hidden>
+          <p class="lotto__kick" id="lotto-kick"></p>
+          <div class="lotto__prizes" id="lotto-prizes"></div>
+          <p class="lotto__clock" id="lotto-clock"></p>
+          <button type="button" class="btn btn--gold lotto__go" id="lotto-go"></button>
+          <p class="lotto__note" id="lotto-note"></p>
         </div>
       </div>
       <div class="stage">
@@ -1906,6 +1953,11 @@ const I18N = {
     'fact.art':'Art','fact.art.v':'Stored fully onchain',
     'fact.art.sub':'Written at creation, unchangeable after.',
     'foot.docs':'HOW IT WORKS','foot.sig':'A DATE. AN ARTWORK. A GIFT.',
+    'lotto.kick':'Today\u2019s draw','lotto.symbol':'{sym} #{id}',
+    'lotto.clock':'Drawn in {t}','lotto.closed':'Drawing now\u2026',
+    'lotto.go':'ENTER THE DRAW','lotto.soon':'OPENING SOON',
+    'lotto.note':'Hold uDAY and you are in \u2014 your weight is the square root of what you hold.',
+    'lotto.preview':'Preview only \u2014 entering is not wired up yet.',
     'poster.btn':'MAKE MY ART CALENDAR','poster.making':'DRAWING\u2026',
     'poster.head':'MY uDAY YEAR','poster.headsub':'{n} days, drawn from the chain',
     'poster.sub':'{n} of your days, each one its own piece. Download it full size.',
@@ -2134,6 +2186,11 @@ const I18N = {
     'fact.art':'艺术','fact.art.v':'完整存储于链上',
     'fact.art.sub':'创建时写入，之后无法更改。',
     'foot.docs':'运作方式','foot.sig':'一个日期。一件藏品。一份礼物。',
+    'lotto.kick':'今天的抽奖','lotto.symbol':'{sym} #{id}',
+    'lotto.clock':'{t} 后开奖','lotto.closed':'正在开奖…',
+    'lotto.go':'参加抽奖','lotto.soon':'即将开放',
+    'lotto.note':'持有 uDAY 就能参加，权重是持有量的平方根。',
+    'lotto.preview':'目前只是预览，参加功能还没接上。',
     'poster.btn':'生成 uDAY 艺术日历','poster.making':'正在生成…',
     'poster.head':'我的 uDAY 一年','poster.headsub':'{n} 天，全部来自链上',
     'poster.sub':'你的 {n} 天，每一天都是它自己那一枚。可下载原始尺寸。',
@@ -2853,6 +2910,75 @@ async function openPoster(scope){
     btn.disabled = false;
     btn.textContent = was;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   today's draw
+
+   The pot decides whether this exists. data/prizes.json is written by
+   tools/build_prizes.py, which asks the chain whether the prize holder really
+   holds each piece and drops the ones it does not — so an empty file is an
+   empty pot, and an absent block is the honest rendering of that.
+
+   Art is served as PNG at its native pixel size and doubled in CSS. The chain
+   hands out a 226KB SVG of one-pixel <rect>s; the same picture is an 8KB PNG,
+   and an integer upscale is the only direction pixel art may be scaled.
+   ───────────────────────────────────────────────────────────────────── */
+let lottoTimer = null;
+
+async function renderLotto(){
+  const box = document.getElementById('lotto');
+  if(!box) return;
+  let j;
+  try{
+    const r = await fetch('/data/prizes.json', { cache: 'no-cache' });
+    if(!r.ok) return;                      // no pot file at all: stay hidden
+    j = await r.json();
+  }catch(e){ return; }
+  const prizes = (j && j.prizes) || [];
+  if(!prizes.length) return;               // pot empty: stay hidden
+
+  document.getElementById('lotto-kick').textContent = t('lotto.kick');
+  const host = document.getElementById('lotto-prizes');
+  host.textContent = '';
+  prizes.forEach(p => {
+    // Not a link yet — there is nowhere honest to send anyone until the draw
+    // contract exists. A div cannot be mistaken for something clickable.
+    const cell = document.createElement('div');
+    cell.className = 'lotto__prize';
+    const img = document.createElement('img');
+    img.src = p.art;
+    img.width = 192; img.height = 192;
+    img.alt = t('lotto.symbol', { sym: p.symbol, id: p.assetId });
+    const cap = document.createElement('span');
+    cap.textContent = t('lotto.symbol', { sym: p.symbol, id: p.assetId });
+    cell.append(img, cap);
+    host.appendChild(cell);
+  });
+
+  const go = document.getElementById('lotto-go');
+  go.textContent = t('lotto.soon');
+  go.disabled = true;                      // see the note below it
+  document.getElementById('lotto-note').textContent =
+    t('lotto.note') + ' ' + t('lotto.preview');
+
+  const clock = document.getElementById('lotto-clock');
+  const at = j.drawAt ? Date.parse(j.drawAt) : 0;
+  const tick = () => {
+    if(!at){ clock.hidden = true; return; }
+    const left = at - Date.now();
+    if(left <= 0){ clock.textContent = t('lotto.closed'); return; }
+    const s = Math.floor(left / 1000);
+    const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+    const mm = String(Math.floor(s % 3600 / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    clock.innerHTML = t('lotto.clock', { t: '<b>' + hh + ':' + mm + ':' + ss + '</b>' });
+  };
+  tick();
+  if(lottoTimer) clearInterval(lottoTimer);
+  lottoTimer = setInterval(tick, 1000);
+
+  box.hidden = false;
 }
 
 /// The story's body carries live onchain numbers — how many pieces are
@@ -5961,6 +6087,9 @@ async function loadIndex(){
     }
 
     if(!IS_PERSONAL){ renderRoad(); renderStory(); }   // both fold away there
+    // the draw lives on the homepage only, and reads its own small file —
+    // not awaited, because it decorates the hero rather than sizing it
+    if(!IS_PERSONAL && !COMM_SLUG && !COMM_NEW) renderLotto();
     renderLiveTags();
     renderDayStatus();
     // On the personal page the whole-collection wall lives behind a toggle, so

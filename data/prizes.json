@@ -1,0 +1,24 @@
+{
+ "holder": "0xe72d42810212c856636cd9d019e98cfe985535fd",
+ "drawAt": "2026-08-31T00:00:00+08:00",
+ "prizes": [
+  {
+   "token": "0x359211bb6b8cabce02dcbec1c55b50f2ec884146",
+   "assetId": 18,
+   "symbol": "uDAY",
+   "art": "/data/prizes/uday-18.png",
+   "w": 96,
+   "h": 96,
+   "note": "preview"
+  },
+  {
+   "token": "0x359211bb6b8cabce02dcbec1c55b50f2ec884146",
+   "assetId": 24,
+   "symbol": "uDAY",
+   "art": "/data/prizes/uday-24.png",
+   "w": 96,
+   "h": 96,
+   "note": "preview"
+  }
+ ]
+}
