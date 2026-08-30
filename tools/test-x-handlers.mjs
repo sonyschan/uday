@@ -49,12 +49,33 @@ await withEnv(ENV, async () => {
   ok('session: signature for a DIFFERENT wallet -> 403', r.code === 403, r.code + ' ' + r.body);
 
   r = mkRes();
-  await session({ method: 'POST', query: { addr: ADDR, sig, ts }, headers: {} }, r);
+  await session({ method: 'POST', query: { addr: ADDR, sig, ts }, headers: { host: 'uday.gift' } }, r);
   ok('session: valid signature -> 200 + cookie', r.code === 200 && /uday_s=/.test(r.headers['set-cookie'] || ''), r.code);
-  ok('session cookie is HttpOnly+Secure+Lax and shared',
+  ok('session cookie is HttpOnly+Secure+Lax',
      /HttpOnly/.test(r.headers['set-cookie']) && /Secure/.test(r.headers['set-cookie']) &&
-     /SameSite=Lax/.test(r.headers['set-cookie']) && /Domain=\.uday\.gift/.test(r.headers['set-cookie']),
-     r.headers['set-cookie']);
+     /SameSite=Lax/.test(r.headers['set-cookie']), r.headers['set-cookie']);
+
+  // Domain=.uday.gift is only VALID on uday.gift. Set it from anywhere else and
+  // the browser drops the cookie silently: /api/session answers 200, nothing is
+  // stored, and the header still says SIGN IN. That is how signing in was
+  // broken on every preview deployment for as long as previews have existed,
+  // so both directions are asserted, not just the happy one.
+  ok('session cookie IS shared on uday.gift',
+     /Domain=\.uday\.gift/.test(r.headers['set-cookie']), r.headers['set-cookie']);
+
+  for (const host of ['my.uday.gift', 'UDAY.GIFT']) {
+    const rr = mkRes();
+    await session({ method: 'POST', query: { addr: ADDR, sig, ts }, headers: { host } }, rr);
+    ok('shared on ' + host, /Domain=\.uday\.gift/.test(rr.headers['set-cookie'] || ''),
+       rr.headers['set-cookie']);
+  }
+  for (const host of ['uday-git-feat-x-sonyschans-projects.vercel.app', 'localhost:8777', '']) {
+    const rr = mkRes();
+    await session({ method: 'POST', query: { addr: ADDR, sig, ts }, headers: { host } }, rr);
+    ok('NOT shared on ' + (host || '(no host)'),
+       !/Domain=/.test(rr.headers['set-cookie'] || ''), rr.headers['set-cookie']);
+  }
+
   COOKIE = (r.headers['set-cookie'] || '').split(';')[0];
 
   r = mkRes(); await session({ method: 'GET', query: {}, headers: { cookie: COOKIE } }, r);

@@ -70,12 +70,20 @@ export const b64url = b => Buffer.from(b).toString('base64url');
 export const pkceVerifier = () => b64url(randomBytes(32));
 export const pkceChallenge = v => b64url(createHash('sha256').update(v).digest());
 
-export function cookie(name, value, maxAge, shared) {
+export function cookie(name, value, maxAge, shared, host) {
   // Lax survives the top-level GET that x.com redirects us back with, and
   // refuses to ride along on anyone else's cross-site request.
   // `shared` widens it to the parent domain — the session has to be readable
   // on my.uday.gift too, and a cookie is the one store the siblings share.
-  const dom = shared ? '; Domain=.uday.gift' : '';
+  //
+  // But `Domain=.uday.gift` is only valid ON uday.gift. Set it from a
+  // *.vercel.app preview or localhost and the browser DROPS THE COOKIE without
+  // a word: /api/session answers 200, nothing is stored, and the header keeps
+  // saying SIGN IN. The page's own writer already checks this (sharedCookie);
+  // only this half was still setting it unconditionally, which is why signing
+  // in has never once worked on a preview deployment.
+  const bare = String(host || '').split(':')[0].toLowerCase();
+  const dom = shared && /(^|\.)uday\.gift$/.test(bare) ? '; Domain=.uday.gift' : '';
   return `${name}=${value}; Path=/${dom}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
 }
 export function readCookie(req, name) {

@@ -488,6 +488,16 @@ section{ position:relative; }
 .daymodal__close:hover{ color:var(--vellum); }
 .daymodal__sub{ font-size:var(--fs-micro); color:var(--muted); margin:4px 0 14px; }
 
+/* Under the bar, not in it: the topbar is a fixed row and a wrapped sentence
+   would shove its own buttons sideways. */
+.signin-err{
+  position:absolute; top:100%; right:clamp(16px,4vw,40px); margin-top:6px;
+  max-width:min(46ch,90vw); padding:8px 12px; border-radius:6px;
+  border:1px solid rgba(192,68,85,.5); background:rgba(28,10,16,.96);
+  color:#e08496; font-size:var(--fs-micro); line-height:1.5;
+}
+.signin-err[hidden]{ display:none; }
+
 .mine__poster,
 .yearwall__poster{ display:flex; justify-content:center; margin:18px 0 0; }
 /* The poster is 3300px wide; a panel that fits the day gallery would show a
@@ -1293,6 +1303,7 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
         <span class="tb-nav__short" data-i18n="nav.comm.short">ROOMS</span>
       </button>
     </nav>
+    <p class="signin-err" id="signin-err" role="alert" hidden></p>
     <div class="tb-wallet">
       <button type="button" class="btn btn--gold" id="mine-connect" data-i18n="mine.connect" hidden>SIGN IN</button>
       <button type="button" class="btn btn--ghost tb-out" id="mine-disconnect" hidden>
@@ -1793,6 +1804,7 @@ const I18N = {
     'mine.kicker':'Your days',
     'mine.title':'Which days are already yours?',
     'mine.blurb':'Sign in with your wallet to see the days you own \u2014 or paste any address to look.',
+    'signin.failed':'Sign-in did not go through ({code}). The signature was fine \u2014 the server did not keep the session. Check the console.',
     'mine.connect':'SIGN IN','mine.signingin':'SIGNING IN…','mine.view':'VIEW',
     'mine.disconnect':'SIGN OUT','mine.wallet.back':'Back to my days',
     'mine.btn.view':'VIEW YOUR PIECE',
@@ -2020,6 +2032,7 @@ const I18N = {
     'mine.kicker':'你的收藏',
     'mine.title':'哪些日子已经是你的？',
     'mine.blurb':'用钱包登入，看看哪些日子已经是你的——或者贴上任何地址来看看。',
+    'signin.failed':'登录没有成功（{code}）。签名没问题，是服务器没有保住这次登录。详情在 console。',
     'mine.connect':'登入','mine.signingin':'登入中…','mine.view':'查看',
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日历',
     'mine.btn.view':'查看你的这一枚',
@@ -4836,6 +4849,19 @@ function mineWalletUI(){
 ///
 /// The text is duplicated in api/session.js and must stay character-identical:
 /// one byte apart and the server recovers a different, valid-looking wallet.
+/// Says why the door did not open. One line under the button, gone on the next
+/// attempt — this is for the person standing there, and for the console line
+/// an operator can paste back.
+function signInFailed(status, detail){
+  console.error('[sign-in] ' + (status || 'network') + ': ' + detail);
+  const box = document.getElementById('signin-err');
+  if(!box) return;
+  box.textContent = t('signin.failed', { code: status || 'network' });
+  box.hidden = false;
+  clearTimeout(signInFailed._t);
+  signInFailed._t = setTimeout(() => { box.hidden = true; }, 12000);
+}
+
 async function signIn(){
   if(!mineEth) return false;
   let acc;
@@ -4852,11 +4878,21 @@ async function signIn(){
   let sig;
   try{ sig = await mineEth.request({ method: 'personal_sign', params: [msg, acc[0]] }); }
   catch(e){ return false; }                       // declined the signature
+  // A signature that goes nowhere must SAY so. This returned false silently,
+  // so a failed sign-in and a declined signature looked identical: you signed,
+  // the button stayed on SIGN IN, and nothing on the page could tell you the
+  // server had answered 503. That is how a preview deployment with unscoped
+  // env vars costs an afternoon.
   try{
     const r = await fetch('/api/session?addr=' + addr + '&ts=' + ts + '&sig=' + sig,
                           { method: 'POST' });
-    if(!r.ok) return false;
-  }catch(e){ return false; }                      // no session: the page still works, X linking will not
+    if(!r.ok){
+      let why = '';
+      try{ why = (await r.text()).slice(0, 120); }catch(e){}
+      signInFailed(r.status, why);
+      return false;
+    }
+  }catch(e){ signInFailed(0, String(e).slice(0, 120)); return false; }
   mineWallet = addr;
   mineWalletUI();
   setMineAddr(acc[0], 'wallet');

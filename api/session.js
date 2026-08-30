@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   if (!SECRET) return fail(res, 503, 'sign-in is not configured');
 
   if (req.method === 'DELETE') {
-    res.setHeader('Set-Cookie', cookie('uday_s', '', 0, true));
+    res.setHeader('Set-Cookie', cookie('uday_s', '', 0, true, req.headers.host));
     return res.status(200).end('signed out');
   }
 
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
   if (signer.toLowerCase() !== addr) return fail(res, 403, 'signature does not match that wallet');
 
   const exp = Math.floor(Date.now() / 1000) + LIFE_S;
-  res.setHeader('Set-Cookie', cookie('uday_s', seal({ addr, exp }, SECRET), LIFE_S, true));
+  res.setHeader('Set-Cookie', cookie('uday_s', seal({ addr, exp }, SECRET), LIFE_S, true, req.headers.host));
   res.setHeader('Content-Type', 'application/json');
   return res.status(200).end(JSON.stringify({ addr, exp }));
 }
