@@ -6,6 +6,18 @@
 # 15-minute schedule, which pushed three of six gift roots hours into the day
 # they were for. Cloud Scheduler POSTs to this workflow's dispatches endpoint,
 # so everything below still runs here — only the clock is elsewhere.
+#
+# HOURLY, and that is a ceiling rather than a compromise. Every run that finds
+# a change commits, every commit to main is a Vercel deployment, and the plan
+# allows 100 a day. At */15 this job alone was 96 of them: preview deployments
+# stopped being built entirely, which is how it surfaced — a branch pushed to
+# GitHub simply had no preview URL. Cheap to miss, because GitHub's broken cron
+# had been firing this two or three times a day and hiding the cost; making the
+# clock reliable is what made the waste real.
+#
+# Raising it again means paying Vercel for deployments nobody reads. The data
+# does not move that fast: the collection trades ~17 times a day, and the site
+# has never promised a refresh interval.
 name: date-index
 on:
   # So a deploy refreshes it too. No loop: this job commits with the default
