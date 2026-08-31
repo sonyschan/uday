@@ -1682,7 +1682,11 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
       <div class="foot__links">
         <a href="https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146" target="_blank" rel="noopener">UTOKEN</a>
         <a href="https://x.com/udaygift" target="_blank" rel="noopener">X</a>
-        <a href="https://utoken.so/docs" target="_blank" rel="noopener" data-i18n="foot.docs">HOW IT WORKS</a>
+        <!-- HOW IT WORKS pointed at utoken.so/docs, which documents the PROTOCOL,
+             not uDAY. A footer link labelled "how it works" has to answer "how
+             does uDAY work" or it sends a curious reader to someone else's
+             product. Restore it when uDAY's own docs exist; the foot.docs
+             strings are kept in both locales for that. -->
       </div>
       <p class="foot__sig" data-i18n="foot.sig">A DATE. AN ARTWORK. A GIFT.</p>
     </div>
