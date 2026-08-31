@@ -97,6 +97,29 @@ def dec_string(h):
         return None
 
 
+UDAY = "0x359211bb6b8cabce02dcbec1c55b50f2ec884146"
+
+
+def safe_symbol(raw, token):
+    """A token's symbol is a string its own deployer chose, and it ends up in a
+    filename, in prizes.json, and on the homepage. The community gate already
+    filters this on both sides; the prize path was not, which is the same gap
+    one file later.
+
+    The allowlist in prizes-config.json is what actually decides which
+    contracts we ever touch, so this is the second lock, not the first — but
+    'any field written by strangers and rendered as markup gets the same
+    treatment on both sides' is a rule this project wrote down after a
+    javascript: url reached a live page."""
+    s = raw.strip() if isinstance(raw, str) else ""
+    if not re.fullmatch(r"[\x20-\x7e]{1,12}", s):
+        return None
+    # anyone can deploy a token that calls itself uDAY; that name is one address'
+    if s.lower() == "uday" and token.lower() != UDAY:
+        return None
+    return s
+
+
 def pad_addr(a):
     return a[2:].lower().rjust(64, "0")
 
@@ -112,8 +135,12 @@ def build(dry):
 
     for p in cfg["prizes"]:
         token, aid = p["token"], int(p["assetId"])
-        sym = dec_string(call(token, SEL_SYMBOL)) or "?"
-        tag = "%s #%d" % (sym, aid)
+        raw = dec_string(call(token, SEL_SYMBOL))
+        sym = safe_symbol(raw, token)
+        tag = "%s #%d" % (sym or token[:10], aid)
+        if sym is None:
+            dropped.append("%s — refusing its symbol %r" % (tag, (raw or "")[:24]))
+            continue
 
         owned = call(token, SEL_ISOWNER + pad_addr(holder) + pad_uint(aid))
         if not owned or int(owned, 16) != 1:
