@@ -72,7 +72,7 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 @media (prefers-reduced-motion:reduce){.wall img{animation:none}}
 .wall::after{content:'';position:absolute;inset:0;
   background:linear-gradient(180deg,rgba(8,6,15,.15),rgba(8,6,15,.92) 88%)}
-.hero__over{position:relative;margin-top:-58px;z-index:1}
+.hero__over{position:relative;margin-top:-46px;padding-top:30px;z-index:1}
 
 /* ── the one interaction ─────────────────────────────────────────── */
 .pick{margin-top:24px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
@@ -229,6 +229,33 @@ const load = src => cache.get(src) || cache.set(src, new Promise(r => {
 })).get(src);
 
 let curM = new Date().getMonth() + 1, curD = new Date().getDate();
+
+// Draws the real piece for the chosen day, from the same layer files and the
+// same committed index the app serves. Nothing here is mocked art.
+async function draw(){
+  const m = curM, d = curD, key = pad(m) + '-' + pad(d);
+  const list = (DAYS && DAYS[key]) || [];
+  const ctx = $('cv').getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, 96, 96);
+  if(!list.length){
+    $('out').innerHTML = '<b>' + m + '\u6708' + d + '\u65e5</b> \u9084\u6c92\u6709\u4eba\u64c1\u6709\u3002\u5b83\u662f\u5269\u4e0b\u7684\u90a3\u5e7e\u5929\u4e4b\u4e00\u3002';
+    return;
+  }
+  // best-dressed piece of that day, oldest wins ties — the rule the daily card
+  // uses, and for the same reason: a day's first piece is often two bare glyphs
+  const dress = e => (e.p ? 1 : 0) + (e.f ? 1 : 0);
+  const e = list.slice().sort((a, b) => dress(b) - dress(a) || a.id - b.id)[0];
+  const src = [];
+  if(e.p) src.push('/assets/layers/plate/' + e.p + '.png');
+  if(e.f) src.push('/assets/layers/frame/' + e.f + '.png');
+  src.push('/assets/layers/month/' + pad(m) + '_' + (e.mp === 'r' ? 'corner' : 'center') + '.png');
+  src.push('/assets/layers/date/'  + pad(d) + '_' + (e.dp === 'r' ? 'corner' : 'center') + '.png');
+  (await Promise.all(src.map(load))).forEach(im => im && ctx.drawImage(im, 0, 0, 96, 96));
+  $('out').innerHTML = '<b>' + m + '\u6708' + d + '\u65e5</b> \u5df2\u7d93\u8a95\u751f \u2014\u2014 \u5171 ' + list.length +
+    ' \u679a\uff0c\u6700\u65e9\u7684 #' + e.id + ' \u5728 ' + e.owner.slice(0, 6) + '\u2026' + e.owner.slice(-4) + ' \u7684\u9322\u5305\u88e1\u3002';
+}
+
 
 // One menu builder for both pickers. Closing walks EVERY open menu: the app
 // once grew a third picker that could neither open nor close, because the
