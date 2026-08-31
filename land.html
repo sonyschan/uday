@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>uDAY — 擁有一天</title>
+<meta name="robots" content="noindex">
+<!--
+  MOCK of a one-page landing, for review. Does not touch index.html.
+
+  Reachable at /land.html on a preview deployment. The argument it is making:
+  the current homepage teaches before it hooks, and nobody reads past a
+  specification. Five sections, ~350 words, ONE call to action.
+
+  Every number here is live-read at build time from the same index the site
+  serves, so nothing on it is aspirational.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#08060f; --night:#100d20; --vellum:#f3e7cd; --gold:#e8b93f;
+  --muted:#9b8fb5; --rule:rgba(232,185,63,.22);
+  --display:'Silkscreen','Noto Sans SC',ui-monospace,monospace;
+  --body:'Noto Sans SC','Nunito Sans',-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--ink);color-scheme:dark}
+body{background:var(--ink);color:var(--vellum);font-family:var(--body);line-height:1.7;
+  -webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+.shell{max-width:1120px;margin:0 auto;padding:0 clamp(20px,5vw,44px)}
+section{padding:clamp(56px,9vw,110px) 0}
+.kick{font-family:var(--display);font-size:16px;letter-spacing:.10em;text-transform:uppercase;
+  color:var(--gold);opacity:.9;margin-bottom:18px}
+h1{font-family:var(--display);font-size:clamp(28px,5vw,54px);line-height:1.14;font-weight:400;
+  letter-spacing:-.01em}
+h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;font-weight:400}
+.lede{font-size:clamp(16px,1.9vw,19px);color:#dbcfb4;max-width:34ch;margin-top:18px}
+.big{font-family:var(--display);color:var(--gold);font-size:clamp(40px,9vw,110px);line-height:1}
+.muted{color:var(--muted)}
+.rule{border:0;border-top:1px solid var(--rule);margin:0}
+
+/* ── 1. the wall ─────────────────────────────────────────────────── */
+.hero{position:relative;padding-top:clamp(40px,7vw,76px)}
+/* Capped, not scaled. The strip is 576px of 96px tiles; showing all six rows
+   ate the whole first screen and pushed the one interaction below the fold —
+   what it is, how scarce, and what you can do all have to land together.
+   Cropping keeps every tile at 1x; shrinking would blur the art. */
+.wall{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--rule);
+  height:clamp(200px,30vh,300px)}
+/* the art is 96px per tile; the strip is shown at 1x on a phone and never
+   downscaled below it — pixel art loses its edges the moment it is */
+.wall img{width:2496px;max-width:none;image-rendering:pixelated;
+  animation:drift 90s linear infinite}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-1248px)}}
+@media (prefers-reduced-motion:reduce){.wall img{animation:none}}
+.wall::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(8,6,15,.15),rgba(8,6,15,.92) 88%)}
+.hero__over{position:relative;margin-top:-58px;z-index:1}
+
+/* ── the one interaction ─────────────────────────────────────────── */
+.pick{margin-top:24px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.pick select{font-family:var(--display);font-size:16px;color:var(--vellum);
+  background:#181430;border:1px solid var(--rule);border-radius:8px;padding:12px 14px}
+.pick__out{display:flex;gap:16px;align-items:center;margin-top:20px;min-height:104px}
+.pick__out canvas{width:96px;height:96px;image-rendering:pixelated;border-radius:8px;
+  border:1px solid var(--rule);background:#0b0916}
+.pick__txt{font-size:16px;max-width:30ch}
+.pick__txt b{color:var(--gold);font-weight:600}
+
+.btn{display:inline-block;font-family:var(--display);font-size:16px;letter-spacing:.08em;
+  padding:16px 26px;border-radius:8px;text-decoration:none;cursor:pointer;border:1px solid transparent}
+.btn--gold{background:linear-gradient(180deg,#f2c855,var(--gold) 55%,#c9992c);color:#1a1206;
+  box-shadow:0 4px 0 #7d5713,0 10px 26px rgba(0,0,0,.45)}
+.btn--ghost{border-color:var(--rule);color:var(--vellum)}
+
+.stat{display:grid;gap:clamp(28px,4vw,56px);grid-template-columns:1fr}
+@media(min-width:820px){.stat{grid-template-columns:1fr 1fr;align-items:center}}
+.foot{padding:40px 0 64px;font-size:14px}
+.foot a{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- 1 ─ the wall, the scarcity, the one interaction -->
+<section class="hero">
+  <div class="shell">
+    <div class="wall"><img src="/assets/land/wall.png" alt="uDAY 作品牆" width="2496" height="576"></div>
+  </div>
+  <div class="shell hero__over">
+    <p class="kick">uDAY</p>
+    <h1>一年 366 天<br>只剩 <span style="color:var(--gold)">7</span> 天<br>從未被誕生</h1>
+    <p class="lede">每一天都是一件鏈上的作品，被一個人擁有。你的那一天，還在不在？</p>
+
+<!--
+  ⚠️ KNOWN, DELIBERATE IN THIS MOCK: the month/day pickers are native <select>.
+  This site does not use those anywhere, because Android hands the select popup
+  to the host app and wallet in-app browsers (OKX and friends) never open it —
+  the control is silently dead, and undetectable from the page. Wallet browsers
+  are exactly where this audience arrives, so before this ships the pickers must
+  become the DOM listbox index.html already has (.sel__btn + .sel__menu).
+  Left as-is here so the review is about structure and copy, not plumbing.
+-->
+    <div class="pick">
+      <select id="m" aria-label="月"></select>
+      <select id="d" aria-label="日"></select>
+    </div>
+    <div class="pick__out">
+      <canvas id="cv" width="96" height="96"></canvas>
+      <p class="pick__txt" id="out">…</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- 2 ─ the product -->
+<section>
+  <div class="shell">
+    <h2>每年你的那一天<br>鏈上會寄一份禮物給你</h2>
+    <p class="lede">不是空投，不是積分。是一年裡屬於你的那一天到了，
+      而這條鏈記得。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- 3 ─ the mystery -->
+<section>
+  <div class="shell stat">
+    <div>
+      <p class="big" id="sealed">3,198</p>
+      <p class="kick" style="margin-top:14px">枚還沒揭曉</p>
+    </div>
+    <p class="lede" style="max-width:38ch">連持有者自己都不知道拿到的是哪一天。
+      揭曉是一個鏈上動作，而在那之前，那一天對所有人都是未知的。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- 4 ─ the evidence, below the hook where it belongs -->
+<section>
+  <div class="shell">
+    <p class="kick">作品怎麼來的</p>
+    <h2>四層，合約自己畫</h2>
+    <p class="lede" style="max-width:44ch">底盤、外框、月份、日期。每一次買進整數枚，
+      合約就鑄出一件，四層各自獨立抽出——所以底盤和外框可能都不存在，
+      也可能都在。<b style="color:var(--gold)">95,232</b> 種組合，全部畫在鏈上。</p>
+    <p class="lede muted" style="max-width:44ch">日期綁的是現實世界的意義，
+      底盤和外框決定它的稀有度與長相。</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- 5 ─ the single door -->
+<section>
+  <div class="shell">
+    <h2>你的日曆，和你的人的日曆</h2>
+    <p class="lede">個人日曆看自己收集了哪些日子。社區日曆看夥伴的重要日子，
+      在那天給他一句祝賀。</p>
+    <p style="margin-top:34px">
+      <a class="btn btn--gold" href="https://app.uday.gift/">進入 uDAY</a>
+    </p>
+  </div>
+</section>
+
+<hr class="rule">
+<footer class="foot">
+  <div class="shell muted">
+    <a href="https://utoken.so/token/0x359211bb6b8cabce02dcbec1c55b50f2ec884146">uToken</a>
+    &nbsp;·&nbsp;
+    <a href="https://x.com/udaygift">X</a>
+    &nbsp;·&nbsp;
+    <span>一個日期。一件藏品。一份禮物。</span>
+  </div>
+</footer>
+
+<script>
+// The picker is the hook: one question, one interaction, one answer. It draws
+// the real piece for the day you choose, from the same layer files and the same
+// committed index the site already serves — nothing here is mocked art.
+const MON = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
+const pad = n => String(n).padStart(2,'0');
+const $ = id => document.getElementById(id);
+let DAYS = null;
+
+const cache = new Map();
+const load = src => cache.get(src) || cache.set(src, new Promise(r => {
+  const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src;
+})).get(src);
+
+function fillDays(){
+  const m = +$('m').value, keep = +$('d').value || 1;
+  $('d').innerHTML = '';
+  for(let i=1;i<=DIM[m-1];i++){
+    const o = document.createElement('option');
+    o.value = i; o.textContent = i + '日';
+    $('d').appendChild(o);
+  }
+  $('d').value = Math.min(keep, DIM[m-1]);
+}
+
+async function draw(){
+  const m = +$('m').value, d = +$('d').value, key = pad(m)+'-'+pad(d);
+  const list = (DAYS && DAYS[key]) || [];
+  const ctx = $('cv').getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0,0,96,96);
+  if(!list.length){
+    $('out').innerHTML = '<b>'+m+'月'+d+'日</b> 還沒有人擁有。它是剩下的那幾天之一。';
+    return;
+  }
+  // best-dressed piece of that day, oldest wins ties — the same rule the daily
+  // card uses, and for the same reason: a day's first piece is often bare
+  const dress = e => (e.p?1:0)+(e.f?1:0);
+  const e = list.slice().sort((a,b)=>dress(b)-dress(a)||a.id-b.id)[0];
+  const src = [];
+  if(e.p) src.push('/assets/layers/plate/'+e.p+'.png');
+  if(e.f) src.push('/assets/layers/frame/'+e.f+'.png');
+  src.push('/assets/layers/month/'+pad(m)+'_'+(e.mp==='r'?'corner':'center')+'.png');
+  src.push('/assets/layers/date/'+pad(d)+'_'+(e.dp==='r'?'corner':'center')+'.png');
+  (await Promise.all(src.map(load))).forEach(im => im && ctx.drawImage(im,0,0,96,96));
+  $('out').innerHTML = '<b>'+m+'月'+d+'日</b> 已經誕生 —— 共 '+list.length+
+    ' 枚，最早的 #'+e.id+' 在 '+e.owner.slice(0,6)+'…'+e.owner.slice(-4)+' 的錢包裡。';
+}
+
+MON.forEach((s,i)=>{ const o=document.createElement('option'); o.value=i+1; o.textContent=s; $('m').appendChild(o); });
+const now = new Date();
+$('m').value = now.getMonth()+1;
+fillDays();
+$('d').value = now.getDate();
+$('m').addEventListener('change', ()=>{ fillDays(); draw(); });
+$('d').addEventListener('change', draw);
+
+fetch('/data/date-index.json').then(r=>r.json()).then(j=>{
+  DAYS = j.days;
+  const real = k => { const m=+k.slice(0,2), d=+k.slice(3); return m>=1&&m<=12&&d>=1&&d<=DIM[m-1]; };
+  const lit = Object.keys(DAYS).filter(real).length;
+  document.querySelector('h1').innerHTML =
+    '一年 366 天<br>只剩 <span style="color:var(--gold)">'+(366-lit)+'</span> 天<br>從未被誕生';
+  $('sealed').textContent = (j.unrevealed||0).toLocaleString();
+  draw();
+}).catch(()=>{ $('out').textContent = '索引讀取失敗'; });
+</script>
+</body>
+</html>
