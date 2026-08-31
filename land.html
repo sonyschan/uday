@@ -129,6 +129,32 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 
 .stat{display:grid;gap:clamp(28px,4vw,56px);grid-template-columns:1fr}
 @media(min-width:820px){.stat{grid-template-columns:1fr 1fr;align-items:center}}
+/* Three of five sections used under half the width, because they were written
+   as prose blocks and never given a right side. Widening the text was not the
+   fix — 34ch is the readable measure — so the right column carries something
+   real instead: today's actual piece, the four layers, the door. */
+.today{margin:0;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.today canvas{width:192px;height:192px;image-rendering:pixelated;border-radius:10px;
+  border:1px solid var(--rule);background:#0b0916}
+.today figcaption{font-family:var(--display);font-size:15px;letter-spacing:.08em;color:var(--muted)}
+
+/* 4 tiles + 3 plus signs + equals + the composite has to fit one row, or the
+   sum wraps under the operator and the sentence the diagram is making
+   breaks in half. 64 + 96 fits ~500px of column; both are integer
+   fractions of the 96px source, so no tile is scaled to a fraction. */
+.layers{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.layers canvas{image-rendering:pixelated;border-radius:8px;border:1px solid var(--rule);
+  background:#0b0916}
+.layers .l{width:64px;height:64px}
+.layers .sum{width:96px;height:96px;border-color:rgba(232,185,63,.45)}
+.layers .op{font-family:var(--display);color:var(--muted);font-size:16px;
+  align-self:center;margin-bottom:18px}
+.layers figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.layers figcaption{font-family:var(--display);font-size:13px;color:var(--muted)}
+
+.door{margin:0;display:flex;align-items:center}
+@media(max-width:819px){ .door{margin-top:8px} }
+
 .foot{padding:40px 0 64px;font-size:14px}
 .foot a{color:var(--muted)}
 </style>
@@ -175,10 +201,18 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 
 <!-- 2 ─ the product -->
 <section>
-  <div class="shell">
-    <h2>每年你的那一天<br>鏈上會寄一份禮物給你</h2>
-    <p class="lede">不是空投，不是積分。是一年裡屬於你的那一天到了，
-      而這條鏈記得。</p>
+  <div class="shell stat">
+    <div>
+      <h2>每年你的那一天<br>鏈上會寄一份禮物給你</h2>
+      <p class="lede">不是空投，不是積分。是一年裡屬於你的那一天到了，
+        而這條鏈記得。</p>
+    </div>
+    <!-- Today's real piece, drawn from the index. The claim on the left is
+         abstract until something on the right proves the thing runs daily. -->
+    <figure class="today">
+      <canvas id="today-cv" width="96" height="96"></canvas>
+      <figcaption id="today-cap">今天</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -200,14 +234,18 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 
 <!-- 4 ─ the evidence, below the hook where it belongs -->
 <section>
-  <div class="shell">
-    <p class="kick">作品怎麼來的</p>
-    <h2>四層，合約自己畫</h2>
-    <p class="lede" style="max-width:44ch">底盤、外框、月份、日期。每一次買進整數枚，
-      合約就鑄出一件，四層各自獨立抽出——所以底盤和外框可能都不存在，
-      也可能都在。<b style="color:var(--gold)">95,232</b> 種組合，全部畫在鏈上。</p>
-    <p class="lede muted" style="max-width:44ch">日期綁的是現實世界的意義，
-      底盤和外框決定它的稀有度與長相。</p>
+  <div class="shell stat">
+    <div>
+      <p class="kick">作品怎麼來的</p>
+      <h2>四層<br>合約自己畫</h2>
+      <p class="lede">底盤、外框、月份、日期，四層各自獨立抽出——所以底盤和外框
+        可能都不存在，也可能都在。<b style="color:var(--gold)">95,232</b> 種組合，
+        全部畫在鏈上。</p>
+      <p class="lede muted">日期綁的是現實世界的意義，底盤和外框決定稀有度與長相。</p>
+    </div>
+    <!-- Four layers, then the piece they make. A diagram beats the sentence it
+         replaces, and every tile here is the real file the contract draws. -->
+    <div class="layers" id="layers"></div>
   </div>
 </section>
 
@@ -215,11 +253,13 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 
 <!-- 5 ─ the single door -->
 <section>
-  <div class="shell">
-    <h2>你的日曆，和你的人的日曆</h2>
-    <p class="lede">個人日曆看自己收集了哪些日子。社區日曆看夥伴的重要日子，
-      在那天給他一句祝賀。</p>
-    <p style="margin-top:34px">
+  <div class="shell stat">
+    <div>
+      <h2>你的日曆<br>和你的人的日曆</h2>
+      <p class="lede">個人日曆看自己收集了哪些日子。社區日曆看夥伴的重要日子，
+        在那天給他一句祝賀。</p>
+    </div>
+    <p class="door">
       <a class="btn btn--gold" href="https://app.uday.gift/">進入 uDAY</a>
     </p>
   </div>
@@ -329,7 +369,72 @@ function render(){
   buildMenu('d', days, curD, v => { curD = v; render(); draw(); });
 }
 
+
+// The two figures on the right of sections 2 and 4. Both draw the REAL layer
+// files — the same ones the contract composes — so nothing here is an
+// illustration of the product, it is the product.
+function tile(w, h, cls){
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h; c.className = cls;
+  const x = c.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  return c;
+}
+async function paintInto(canvas, srcs, size){
+  const x = canvas.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  x.clearRect(0, 0, size, size);
+  (await Promise.all(srcs.map(load))).forEach(im => im && x.drawImage(im, 0, 0, size, size));
+}
+
+async function drawToday(){
+  const now = new Date(), m = now.getMonth() + 1, d = now.getDate();
+  const list = (DAYS && DAYS[pad(m) + '-' + pad(d)]) || [];
+  const cap = $('today-cap');
+  cap.textContent = '\u4eca\u5929 \u00b7 ' + m + '\u6708' + d + '\u65e5';
+  if(!list.length) return;
+  const dress = e => (e.p ? 1 : 0) + (e.f ? 1 : 0);
+  const e = list.slice().sort((a, b) => dress(b) - dress(a) || a.id - b.id)[0];
+  const src = [];
+  if(e.p) src.push('/assets/layers/plate/' + e.p + '.png');
+  if(e.f) src.push('/assets/layers/frame/' + e.f + '.png');
+  src.push('/assets/layers/month/' + pad(m) + '_' + (e.mp === 'r' ? 'corner' : 'center') + '.png');
+  src.push('/assets/layers/date/'  + pad(d) + '_' + (e.dp === 'r' ? 'corner' : 'center') + '.png');
+  await paintInto($('today-cv'), src, 96);
+}
+
+async function drawLayers(){
+  const host = $('layers');
+  if(!host || host.childElementCount) return;
+  const parts = [
+    ['/assets/layers/plate/unicorn.png', '\u5e95\u76e4'],
+    ['/assets/layers/frame/classic.png', '\u5916\u6846'],
+    ['/assets/layers/month/08_corner.png', '\u6708\u4efd'],
+    ['/assets/layers/date/31_corner.png', '\u65e5\u671f'],
+  ];
+  for(let i = 0; i < parts.length; i++){
+    const fig = document.createElement('figure');
+    const c = tile(96, 96, 'l');
+    const cap = document.createElement('figcaption');
+    cap.textContent = parts[i][1];
+    fig.append(c, cap);
+    host.appendChild(fig);
+    if(i < parts.length - 1){
+      const op = document.createElement('span');
+      op.className = 'op'; op.textContent = '+';
+      host.appendChild(op);
+    }
+    await paintInto(c, [parts[i][0]], 96);
+  }
+  const eq = document.createElement('span');
+  eq.className = 'op'; eq.textContent = '=';
+  const sum = tile(96, 96, 'sum');
+  host.append(eq, sum);
+  await paintInto(sum, parts.map(p => p[0]), 96);
+}
+
 render();
+drawLayers();          // independent of the index — no reason to wait for it
 
 fetch('/data/date-index.json').then(r=>r.json()).then(j=>{
   DAYS = j.days;
@@ -339,6 +444,7 @@ fetch('/data/date-index.json').then(r=>r.json()).then(j=>{
     '一年 366 天<br>只剩 <span style="color:var(--gold)">'+(366-lit)+'</span> 天<br>從未被誕生';
   $('sealed').textContent = (j.unrevealed||0).toLocaleString();
   draw();
+  drawToday();
 }).catch(()=>{ $('out').textContent = '索引讀取失敗'; });
 </script>
 </body>
