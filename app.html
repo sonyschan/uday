@@ -672,6 +672,9 @@ section{ position:relative; }
   letter-spacing:var(--ls-narrow); color:#d97c8d;
 }
 /* ─── your days (holder calendar) ───────────────────────────────────── */
+.mine__nowallet{display:flex;flex-direction:column;align-items:flex-start;gap:12px;
+  margin:18px 0 6px;max-width:520px}
+.mine__nowallet p{color:var(--muted);font-size:var(--fs-sub)}
 .mine__controls{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:26px; }
 .mine__addr{
   flex:1 1 220px; max-width:480px;
@@ -1816,6 +1819,10 @@ const I18N = {
     'mine.kicker':'Your days',
     'mine.title':'Which days are already yours?',
     'mine.blurb':'Sign in with your wallet to see the days you own \u2014 or paste any address to look.',
+    'nowallet.why':'Signing in needs a wallet app \u2014 this browser has none. Copy this page\u2019s link and open it in your wallet\u2019s built-in browser.',
+    'nowallet.copy':'COPY PAGE LINK',
+    'nowallet.copied':'COPIED',
+    'nowallet.mm':'OPEN IN METAMASK',
     'signin.failed':'Sign-in did not go through ({code}). The signature was fine \u2014 the server did not keep the session. Check the console.',
     'mine.connect':'SIGN IN','mine.signingin':'SIGNING IN…','mine.view':'VIEW',
     'mine.disconnect':'SIGN OUT','mine.wallet.back':'Back to my days',
@@ -2044,6 +2051,10 @@ const I18N = {
     'mine.kicker':'你的收藏',
     'mine.title':'哪些日子已经是你的？',
     'mine.blurb':'用钱包登入，看看哪些日子已经是你的——或者贴上任何地址来看看。',
+    'nowallet.why':'登录需要钱包 App——当前浏览器里没有钱包。请复制本页链接，到钱包应用内建的浏览器中打开。',
+    'nowallet.copy':'复制本页链接',
+    'nowallet.copied':'已复制',
+    'nowallet.mm':'用 METAMASK 打开',
     'signin.failed':'登录没有成功（{code}）。签名没问题，是服务器没有保住这次登录。详情在 console。',
     'mine.connect':'登入','mine.signingin':'登入中…','mine.view':'查看',
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日历',
@@ -4059,6 +4070,49 @@ function joinWaiting(){
 /// still-pending appends, the panel came out with ONE heading and TWO sets of
 /// buttons. A generation stamp means only the newest run may touch the DOM.
 let joinRun = 0;
+// A browser with no injected wallet used to get a button that LOOKED like a
+// door: the join panel and the gift modal both linked it to the personal page,
+// where the connect control is hidden for exactly the same reason — !mineEth.
+// A holder walked that circle twice and reported "no claim options in sight"
+// (they read the site inside X's in-app browser, which carries no wallet).
+// There is no WalletConnect here, so the only honest help is the truth plus
+// the link to carry into a wallet app.
+async function copyText(txt){
+  try{ await navigator.clipboard.writeText(txt); return true; }catch(e){}
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove(); return ok;
+  }catch(e){ return false; }
+}
+function noWalletActions(box){
+  // the URL is visible and selectable on its own, so even a webview that
+  // walls off the clipboard API leaves the user a long-press path
+  const url = document.createElement('input');
+  url.className = 'mine__addr'; url.readOnly = true; url.value = location.href;
+  url.setAttribute('aria-label', 'URL');
+  url.addEventListener('click', () => url.select());
+  box.appendChild(url);
+  const copy = document.createElement('button');
+  copy.type = 'button'; copy.className = 'btn btn--gold';
+  copy.textContent = t('nowallet.copy');
+  copy.addEventListener('click', async () => {
+    const ok = await copyText(location.href);
+    if(ok){ copy.textContent = t('nowallet.copied');
+            setTimeout(() => { copy.textContent = t('nowallet.copy'); }, 1600); }
+    else  { url.select(); }
+  });
+  box.appendChild(copy);
+  const mm = document.createElement('a');
+  mm.className = 'btn btn--ghost';
+  mm.href = 'https://metamask.app.link/dapp/' + location.host + location.pathname;
+  mm.target = '_blank'; mm.rel = 'noopener';
+  mm.textContent = t('nowallet.mm');
+  box.appendChild(mm);
+}
+
 async function renderJoin(){
   const run = ++joinRun;
   const box = document.getElementById('comm-join');
@@ -4104,9 +4158,13 @@ async function renderJoin(){
 
   markPendingDays([]);
   if(!me){
-    line.textContent = t('join.connect');
-    if(mineEth) act(t('gift.modal.connect'), 'btn--gold', () => mineConnect.click());
-    else link(t('gift.modal.connect'), personalUrl(mineIdentity()));
+    if(mineEth){
+      line.textContent = t('join.connect');
+      act(t('gift.modal.connect'), 'btn--gold', () => mineConnect.click());
+    }else{
+      line.textContent = t('nowallet.why');
+      noWalletActions(box);
+    }
     return;
   }
 
@@ -5010,6 +5068,23 @@ if(mineEth){
   document.getElementById('mine-addr').hidden = CONN_HINT;
   document.getElementById('mine-view').hidden = CONN_HINT;
 }
+// The third door with the same trap. The hero's blurb promises "sign in with
+// your wallet", but with no injected provider the connect button is hidden
+// (correctly — it could do nothing), so the promise dangled with no control
+// under it. Say why, in the same words as the other two doors. Only on the
+// personal page: rooms carry their own copy inside the join panel.
+if(!mineEth && IS_PERSONAL){
+  const head = document.querySelector('#mine .band__head');
+  if(head){
+    const box = document.createElement('div');
+    box.className = 'mine__nowallet';
+    const why = document.createElement('p');
+    why.textContent = t('nowallet.why');
+    box.appendChild(why);
+    noWalletActions(box);
+    head.after(box);
+  }
+}
 mineConnect.addEventListener('click', async () => {
   const was = mineConnect.textContent;
   mineConnect.disabled = true;
@@ -5544,11 +5619,11 @@ async function openGiftModal(){
       b.addEventListener('click', () => { closeGiftModal(); mineConnect.click(); });
       gmState.appendChild(b);
     }else{
-      const a = document.createElement('a');
-      a.className = 'btn btn--gold';
-      a.href = personalUrl(mineIdentity());
-      a.textContent = t('gift.modal.connect');
-      gmState.appendChild(a);
+      const why = document.createElement('p');
+      why.className = 'giftmodal__note';
+      why.textContent = t('nowallet.why');
+      gmState.appendChild(why);
+      noWalletActions(gmState);
     }
   }else if(entry){
     const amt = String(Math.floor(entry.amount / 1e6));
