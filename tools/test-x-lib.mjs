@@ -6,7 +6,7 @@ let pass = 0, fail = 0;
 const ok = (name, cond) => { cond ? pass++ : fail++; console.log((cond ? '  ok   ' : '  FAIL ') + name); };
 
 // A. the page and the server must build the SAME string
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../app.html', import.meta.url), 'utf8');
 const block = html.match(/async function signIn\(\)\{([\s\S]*?)\n\}/)[1];
 // pull just the message out of signIn(), which also does wallet calls
 const clientMsg = new Function('addr', 'ts', block

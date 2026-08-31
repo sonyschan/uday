@@ -6,7 +6,7 @@
 //   node tools/test-i18n.mjs
 import { readFileSync } from 'node:fs';
 
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../app.html', import.meta.url), 'utf8');
 let pass = 0, fail = 0;
 const ok = (name, cond, extra) => {
   cond ? pass++ : fail++;

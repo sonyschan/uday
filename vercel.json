@@ -1,6 +1,12 @@
 {
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "my.uday.gift" }],
+      "destination": "https://app.uday.gift/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "my.uday.gift" }],
       "destination": "https://app.uday.gift/:path*",
@@ -20,12 +26,13 @@
     }
   ],
   "rewrites": [
-    { "source": "/c", "destination": "/index.html" },
-    { "source": "/c/:slug", "destination": "/index.html" },
     {
       "source": "/",
       "has": [{ "type": "host", "value": "uday.gift" }],
       "destination": "/land.html"
-    }
+    },
+    { "source": "/", "destination": "/app.html" },
+    { "source": "/c", "destination": "/app.html" },
+    { "source": "/c/:slug", "destination": "/app.html" }
   ]
 }
