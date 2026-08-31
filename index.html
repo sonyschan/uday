@@ -1953,6 +1953,14 @@ const I18N = {
     'fact.art':'Art','fact.art.v':'Stored fully onchain',
     'fact.art.sub':'Written at creation, unchangeable after.',
     'foot.docs':'HOW IT WORKS','foot.sig':'A DATE. AN ARTWORK. A GIFT.',
+    'lotto.signin':'SIGN IN TO ENTER','lotto.getuday':'GET A uDAY',
+    'lotto.need':'You need at least one whole uDAY to enter. One is enough.',
+    'lotto.weight':'You hold {held} uDAY, so your weight is {w}.',
+    'lotto.in':'YOU ARE IN','lotto.odds':'Weight {w} of {total}, across {n} wallets.',
+    'lotto.drawing':'DRAWING\u2026','lotto.drawing.note':'The seed block is in. Winners appear here shortly.',
+    'lotto.next':'NOT THIS TIME','lotto.lost':'Not your draw. The next one opens at midnight.',
+    'lotto.claim':'CLAIM YOUR PRIZE','lotto.won':'You won {sym} #{id}. It is held for you until you claim it.',
+    'lotto.yours':'CLAIMED','lotto.claimed':'{sym} #{id} is in your wallet.',
     'lotto.kick':'Today\u2019s draw','lotto.symbol':'{sym} #{id}',
     'lotto.clock':'Drawn in {t}','lotto.closed':'Drawing now\u2026',
     'lotto.go':'ENTER THE DRAW','lotto.soon':'OPENING SOON',
@@ -2186,6 +2194,14 @@ const I18N = {
     'fact.art':'艺术','fact.art.v':'完整存储于链上',
     'fact.art.sub':'创建时写入，之后无法更改。',
     'foot.docs':'运作方式','foot.sig':'一个日期。一件藏品。一份礼物。',
+    'lotto.signin':'登录后参加','lotto.getuday':'去买一枚 uDAY',
+    'lotto.need':'至少要有一整枚 uDAY 才能参加。一枚就够。',
+    'lotto.weight':'你持有 {held} 枚 uDAY，权重是 {w}。',
+    'lotto.in':'你已参加','lotto.odds':'权重 {w} / {total}，共 {n} 个钱包参加。',
+    'lotto.drawing':'开奖中…','lotto.drawing.note':'种子区块已经产生，结果马上出来。',
+    'lotto.next':'这次没中','lotto.lost':'这一轮不是你。下一轮午夜开始。',
+    'lotto.claim':'领取你的奖品','lotto.won':'你抽中了 {sym} #{id}，它会一直帮你留着。',
+    'lotto.yours':'已领取','lotto.claimed':'{sym} #{id} 已经在你的钱包里。',
     'lotto.kick':'今天的抽奖','lotto.symbol':'{sym} #{id}',
     'lotto.clock':'{t} 后开奖','lotto.closed':'正在开奖…',
     'lotto.go':'参加抽奖','lotto.soon':'即将开放',
@@ -2926,6 +2942,18 @@ async function openPoster(scope){
    ───────────────────────────────────────────────────────────────────── */
 let lottoTimer = null;
 
+/// Every state the draw can be in, forced from the URL with ?lotto=<name>.
+///
+/// This exists to be REVIEWED BEFORE THE CONTRACT IS WRITTEN. Each state below
+/// is a question the contract has to answer, and the contract cannot be
+/// changed once a draw has run — UdayCommunity was already abandoned once for
+/// deciding its interface before its screens existed. Cheaper to click through
+/// nine mocked states than to redeploy.
+///
+/// Mock only: nothing here is reachable without the query parameter.
+const LOTTO_STATES = ['out', 'noheld', 'ready', 'entered', 'drawing', 'lost', 'won', 'claimed'];
+const LOTTO_MOCK = new URLSearchParams(location.search).get('lotto');
+
 async function renderLotto(){
   const box = document.getElementById('lotto');
   if(!box) return;
@@ -2956,11 +2984,54 @@ async function renderLotto(){
     host.appendChild(cell);
   });
 
+  // Everything below is what the CONTRACT will have to answer. Until it exists
+  // the state is forced from the URL; the shape of each branch is the review.
   const go = document.getElementById('lotto-go');
-  go.textContent = t('lotto.soon');
-  go.disabled = true;                      // see the note below it
-  document.getElementById('lotto-note').textContent =
-    t('lotto.note') + ' ' + t('lotto.preview');
+  const note = document.getElementById('lotto-note');
+  const st = LOTTO_STATES.includes(LOTTO_MOCK) ? LOTTO_MOCK : null;
+  const mock = { weight: 6, held: 40, entrants: 83, totalWeight: 512, prize: prizes[0] };
+
+  go.disabled = false;
+  go.className = 'btn btn--gold lotto__go';
+  go.onclick = null;
+
+  if(!st){                                  // no contract yet, and it says so
+    go.textContent = t('lotto.soon');
+    go.disabled = true;
+    note.textContent = t('lotto.note') + ' ' + t('lotto.preview');
+  }else if(st === 'out'){                   // signed out
+    go.textContent = t('lotto.signin');
+    go.onclick = () => mineConnect.click();
+    note.textContent = t('lotto.note');
+  }else if(st === 'noheld'){                // signed in, holds nothing
+    go.textContent = t('lotto.getuday');
+    go.className = 'btn btn--ghost lotto__go';
+    go.onclick = () => window.open(UTOKEN_BUY, '_blank', 'noopener');
+    note.textContent = t('lotto.need');
+  }else if(st === 'ready'){                 // can enter
+    go.textContent = t('lotto.go');
+    note.textContent = t('lotto.weight', { w: mock.weight, held: mock.held });
+  }else if(st === 'entered'){               // in, waiting
+    go.textContent = t('lotto.in');
+    go.disabled = true;
+    note.textContent = t('lotto.odds', { w: mock.weight, total: mock.totalWeight,
+                                         n: mock.entrants });
+  }else if(st === 'drawing'){               // time passed, root not posted
+    go.textContent = t('lotto.drawing');
+    go.disabled = true;
+    note.textContent = t('lotto.drawing.note');
+  }else if(st === 'lost'){
+    go.textContent = t('lotto.next');
+    go.disabled = true;
+    note.textContent = t('lotto.lost');
+  }else if(st === 'won'){
+    go.textContent = t('lotto.claim');
+    note.textContent = t('lotto.won', { sym: mock.prize.symbol, id: mock.prize.assetId });
+  }else if(st === 'claimed'){
+    go.textContent = t('lotto.yours');
+    go.disabled = true;
+    note.textContent = t('lotto.claimed', { sym: mock.prize.symbol, id: mock.prize.assetId });
+  }
 
   const clock = document.getElementById('lotto-clock');
   const at = j.drawAt ? Date.parse(j.drawAt) : 0;
