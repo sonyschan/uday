@@ -59,19 +59,31 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 .rule{border:0;border-top:1px solid var(--rule);margin:0}
 
 /* ── 1. the wall ─────────────────────────────────────────────────── */
-.hero{position:relative;padding-top:clamp(40px,7vw,76px)}
-/* Capped, not scaled. The strip is 576px of 96px tiles; showing all six rows
+/* flush at the very top: a banner with 78px of ground above it is a picture
+   on a page, not a banner. Nothing sits above it — there is no header. */
+.hero{position:relative;padding-top:0}
+/* FULL BLEED, outside the shell. Sharing the text column's gutters made it
+   read as one picture sitting on the page; edge to edge it reads as a
+   collection running past the frame, which is what it is.
+   Capped, not scaled. The strip is 576px of 96px tiles; showing all six rows
    ate the whole first screen and pushed the one interaction below the fold —
    what it is, how scarce, and what you can do all have to land together.
    Cropping keeps every tile at 1x; shrinking would blur the art. */
-.wall{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--rule);
+.wall{position:relative;overflow:hidden;border-bottom:1px solid var(--rule);
   height:clamp(200px,30vh,300px)}
+/* TWO copies, translated by exactly one image width. The old loop drifted a
+   single 2496px image by -1248px, which is only seamless if the halves match
+   — they do not (checked: they differ across the whole tile field), so it
+   jumped once a cycle. It also could not survive full bleed: at -1248px the
+   right edge of the image reaches x = 1248 + viewport, so any screen wider
+   than 1248px would have run off the end of the picture into empty ground.
+   The shell's 1120px cap was the only thing hiding that. */
+.wall__track{display:flex;width:max-content;animation:drift 180s linear infinite}
 /* the art is 96px per tile; the strip is shown at 1x on a phone and never
    downscaled below it — pixel art loses its edges the moment it is */
-.wall img{width:2496px;max-width:none;image-rendering:pixelated;
-  animation:drift 90s linear infinite}
-@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-1248px)}}
-@media (prefers-reduced-motion:reduce){.wall img{animation:none}}
+.wall img{width:2496px;max-width:none;image-rendering:pixelated;display:block}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-2496px)}}
+@media (prefers-reduced-motion:reduce){.wall__track{animation:none}}
 .wall::after{content:'';position:absolute;inset:0;
   background:linear-gradient(180deg,rgba(8,6,15,.15),rgba(8,6,15,.92) 88%)}
 .hero__over{position:relative;margin-top:-46px;padding-top:42px;z-index:1}
@@ -171,8 +183,11 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 
 <!-- 1 ─ the wall, the scarcity, the one interaction -->
 <section class="hero">
-  <div class="shell">
-    <div class="wall"><img src="/assets/land/wall.png" alt="uDAY 作品牆" width="2496" height="576"></div>
+  <div class="wall">
+    <div class="wall__track">
+      <img src="/assets/land/wall.png" alt="uDAY 作品牆" width="2496" height="576">
+      <img src="/assets/land/wall.png" alt="" aria-hidden="true" width="2496" height="576">
+    </div>
   </div>
   <div class="shell hero__over">
     <p class="kick">uDAY</p>
