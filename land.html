@@ -447,6 +447,25 @@ async function drawLayers(){
   await paintInto(sum, parts.map(p => p[0]), 96);
 }
 
+// Before anyone touches the picker, the hero is a SHOWCASE — after they touch
+// it, it is a lookup. Defaulting to today gambles that first impression on a
+// coin flip: plate and frame are optional (80%/20%), 234 pieces carry neither,
+// and only 183 of 365 days hold a fully-dressed one. Today happened to be a
+// single bare piece, so the first artwork a visitor saw was an empty box.
+// Seeded by the date, so it changes daily and never opens on a weak tile.
+function showcaseDay(){
+  const dressed = Object.keys(DAYS).filter(k => {
+    const m = +k.slice(0, 2), d = +k.slice(3);
+    return m >= 1 && m <= 12 && d >= 1 && d <= DIM[m - 1]
+        && DAYS[k].some(e => e.p && e.f);
+  }).sort();
+  if(!dressed.length) return;                    // early collection: keep today
+  const now = new Date();
+  const seed = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 864e5);
+  const k = dressed[seed % dressed.length];
+  curM = +k.slice(0, 2); curD = +k.slice(3);
+}
+
 render();
 drawLayers();          // independent of the index — no reason to wait for it
 drawYearlet();
@@ -458,6 +477,8 @@ fetch('/data/date-index.json').then(r=>r.json()).then(j=>{
   document.querySelector('h1').innerHTML =
     '一年 366 天<br>只剩 <span style="color:var(--gold)">'+(366-lit)+'</span> 天<br>從未被誕生';
   $('sealed').textContent = (j.unrevealed||0).toLocaleString();
+  showcaseDay();
+  render();
   draw();
 }).catch(()=>{ $('out').textContent = '索引讀取失敗'; });
 </script>
