@@ -133,10 +133,18 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
    as prose blocks and never given a right side. Widening the text was not the
    fix — 34ch is the readable measure — so the right column carries something
    real instead: today's actual piece, the four layers, the door. */
-.today{margin:0;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
-.today canvas{width:192px;height:192px;image-rendering:pixelated;border-radius:10px;
-  border:1px solid var(--rule);background:#0b0916}
-.today figcaption{font-family:var(--display);font-size:15px;letter-spacing:.08em;color:var(--muted)}
+.yearlet{margin:0;display:flex;flex-direction:column;align-items:flex-start;gap:16px}
+.yearlet__grid{display:grid;grid-template-columns:repeat(31,1fr);gap:3px;
+  width:min(340px,100%)}
+.yearlet__grid i{aspect-ratio:1;border-radius:1px;background:rgba(243,231,205,.10)}
+.yearlet__grid i.on{background:var(--gold);animation:yearpulse 2.4s ease-in-out infinite}
+@keyframes yearpulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(232,185,63,.55),0 0 8px rgba(232,185,63,.7)}
+  50%    {box-shadow:0 0 0 4px rgba(232,185,63,0),0 0 14px rgba(232,185,63,1)}}
+@media (prefers-reduced-motion:reduce){.yearlet__grid i.on{animation:none;
+  box-shadow:0 0 0 3px rgba(232,185,63,.35),0 0 12px rgba(232,185,63,.9)}}
+.yearlet figcaption{font-size:15px;color:var(--muted);width:min(340px,100%);line-height:1.7}
+.yearlet figcaption b{color:var(--gold);font-weight:600}
 
 /* 4 tiles + 3 plus signs + equals + the composite has to fit one row, or the
    sum wraps under the operator and the sentence the diagram is making
@@ -207,11 +215,14 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
       <p class="lede">不是空投，不是積分。是一年裡屬於你的那一天到了，
         而這條鏈記得。</p>
     </div>
-    <!-- Today's real piece, drawn from the index. The claim on the left is
-         abstract until something on the right proves the thing runs daily. -->
-    <figure class="today">
-      <canvas id="today-cv" width="96" height="96"></canvas>
-      <figcaption id="today-cap">今天</figcaption>
+    <!-- A YEAR, with one cell lit — not a piece. The picker above already draws
+         a piece, and defaulting to today meant the same artwork appeared twice
+         within 600px, which teaches a reader that the page repeats itself.
+         This section's claim is "one day a year is yours", and the thing that
+         says that is a calendar, not an artwork. -->
+    <figure class="yearlet">
+      <div class="yearlet__grid" id="yearlet" aria-hidden="true"></div>
+      <figcaption id="yearlet-cap"></figcaption>
     </figure>
   </div>
 </section>
@@ -387,20 +398,23 @@ async function paintInto(canvas, srcs, size){
   (await Promise.all(srcs.map(load))).forEach(im => im && x.drawImage(im, 0, 0, size, size));
 }
 
-async function drawToday(){
+function drawYearlet(){
+  const host = $('yearlet');
+  if(!host || host.childElementCount) return;
   const now = new Date(), m = now.getMonth() + 1, d = now.getDate();
-  const list = (DAYS && DAYS[pad(m) + '-' + pad(d)]) || [];
-  const cap = $('today-cap');
-  cap.textContent = '\u4eca\u5929 \u00b7 ' + m + '\u6708' + d + '\u65e5';
-  if(!list.length) return;
-  const dress = e => (e.p ? 1 : 0) + (e.f ? 1 : 0);
-  const e = list.slice().sort((a, b) => dress(b) - dress(a) || a.id - b.id)[0];
-  const src = [];
-  if(e.p) src.push('/assets/layers/plate/' + e.p + '.png');
-  if(e.f) src.push('/assets/layers/frame/' + e.f + '.png');
-  src.push('/assets/layers/month/' + pad(m) + '_' + (e.mp === 'r' ? 'corner' : 'center') + '.png');
-  src.push('/assets/layers/date/'  + pad(d) + '_' + (e.dp === 'r' ? 'corner' : 'center') + '.png');
-  await paintInto($('today-cv'), src, 96);
+  for(let mm = 1; mm <= 12; mm++){
+    for(let dd = 1; dd <= 31; dd++){
+      const cell = document.createElement('i');
+      // days a month does not have stay invisible rather than absent, so every
+      // row is 31 wide and the grid reads as a year instead of a ragged block
+      if(dd > DIM[mm - 1]) cell.style.visibility = 'hidden';
+      else if(mm === m && dd === d) cell.className = 'on';
+      host.appendChild(cell);
+    }
+  }
+  $('yearlet-cap').innerHTML =
+    '\u65e5\u66c6\u4e00\u5e74\u53ea\u8d70\u5230\u9019\u4e00\u683c\u4e00\u6b21\u3002' +
+    '\u90a3\u4e00\u5929\uff0c\u79ae\u7269\u5c31\u662f\u4f60\u7684\u3002';
 }
 
 async function drawLayers(){
@@ -435,6 +449,7 @@ async function drawLayers(){
 
 render();
 drawLayers();          // independent of the index — no reason to wait for it
+drawYearlet();
 
 fetch('/data/date-index.json').then(r=>r.json()).then(j=>{
   DAYS = j.days;
@@ -444,7 +459,6 @@ fetch('/data/date-index.json').then(r=>r.json()).then(j=>{
     '一年 366 天<br>只剩 <span style="color:var(--gold)">'+(366-lit)+'</span> 天<br>從未被誕生';
   $('sealed').textContent = (j.unrevealed||0).toLocaleString();
   draw();
-  drawToday();
 }).catch(()=>{ $('out').textContent = '索引讀取失敗'; });
 </script>
 </body>
