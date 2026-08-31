@@ -45,13 +45,15 @@ body{background:var(--ink);color:var(--vellum);font-family:var(--body);line-heig
   -webkit-font-smoothing:antialiased}
 img{max-width:100%;display:block}
 .shell{max-width:1120px;margin:0 auto;padding:0 clamp(20px,5vw,44px)}
-section{padding:clamp(56px,9vw,110px) 0}
+/* 110 top AND bottom made every boundary 220px of nothing, for a page of
+   350 words. Generous, not cavernous. */
+section{padding:clamp(48px,6.5vw,78px) 0}
 .kick{font-family:var(--display);font-size:16px;letter-spacing:.10em;text-transform:uppercase;
   color:var(--gold);opacity:.9;margin-bottom:18px}
 h1{font-family:var(--display);font-size:clamp(28px,5vw,54px);line-height:1.14;font-weight:400;
   letter-spacing:-.01em}
 h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;font-weight:400}
-.lede{font-size:clamp(16px,1.9vw,19px);color:#dbcfb4;max-width:34ch;margin-top:18px}
+.lede{font-size:clamp(16px,1.9vw,19px);color:#dbcfb4;max-width:34ch;margin-top:20px}
 .big{font-family:var(--display);color:var(--gold);font-size:clamp(40px,9vw,110px);line-height:1}
 .muted{color:var(--muted)}
 .rule{border:0;border-top:1px solid var(--rule);margin:0}
@@ -72,10 +74,13 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 @media (prefers-reduced-motion:reduce){.wall img{animation:none}}
 .wall::after{content:'';position:absolute;inset:0;
   background:linear-gradient(180deg,rgba(8,6,15,.15),rgba(8,6,15,.92) 88%)}
-.hero__over{position:relative;margin-top:-46px;padding-top:30px;z-index:1}
+.hero__over{position:relative;margin-top:-46px;padding-top:42px;z-index:1}
 
 /* ── the one interaction ─────────────────────────────────────────── */
-.pick{margin-top:24px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+/* The four gaps here used to be 29/18/24/20 — all the same, so nothing
+   grouped. The headline and its lede are one unit; the picker is a
+   different thing and is now pushed away from them. */
+.pick{margin-top:44px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 /* Our own menu, never the platform's. Android hands the <select> popup to the
    host app and wallet in-app browsers do not open it — the control is silently
    dead and undetectable from the page. Wallet browsers are where this audience
@@ -97,11 +102,24 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
   color:var(--vellum);font-family:var(--display);font-size:15px;padding:10px 14px;border-radius:4px}
 .sel__opt:hover{background:rgba(232,185,63,.14)}
 .sel__opt[aria-selected="true"]{color:var(--gold)}
-.pick__out{display:flex;gap:16px;align-items:center;margin-top:20px;min-height:104px}
+/* Capped, or margin-left:auto throws the button 1000px from the answer it
+   belongs to and it reads as an unrelated element rather than the next step. */
+.pick__out{display:flex;gap:16px;align-items:center;margin-top:18px;min-height:104px;
+  flex-wrap:wrap;max-width:min(720px,100%)}
 .pick__out canvas{width:96px;height:96px;image-rendering:pixelated;border-radius:8px;
   border:1px solid var(--rule);background:#0b0916}
-.pick__txt{font-size:16px;max-width:30ch}
+/* min-width:0 or the text refuses to shrink below its content and drops
+   the piece onto its own row, costing a third line on a phone. */
+.pick__txt{font-size:16px;max-width:30ch;flex:1 1 180px;min-width:0}
 .pick__txt b{color:var(--gold);font-weight:600}
+.pick__go{margin-left:auto;white-space:nowrap}
+@media(max-width:700px){
+  .pick__go{margin-left:0;margin-top:4px;width:100%;text-align:center}
+  /* the copy and the interaction can sit closer when the screen is the
+     constraint — the CTA landing below the fold costs more than the air */
+  .pick{margin-top:30px}
+  .pick__out{margin-top:14px;min-height:0}
+}
 
 .btn{display:inline-block;font-family:var(--display);font-size:16px;letter-spacing:.08em;
   padding:16px 26px;border-radius:8px;text-decoration:none;cursor:pointer;border:1px solid transparent}
@@ -144,6 +162,11 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
     <div class="pick__out">
       <canvas id="cv" width="96" height="96"></canvas>
       <p class="pick__txt" id="out">…</p>
+      <!-- The highest-intent moment on the page: they just looked up a day and
+           got an answer. Asking here, rather than only at the foot, is the
+           difference between a question answered and a door opened. Same
+           destination as the footer button — one door, offered twice. -->
+      <a class="btn btn--ghost pick__go" href="https://app.uday.gift/">哪些日子是你的？</a>
     </div>
   </div>
 </section>
