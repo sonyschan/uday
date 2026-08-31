@@ -1729,6 +1729,8 @@ const I18N = {
     'join.member':'You are in this room. Only you can take yourself out of it.',
     'join.member.days':'On the calendar as {days}.',
     'join.loading':'Checking which of your days can stand here…',
+    'join.rpcfail':'The chain did not answer — the room can’t read your standing right now.',
+    'join.retry':'RETRY',
     'x.link':'LINK AN X ACCOUNT',
     'x.unlink':'remove',
     'x.working':'WAITING FOR YOUR SIGNATURE…',
@@ -1961,6 +1963,8 @@ const I18N = {
     'join.member':'你已经在这个房间里。只有你自己能把自己移出去。',
     'join.member.days':'日历上是 {days}。',
     'join.loading':'正在看看你的哪些日子可以站上这张日历…',
+    'join.rpcfail':'链上没有应答——房间暂时读不到你的状态。',
+    'join.retry':'重试',
     'x.link':'连接 X 帐号',
     'x.unlink':'移除',
     'x.working':'等待你签名…',
@@ -3367,10 +3371,16 @@ async function loadCommunity(){
 /// fallback alone left the panel permanently hidden.
 async function ensureCommContract(){
   if(COMM_CONTRACT) return COMM_CONTRACT;
-  try{
-    const r = await fetch(COMM_ADDR_FILE, { cache: 'no-cache' });
-    if(r.ok) COMM_CONTRACT = (await r.text()).trim();
-  }catch(e){}
+  // One failed fetch of this 43-byte file used to hide the entire join panel
+  // with no message — "no claim options in sight" was this line failing once
+  // on a phone network.
+  for(let i = 0; i < 3 && !COMM_CONTRACT; i++){
+    try{
+      const r = await fetch(COMM_ADDR_FILE, { cache: 'no-cache' });
+      if(r.ok) COMM_CONTRACT = (await r.text()).trim();
+    }catch(e){}
+    if(!COMM_CONTRACT && i < 2) await new Promise(res => setTimeout(res, 500));
+  }
   return COMM_CONTRACT;
 }
 
@@ -4006,14 +4016,22 @@ const UTOKEN_BUY = UTOKEN_TOKEN;
 
 async function commCall(sel, args){
   const home = CHAINS[0];
-  try{
-    const r = await fetch(home.rpc, { method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
-        params: [{ to: COMM_CONTRACT, data: sel + (args || '') }, 'latest'] }) });
-    const j = await r.json();
-    return (j && j.result && j.result !== '0x') ? j.result : null;
-  }catch(e){ return null; }
+  // The public RPC drops connections under any load; on a phone network a
+  // single shot fails often enough that real holders were reading its null.
+  for(let i = 0; i < 3; i++){
+    try{
+      const r = await fetch(home.rpc, { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
+          params: [{ to: COMM_CONTRACT, data: sel + (args || '') }, 'latest'] }) });
+      const j = await r.json();
+      if(j && j.result && j.result !== '0x') return j.result;
+      if(j && j.result === '0x') return null;      // answered: not a contract
+      if(j && j.error && j.error.code === 3) return null;  // answered: reverted
+    }catch(e){}
+    if(i < 2) await new Promise(res => setTimeout(res, 400 * (i + 1)));
+  }
+  return null;
 }
 
 /// The days this wallet could declare: only dates it actually holds a piece
@@ -4119,7 +4137,22 @@ async function renderJoin(){
   if(!COMM){ box.hidden = true; return; }
   const ready = await ensureCommContract();
   if(run !== joinRun) return;              // a newer run took over
-  if(!ready){ box.hidden = true; return; }
+  if(!ready){
+    // even with retries the file can stay unreachable; an empty page and a
+    // spoken failure are different experiences, and only one can be acted on
+    box.textContent = '';
+    const p = document.createElement('p');
+    p.className = 'commjoin__line';
+    p.textContent = t('join.rpcfail');
+    box.appendChild(p);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn btn--ghost';
+    b.textContent = t('join.retry');
+    b.addEventListener('click', () => renderJoin());
+    box.appendChild(b);
+    box.hidden = false;
+    return;
+  }
   box.textContent = '';
   // Which days this wallet holds is known only from the collection index, and
   // this runs before it lands — mineWalletUI() calls it the moment a wallet
@@ -4177,6 +4210,14 @@ async function renderJoin(){
     gateBalance(COMM, me),
   ]);
   if(run !== joinRun) return;              // four reads is plenty of time to be lapped
+  // null from commCall is the RPC failing, not an answer. Reading it as an
+  // answer told a member holding hundreds of uDAY "you need 1 uDAY — buy
+  // some". Unknown gets its own state and a retry, like gateBal always had.
+  if(mem === null || slots === null || mine === null){
+    line.textContent = t('join.rpcfail');
+    act(t('join.retry'), 'btn--ghost', () => renderJoin());
+    return;
+  }
   // known-and-short, never merely unknown
   const shortOfGate = gateBal !== null && gateBal < BigInt(COMM.minBalance || '0');
   const owned = commOwnedDays(me);
