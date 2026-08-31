@@ -4,16 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>uDAY — 擁有一天</title>
-<meta name="robots" content="noindex">
+<meta name="description" content="一年 366 天，每一天都是一件鏈上的作品，被一個人擁有。每年你的那一天，鏈上會寄一份禮物給你。">
+<link rel="canonical" href="https://uday.gift/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://uday.gift/">
+<meta property="og:title" content="uDAY — 擁有一天">
+<meta property="og:description" content="每一天都是一件鏈上的作品，被一個人擁有。每年你的那一天，鏈上會寄一份禮物給你。">
+<meta property="og:image" content="https://uday.gift/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://uday.gift/assets/og.png">
+<link rel="icon" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="theme-color" content="#08060f">
 <!--
-  MOCK of a one-page landing, for review. Does not touch index.html.
+  uday.gift — the landing page. Served at the apex by vercel.json; everything
+  you can DO lives on app.uday.gift.
 
-  Reachable at /land.html on a preview deployment. The argument it is making:
-  the current homepage teaches before it hooks, and nobody reads past a
-  specification. Five sections, ~350 words, ONE call to action.
+  Five sections, ~350 words, ONE call to action. The homepage it replaced
+  taught before it hooked, and nobody reads past a specification to find out
+  whether they care.
 
-  Every number here is live-read at build time from the same index the site
-  serves, so nothing on it is aspirational.
+  Every number is read live from the same index the app serves, so the page
+  cannot drift into claiming something the chain does not.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,8 +76,27 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 
 /* ── the one interaction ─────────────────────────────────────────── */
 .pick{margin-top:24px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-.pick select{font-family:var(--display);font-size:16px;color:var(--vellum);
-  background:#181430;border:1px solid var(--rule);border-radius:8px;padding:12px 14px}
+/* Our own menu, never the platform's. Android hands the <select> popup to the
+   host app and wallet in-app browsers do not open it — the control is silently
+   dead and undetectable from the page. Wallet browsers are where this audience
+   arrives, and this is the page's only interaction. Same pattern as the app. */
+.sel{position:relative;display:inline-flex}
+.sel__btn{appearance:none;-webkit-appearance:none;font-family:var(--display);font-size:16px;
+  color:var(--vellum);background:rgba(243,231,205,.04);border:1px solid var(--rule);
+  border-radius:8px;padding:13px 38px 13px 16px;min-width:120px;cursor:pointer;text-align:left}
+.sel__btn:hover{border-color:rgba(232,185,63,.55);background:rgba(243,231,205,.07)}
+.sel__btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.sel__chev{position:absolute;right:14px;top:50%;width:8px;height:8px;pointer-events:none;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:translateY(-70%) rotate(45deg)}
+.sel__menu{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:100%;
+  max-height:264px;overflow-y:auto;background:#181430;border:1px solid rgba(232,185,63,.35);
+  border-radius:6px;box-shadow:0 12px 30px rgba(0,0,0,.55);padding:4px}
+.sel__menu[hidden]{display:none}
+.sel__opt{display:block;width:100%;text-align:left;border:0;cursor:pointer;background:none;
+  color:var(--vellum);font-family:var(--display);font-size:15px;padding:10px 14px;border-radius:4px}
+.sel__opt:hover{background:rgba(232,185,63,.14)}
+.sel__opt[aria-selected="true"]{color:var(--gold)}
 .pick__out{display:flex;gap:16px;align-items:center;margin-top:20px;min-height:104px}
 .pick__out canvas{width:96px;height:96px;image-rendering:pixelated;border-radius:8px;
   border:1px solid var(--rule);background:#0b0916}
@@ -94,18 +127,19 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
     <h1>一年 366 天<br>只剩 <span style="color:var(--gold)">7</span> 天<br>從未被誕生</h1>
     <p class="lede">每一天都是一件鏈上的作品，被一個人擁有。你的那一天，還在不在？</p>
 
-<!--
-  ⚠️ KNOWN, DELIBERATE IN THIS MOCK: the month/day pickers are native <select>.
-  This site does not use those anywhere, because Android hands the select popup
-  to the host app and wallet in-app browsers (OKX and friends) never open it —
-  the control is silently dead, and undetectable from the page. Wallet browsers
-  are exactly where this audience arrives, so before this ships the pickers must
-  become the DOM listbox index.html already has (.sel__btn + .sel__menu).
-  Left as-is here so the review is about structure and copy, not plumbing.
--->
     <div class="pick">
-      <select id="m" aria-label="月"></select>
-      <select id="d" aria-label="日"></select>
+      <div class="sel">
+        <button type="button" class="sel__btn" id="m" aria-label="月"
+                aria-haspopup="listbox" aria-expanded="false"></button>
+        <span class="sel__chev" aria-hidden="true"></span>
+        <div class="sel__menu" id="m-menu" role="listbox" hidden></div>
+      </div>
+      <div class="sel">
+        <button type="button" class="sel__btn" id="d" aria-label="日"
+                aria-haspopup="listbox" aria-expanded="false"></button>
+        <span class="sel__chev" aria-hidden="true"></span>
+        <div class="sel__menu" id="d-menu" role="listbox" hidden></div>
+      </div>
     </div>
     <div class="pick__out">
       <canvas id="cv" width="96" height="96"></canvas>
@@ -194,48 +228,58 @@ const load = src => cache.get(src) || cache.set(src, new Promise(r => {
   const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src;
 })).get(src);
 
-function fillDays(){
-  const m = +$('m').value, keep = +$('d').value || 1;
-  $('d').innerHTML = '';
-  for(let i=1;i<=DIM[m-1];i++){
-    const o = document.createElement('option');
-    o.value = i; o.textContent = i + '日';
-    $('d').appendChild(o);
+let curM = new Date().getMonth() + 1, curD = new Date().getDate();
+
+// One menu builder for both pickers. Closing walks EVERY open menu: the app
+// once grew a third picker that could neither open nor close, because the
+// closer held a hard-coded pair of them.
+function closeMenus(except){
+  document.querySelectorAll('.sel__menu').forEach(mn => {
+    if(mn === except) return;
+    mn.hidden = true;
+    const b = mn.parentNode.querySelector('.sel__btn');
+    if(b) b.setAttribute('aria-expanded', 'false');
+  });
+}
+document.addEventListener('click', e => { if(!e.target.closest('.sel')) closeMenus(); });
+addEventListener('keydown', e => { if(e.key === 'Escape') closeMenus(); });
+
+function buildMenu(id, items, current, pick){
+  const btn = $(id), menu = $(id + '-menu');
+  const now = items.find(o => o.v === current) || items[0];
+  btn.textContent = now.t;
+  menu.textContent = '';
+  items.forEach(o => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sel__opt';
+    b.setAttribute('role', 'option');
+    b.setAttribute('aria-selected', String(o.v === current));
+    b.textContent = o.t;
+    b.addEventListener('click', () => { closeMenus(); pick(o.v); });
+    menu.appendChild(b);
+  });
+  if(!btn.dataset.wired){
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = menu.hidden;
+      closeMenus(menu);
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
   }
-  $('d').value = Math.min(keep, DIM[m-1]);
 }
 
-async function draw(){
-  const m = +$('m').value, d = +$('d').value, key = pad(m)+'-'+pad(d);
-  const list = (DAYS && DAYS[key]) || [];
-  const ctx = $('cv').getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  ctx.clearRect(0,0,96,96);
-  if(!list.length){
-    $('out').innerHTML = '<b>'+m+'月'+d+'日</b> 還沒有人擁有。它是剩下的那幾天之一。';
-    return;
-  }
-  // best-dressed piece of that day, oldest wins ties — the same rule the daily
-  // card uses, and for the same reason: a day's first piece is often bare
-  const dress = e => (e.p?1:0)+(e.f?1:0);
-  const e = list.slice().sort((a,b)=>dress(b)-dress(a)||a.id-b.id)[0];
-  const src = [];
-  if(e.p) src.push('/assets/layers/plate/'+e.p+'.png');
-  if(e.f) src.push('/assets/layers/frame/'+e.f+'.png');
-  src.push('/assets/layers/month/'+pad(m)+'_'+(e.mp==='r'?'corner':'center')+'.png');
-  src.push('/assets/layers/date/'+pad(d)+'_'+(e.dp==='r'?'corner':'center')+'.png');
-  (await Promise.all(src.map(load))).forEach(im => im && ctx.drawImage(im,0,0,96,96));
-  $('out').innerHTML = '<b>'+m+'月'+d+'日</b> 已經誕生 —— 共 '+list.length+
-    ' 枚，最早的 #'+e.id+' 在 '+e.owner.slice(0,6)+'…'+e.owner.slice(-4)+' 的錢包裡。';
+function render(){
+  buildMenu('m', MON.map((t, i) => ({ v: i + 1, t })), curM,
+            v => { curM = v; curD = Math.min(curD, DIM[v - 1]); render(); draw(); });
+  const days = [];
+  for(let i = 1; i <= DIM[curM - 1]; i++) days.push({ v: i, t: i + '\u65e5' });
+  buildMenu('d', days, curD, v => { curD = v; render(); draw(); });
 }
 
-MON.forEach((s,i)=>{ const o=document.createElement('option'); o.value=i+1; o.textContent=s; $('m').appendChild(o); });
-const now = new Date();
-$('m').value = now.getMonth()+1;
-fillDays();
-$('d').value = now.getDate();
-$('m').addEventListener('change', ()=>{ fillDays(); draw(); });
-$('d').addEventListener('change', draw);
+render();
 
 fetch('/data/date-index.json').then(r=>r.json()).then(j=>{
   DAYS = j.days;

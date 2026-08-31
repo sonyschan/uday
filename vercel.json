@@ -1,6 +1,48 @@
 {
+  "_comment": [
+    "Three hostnames, one deployment.",
+    "",
+    "  uday.gift      the landing page — land.html, and nothing else",
+    "  app.uday.gift  everything you can DO — index.html, the whole app",
+    "  my.uday.gift   the app's old name, permanently redirected to app",
+    "",
+    "Order matters: the first matching rule wins, so the community redirect",
+    "sits above the catch-all that would otherwise serve the landing page for",
+    "every path on the apex.",
+    "",
+    "Rooms are the one thing already shared as links (uday.gift/c/<slug> is in",
+    "chat groups and X posts), so those must keep resolving. They 308 to the",
+    "app host rather than 404 or, worse, quietly render a landing page."
+  ],
+
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "my.uday.gift" }],
+      "destination": "https://app.uday.gift/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/c/:path*",
+      "has": [{ "type": "host", "value": "uday.gift" }],
+      "destination": "https://app.uday.gift/c/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/c",
+      "has": [{ "type": "host", "value": "uday.gift" }],
+      "destination": "https://app.uday.gift/c",
+      "permanent": false
+    }
+  ],
+
   "rewrites": [
     { "source": "/c", "destination": "/index.html" },
-    { "source": "/c/:slug", "destination": "/index.html" }
+    { "source": "/c/:slug", "destination": "/index.html" },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "uday.gift" }],
+      "destination": "/land.html"
+    }
   ]
 }
