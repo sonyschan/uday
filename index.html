@@ -30,9 +30,16 @@
    visitor without JS still gets the whole page. */
 (function(){
   var h = document.documentElement;
-  if(location.hostname === 'my.uday.gift' ||
-     /[?&]view=personal(&|$)/.test(location.search)) h.className += ' pre-personal';
-  else if(/^\/c(\/|$)/.test(location.pathname))      h.className += ' pre-comm';
+  // The community path is tested FIRST. On the app host both would match, and
+  // the wrong one wins by source order — pre-personal hides the very sections
+  // a room needs, so a room would paint blank and then jump.
+  //
+  // app.uday.gift is the app; my.uday.gift is its old name and still answers.
+  // Literals, not the constants below — this runs before the script that
+  // declares them, and a TDZ throw here takes the whole page down.
+  if(/^\/c(\/|$)/.test(location.pathname))              h.className += ' pre-comm';
+  else if(/^(app|my)\.uday\.gift$/.test(location.hostname) ||
+          /[?&]view=personal(&|$)/.test(location.search)) h.className += ' pre-personal';
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3297,13 +3304,21 @@ function buildWall(grid, byDay, opts){
    ───────────────────────────────────────────────────────────────────── */
 const COMM_SLUG = (location.pathname.match(/^\/c\/([a-z0-9-]{1,32})\/?$/) || [])[1] || null;
 const COMM_NEW = /^\/c\/?$/.test(location.pathname);
-// Rooms live on uday.gift. On the personal host the same path would boot
-// personal mode AND community mode together — your collection rendering
-// under someone's room. Send the URL to its real home.
-// literal, not PERSONAL_HOST: that const is declared further down and a
-// reference here is a temporal-dead-zone crash that kills the whole script
-if((COMM_SLUG || COMM_NEW) && location.hostname === 'my.uday.gift'){
-  location.replace('https://uday.gift' + location.pathname + location.search);
+// Rooms live on the APP host now — uday.gift is a landing page and has
+// nothing to run them with. The old rule was the other way round (bounce /c
+// off my.uday.gift onto the apex) because the app and the marketing page
+// shared a hostname; they no longer do.
+//
+// What has to stay true either way: /c must never boot personal mode AND
+// community mode at once, or your collection renders underneath someone
+// else's room. IS_PERSONAL is what decides that, and it is told below that a
+// community path is not personal.
+//
+// Literals, not the constants further down: this runs before they are
+// declared and a reference here is a temporal-dead-zone crash that kills the
+// whole script.
+if((COMM_SLUG || COMM_NEW) && location.hostname === 'uday.gift'){
+  location.replace('https://app.uday.gift' + location.pathname + location.search);
 }
 let COMM = null;
 
@@ -4682,9 +4697,18 @@ const ADDR_RE = /^0x[0-9a-fA-F]{40}$/;
    both per-origin, so the main-site login redirects WITH ?addr= — the wall
    renders read-only immediately; connecting on the subdomain is optional.
    (?view=personal exists only so localhost can exercise this path.) */
-const PERSONAL_HOST = 'my.uday.gift';
-const IS_PERSONAL = location.hostname === PERSONAL_HOST ||
-                    new URLSearchParams(location.search).get('view') === 'personal';
+/* The app moved to its own host on 2026-08-31: uday.gift is the landing page
+   now, and everything you can DO lives on app.uday.gift. my.uday.gift was the
+   app's first name and still answers — Vercel redirects it here — so links
+   people already have keep working, and the page recognises both. */
+const APP_HOST = 'app.uday.gift';
+const PERSONAL_HOST = APP_HOST;                    // old name, one meaning
+const IS_APP_HOST = /^(app|my)\.uday\.gift$/.test(location.hostname);
+// A community path is never personal, even on the app host: /c/<slug> and the
+// holder calendar are two different pages that now share one hostname, and
+// booting both put a wallet's own collection under someone else's room once.
+const IS_PERSONAL = (IS_APP_HOST || new URLSearchParams(location.search).get('view') === 'personal')
+                    && !COMM_SLUG && !COMM_NEW;
 
 /* Cross-subdomain handoff rides a short-lived cookie on .uday.gift, not URL
    params — cookies are the one storage siblings share, so the redirect can
@@ -4949,7 +4973,7 @@ async function navGo(dest){
   // for one. Asking first meant tapping it popped a wallet prompt, and
   // dismissing that prompt left you on the page you started from, silently.
   if(dest === 'comm'){
-    leaveTo(/(^|\.)uday\.gift$/.test(location.hostname) ? 'https://uday.gift/c' : '/c');
+    leaveTo(/(^|\.)uday\.gift$/.test(location.hostname) ? 'https://' + APP_HOST + '/c' : '/c');
     return;
   }
   const id = mineIdentity();
