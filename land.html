@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>uDAY — 擁有一天</title>
-<meta name="description" content="一年 366 天，每一天都是一件鏈上的作品，被一個人擁有。每年你的那一天，鏈上會寄一份禮物給你。">
+<title>uDAY — Own a Day</title>
+<meta name="description" content="366 days a year, each one an onchain artwork owned by one person. Every year on your day, the chain sends you a gift.">
 <link rel="canonical" href="https://uday.gift/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://uday.gift/">
-<meta property="og:title" content="uDAY — 擁有一天">
-<meta property="og:description" content="每一天都是一件鏈上的作品，被一個人擁有。每年你的那一天，鏈上會寄一份禮物給你。">
+<meta property="og:title" content="uDAY — Own a Day">
+<meta property="og:description" content="Every day is an onchain artwork, owned by one person. Every year on your day, the chain sends you a gift.">
 <meta property="og:image" content="https://uday.gift/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -37,8 +37,13 @@
   --ink:#08060f; --night:#100d20; --vellum:#f3e7cd; --gold:#e8b93f;
   --muted:#9b8fb5; --rule:rgba(232,185,63,.22);
   --display:'Silkscreen','Noto Sans SC',ui-monospace,monospace;
-  --body:'Noto Sans SC','Nunito Sans',-apple-system,sans-serif;
+  --body:'Nunito Sans',-apple-system,sans-serif;
 }
+/* zh swaps the body face and honours the owner's text floors (zh 16px);
+   Silkscreen has no CJK coverage, so display contexts fall through per glyph */
+html[lang="zh"]{--body:'Noto Sans SC','Nunito Sans',-apple-system,sans-serif}
+html[lang="zh"] .layers figcaption,html[lang="zh"] .yearlet figcaption,
+html[lang="zh"] .foot,html[lang="zh"] .langbtn{font-size:16px}
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--ink);color-scheme:dark}
 body{background:var(--ink);color:var(--vellum);font-family:var(--body);line-height:1.7;
@@ -170,11 +175,16 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 .layers .op{font-family:var(--display);color:var(--muted);font-size:16px;
   align-self:center;margin-bottom:18px}
 .layers figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
-.layers figcaption{font-family:var(--display);font-size:13px;color:var(--muted)}
+.layers figcaption{font-family:var(--display);font-size:14px;color:var(--muted)}
 
 .door{margin:0;display:flex;align-items:center}
 @media(max-width:819px){ .door{margin-top:8px} }
 
+.langbtn{position:absolute;top:14px;right:14px;z-index:5;font-family:var(--display);
+  font-size:14px;letter-spacing:.06em;color:var(--vellum);cursor:pointer;
+  background:rgba(8,6,15,.55);border:1px solid var(--rule);border-radius:8px;
+  padding:8px 14px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.langbtn:hover{border-color:rgba(232,185,63,.55)}
 .foot{padding:40px 0 64px;font-size:14px}
 .foot a{color:var(--muted)}
 </style>
@@ -183,16 +193,17 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 
 <!-- 1 ─ the wall, the scarcity, the one interaction -->
 <section class="hero">
+  <button type="button" class="langbtn" id="langbtn">中文</button>
   <div class="wall">
     <div class="wall__track">
-      <img src="/assets/land/wall.png" alt="uDAY 作品牆" width="2496" height="576">
+      <img src="/assets/land/wall.png" alt="uDAY collection wall" width="2496" height="576">
       <img src="/assets/land/wall.png" alt="" aria-hidden="true" width="2496" height="576">
     </div>
   </div>
   <div class="shell hero__over">
     <p class="kick">uDAY</p>
-    <h1>一年 366 天<br>只剩 <span style="color:var(--gold)">7</span> 天<br>從未被誕生</h1>
-    <p class="lede">每一天都是一件鏈上的作品，被一個人擁有。你的那一天，還在不在？</p>
+    <h1>366 days in a year.<br>All born,<br>except <span style="color:var(--gold)">7</span>.</h1>
+    <p class="lede" data-i18n="hero.lede">Every day is an onchain artwork, owned by one person. Is your day still out there?</p>
 
     <div class="pick">
       <div class="sel">
@@ -215,7 +226,7 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
            got an answer. Asking here, rather than only at the foot, is the
            difference between a question answered and a door opened. Same
            destination as the footer button — one door, offered twice. -->
-      <a class="btn btn--ghost pick__go" href="https://app.uday.gift/">哪些日子是你的？</a>
+      <a class="btn btn--ghost pick__go" href="https://app.uday.gift/" data-i18n="pick.go">WHICH DAYS ARE YOURS?</a>
     </div>
   </div>
 </section>
@@ -226,9 +237,8 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 <section>
   <div class="shell stat">
     <div>
-      <h2>每年你的那一天<br>鏈上會寄一份禮物給你</h2>
-      <p class="lede">不是空投，不是積分。是一年裡屬於你的那一天到了，
-        而這條鏈記得。</p>
+      <h2 data-i18n="gift.h2">Every year on your day,<br>the chain sends you a gift</h2>
+      <p class="lede" data-i18n="gift.lede">Not an airdrop, not points. The one day of the year that is yours arrives — and this chain remembers.</p>
     </div>
     <!-- A YEAR, with one cell lit — not a piece. The picker above already draws
          a piece, and defaulting to today meant the same artwork appeared twice
@@ -249,12 +259,10 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 <section>
   <div class="shell stat">
     <div>
-      <p class="kick">作品怎麼來的</p>
-      <h2>四層<br>合約自己畫</h2>
-      <p class="lede">底盤、外框、月份、日期，四層各自獨立抽出——所以底盤和外框
-        可能都不存在，也可能都在。<b style="color:var(--gold)">95,232</b> 種組合，
-        全部畫在鏈上。</p>
-      <p class="lede muted">日期綁的是現實世界的意義，底盤和外框決定稀有度與長相。</p>
+      <p class="kick" data-i18n="art.kick">How the art is made</p>
+      <h2 data-i18n="art.h2">Four layers,<br>painted by the contract</h2>
+      <p class="lede" data-i18n="art.lede">Plate, frame, month, date — four layers, each drawn on its own, so plate and frame can both be absent, or both there. <b style="color:var(--gold)">95,232</b> combinations, all painted onchain.</p>
+      <p class="lede muted" data-i18n="art.lede2">The date carries real-world meaning; the plate and frame decide rarity and looks.</p>
     </div>
     <!-- Four layers, then the piece they make. A diagram beats the sentence it
          replaces, and every tile here is the real file the contract draws. -->
@@ -272,10 +280,9 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
   <div class="shell stat">
     <div>
       <p class="big" id="sealed">3,198</p>
-      <p class="kick" style="margin-top:14px">枚還沒揭曉</p>
+      <p class="kick" style="margin-top:14px" data-i18n="sealed.kick">pieces still sealed</p>
     </div>
-    <p class="lede" style="max-width:38ch">連持有者自己都不知道拿到的是哪一天。
-      揭曉是一個鏈上動作，而在那之前，那一天對所有人都是未知的。</p>
+    <p class="lede" style="max-width:38ch" data-i18n="sealed.lede">Not even the holder knows which day they got. Revealing is an onchain act — until then, the day is unknown to everyone.</p>
   </div>
 </section>
 
@@ -285,12 +292,11 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 <section>
   <div class="shell stat">
     <div>
-      <h2>你的日曆<br>和你的人的日曆</h2>
-      <p class="lede">個人日曆看自己收集了哪些日子。社區日曆看夥伴的重要日子，
-        在那天給他一句祝賀。</p>
+      <h2 data-i18n="door.h2">Your calendar,<br>and your people’s</h2>
+      <p class="lede" data-i18n="door.lede">Your personal calendar shows the days you’ve collected. Community calendars show the days that matter to your people — and let you congratulate them when theirs arrives.</p>
     </div>
     <p class="door">
-      <a class="btn btn--gold" href="https://app.uday.gift/">進入 uDAY</a>
+      <a class="btn btn--gold" href="https://app.uday.gift/" data-i18n="door.btn">ENTER UDAY</a>
     </p>
   </div>
 </section>
@@ -302,7 +308,7 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
     &nbsp;·&nbsp;
     <a href="https://x.com/udaygift">X</a>
     &nbsp;·&nbsp;
-    <span>一個日期。一件藏品。一份禮物。</span>
+    <span data-i18n="foot.sig">A date. An artwork. A gift.</span>
   </div>
 </footer>
 
@@ -310,7 +316,70 @@ h2{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.2;f
 // The picker is the hook: one question, one interaction, one answer. It draws
 // the real piece for the day you choose, from the same layer files and the same
 // committed index the site already serves — nothing here is mocked art.
-const MON = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const I18N = {
+en:{
+  title:'uDAY \u2014 Own a Day',
+  'hero.h1':'366 days in a year.<br>All born,<br>except <span style="color:var(--gold)">{n}</span>.',
+  'out.unborn':'<b>{day}</b> has never been born. It is one of the last days left.',
+  'out.born':'<b>{day}</b> has been born \u2014 {n} minted, the earliest #{id} in {owner}\u2019s wallet.',
+  'gift.cap':'The calendar reaches this cell once a year. On that day, the gift is yours.',
+  'lay.plate':'PLATE','lay.frame':'FRAME','lay.month':'MONTH','lay.date':'DATE',
+  'hero.lede':'Every day is an onchain artwork, owned by one person. Is your day still out there?',
+  'pick.go':'WHICH DAYS ARE YOURS?',
+  'gift.h2':'Every year on your day,<br>the chain sends you a gift',
+  'gift.lede':'Not an airdrop, not points. The one day of the year that is yours arrives \u2014 and this chain remembers.',
+  'art.kick':'How the art is made',
+  'art.h2':'Four layers,<br>painted by the contract',
+  'art.lede':'Plate, frame, month, date \u2014 four layers, each drawn on its own, so plate and frame can both be absent, or both there. <b style="color:var(--gold)">95,232</b> combinations, all painted onchain.',
+  'art.lede2':'The date carries real-world meaning; the plate and frame decide rarity and looks.',
+  'sealed.kick':'pieces still sealed',
+  'sealed.lede':'Not even the holder knows which day they got. Revealing is an onchain act \u2014 until then, the day is unknown to everyone.',
+  'door.h2':'Your calendar,<br>and your people\u2019s',
+  'door.lede':'Your personal calendar shows the days you\u2019ve collected. Community calendars show the days that matter to your people \u2014 and let you congratulate them when theirs arrives.',
+  'door.btn':'ENTER UDAY',
+  'foot.sig':'A date. An artwork. A gift.',
+  'err.index':'The index could not be loaded.',
+  'aria.month':'Month','aria.day':'Day',
+},
+zh:{
+  title:'uDAY \u2014 \u62e5\u6709\u4e00\u5929',
+  'hero.h1':'\u4e00\u5e74 366 \u5929<br>\u53ea\u5269 <span style="color:var(--gold)">{n}</span> \u5929<br>\u4ece\u672a\u88ab\u8bde\u751f',
+  'hero.lede':'\u6bcf\u4e00\u5929\u90fd\u662f\u4e00\u4ef6\u94fe\u4e0a\u7684\u4f5c\u54c1\uff0c\u88ab\u4e00\u4e2a\u4eba\u62e5\u6709\u3002\u4f60\u7684\u90a3\u4e00\u5929\uff0c\u8fd8\u5728\u4e0d\u5728\uff1f',
+  'pick.go':'\u54ea\u4e9b\u65e5\u5b50\u662f\u4f60\u7684\uff1f',
+  'out.unborn':'<b>{day}</b> \u8fd8\u6ca1\u6709\u4eba\u62e5\u6709\u3002\u5b83\u662f\u5269\u4e0b\u7684\u90a3\u51e0\u5929\u4e4b\u4e00\u3002',
+  'out.born':'<b>{day}</b> \u5df2\u7ecf\u8bde\u751f \u2014\u2014 \u5171 {n} \u679a\uff0c\u6700\u65e9\u7684 #{id} \u5728 {owner} \u7684\u94b1\u5305\u91cc\u3002',
+  'gift.h2':'\u6bcf\u5e74\u4f60\u7684\u90a3\u4e00\u5929<br>\u94fe\u4e0a\u4f1a\u5bc4\u4e00\u4efd\u793c\u7269\u7ed9\u4f60',
+  'gift.lede':'\u4e0d\u662f\u7a7a\u6295\uff0c\u4e0d\u662f\u79ef\u5206\u3002\u662f\u4e00\u5e74\u91cc\u5c5e\u4e8e\u4f60\u7684\u90a3\u4e00\u5929\u5230\u4e86\uff0c\u800c\u8fd9\u6761\u94fe\u8bb0\u5f97\u3002',
+  'gift.cap':'\u65e5\u5386\u4e00\u5e74\u53ea\u8d70\u5230\u8fd9\u4e00\u683c\u4e00\u6b21\u3002\u90a3\u4e00\u5929\uff0c\u793c\u7269\u5c31\u662f\u4f60\u7684\u3002',
+  'art.kick':'\u4f5c\u54c1\u600e\u4e48\u6765\u7684',
+  'art.h2':'\u56db\u5c42<br>\u5408\u7ea6\u81ea\u5df1\u753b',
+  'art.lede':'\u5e95\u76d8\u3001\u5916\u6846\u3001\u6708\u4efd\u3001\u65e5\u671f\uff0c\u56db\u5c42\u5404\u81ea\u72ec\u7acb\u62bd\u51fa\u2014\u2014\u6240\u4ee5\u5e95\u76d8\u548c\u5916\u6846\u53ef\u80fd\u90fd\u4e0d\u5b58\u5728\uff0c\u4e5f\u53ef\u80fd\u90fd\u5728\u3002<b style="color:var(--gold)">95,232</b> \u79cd\u7ec4\u5408\uff0c\u5168\u90e8\u753b\u5728\u94fe\u4e0a\u3002',
+  'art.lede2':'\u65e5\u671f\u7ed1\u7684\u662f\u73b0\u5b9e\u4e16\u754c\u7684\u610f\u4e49\uff0c\u5e95\u76d8\u548c\u5916\u6846\u51b3\u5b9a\u7a00\u6709\u5ea6\u4e0e\u957f\u76f8\u3002',
+  'lay.plate':'\u5e95\u76d8','lay.frame':'\u5916\u6846','lay.month':'\u6708\u4efd','lay.date':'\u65e5\u671f',
+  'sealed.kick':'\u679a\u8fd8\u6ca1\u63ed\u6653',
+  'sealed.lede':'\u8fde\u6301\u6709\u8005\u81ea\u5df1\u90fd\u4e0d\u77e5\u9053\u62ff\u5230\u7684\u662f\u54ea\u4e00\u5929\u3002\u63ed\u6653\u662f\u4e00\u4e2a\u94fe\u4e0a\u52a8\u4f5c\uff0c\u800c\u5728\u90a3\u4e4b\u524d\uff0c\u90a3\u4e00\u5929\u5bf9\u6240\u6709\u4eba\u90fd\u662f\u672a\u77e5\u7684\u3002',
+  'door.h2':'\u4f60\u7684\u65e5\u5386<br>\u548c\u4f60\u7684\u4eba\u7684\u65e5\u5386',
+  'door.lede':'\u4e2a\u4eba\u65e5\u5386\u770b\u81ea\u5df1\u6536\u96c6\u4e86\u54ea\u4e9b\u65e5\u5b50\u3002\u793e\u533a\u65e5\u5386\u770b\u4f19\u4f34\u7684\u91cd\u8981\u65e5\u5b50\uff0c\u5728\u90a3\u5929\u7ed9\u4ed6\u4e00\u53e5\u795d\u8d3a\u3002',
+  'door.btn':'\u8fdb\u5165 uDAY',
+  'foot.sig':'\u4e00\u4e2a\u65e5\u671f\u3002\u4e00\u4ef6\u85cf\u54c1\u3002\u4e00\u4efd\u793c\u7269\u3002',
+  'err.index':'\u7d22\u5f15\u8bfb\u53d6\u5931\u8d25',
+  'aria.month':'\u6708','aria.day':'\u65e5',
+}};
+// url > localStorage > cookie > browser sniff > ENGLISH — same chain as the
+// app, and the shared uday_lang cookie means a choice made on either host
+// follows the visitor to the other.
+let LANG = (() => {
+  const q = new URLSearchParams(location.search).get('lang');
+  const ck = (document.cookie.match(/(?:^|;\s*)uday_lang=(en|zh)\b/) || [])[1] || null;
+  let v = q;
+  try{ v = v || localStorage.getItem('uday.lang'); }catch(e){}
+  v = v || ck || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+  return I18N[v] ? v : 'en';
+})();
+const t = k => (I18N[LANG][k] !== undefined ? I18N[LANG][k] : I18N.en[k]);
+const MONL = { en:['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'],
+               zh:['1\u6708','2\u6708','3\u6708','4\u6708','5\u6708','6\u6708','7\u6708','8\u6708','9\u6708','10\u6708','11\u6708','12\u6708'] };
+const dayLabel = (m, d) => LANG === 'zh' ? m + '\u6708' + d + '\u65e5' : MONL.en[m - 1] + ' ' + d;
 const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
 const pad = n => String(n).padStart(2,'0');
 const $ = id => document.getElementById(id);
@@ -327,12 +396,13 @@ let curM = new Date().getMonth() + 1, curD = new Date().getDate();
 // same committed index the app serves. Nothing here is mocked art.
 async function draw(){
   const m = curM, d = curD, key = pad(m) + '-' + pad(d);
-  const list = (DAYS && DAYS[key]) || [];
+  if(!DAYS){ $('out').textContent = '\u2026'; return; }   // not yet is not "never born"
+  const list = DAYS[key] || [];
   const ctx = $('cv').getContext('2d');
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, 96, 96);
   if(!list.length){
-    $('out').innerHTML = '<b>' + m + '\u6708' + d + '\u65e5</b> \u9084\u6c92\u6709\u4eba\u64c1\u6709\u3002\u5b83\u662f\u5269\u4e0b\u7684\u90a3\u5e7e\u5929\u4e4b\u4e00\u3002';
+    $('out').innerHTML = t('out.unborn').replace('{day}', dayLabel(m, d));
     return;
   }
   // best-dressed piece of that day, oldest wins ties — the rule the daily card
@@ -345,8 +415,9 @@ async function draw(){
   src.push('/assets/layers/month/' + pad(m) + '_' + (e.mp === 'r' ? 'corner' : 'center') + '.png');
   src.push('/assets/layers/date/'  + pad(d) + '_' + (e.dp === 'r' ? 'corner' : 'center') + '.png');
   (await Promise.all(src.map(load))).forEach(im => im && ctx.drawImage(im, 0, 0, 96, 96));
-  $('out').innerHTML = '<b>' + m + '\u6708' + d + '\u65e5</b> \u5df2\u7d93\u8a95\u751f \u2014\u2014 \u5171 ' + list.length +
-    ' \u679a\uff0c\u6700\u65e9\u7684 #' + e.id + ' \u5728 ' + e.owner.slice(0, 6) + '\u2026' + e.owner.slice(-4) + ' \u7684\u9322\u5305\u88e1\u3002';
+  $('out').innerHTML = t('out.born').replace('{day}', dayLabel(m, d))
+    .replace('{n}', list.length).replace('{id}', e.id)
+    .replace('{owner}', e.owner.slice(0, 6) + '\u2026' + e.owner.slice(-4));
 }
 
 
@@ -392,10 +463,13 @@ function buildMenu(id, items, current, pick){
 }
 
 function render(){
-  buildMenu('m', MON.map((t, i) => ({ v: i + 1, t })), curM,
+  $('m').setAttribute('aria-label', t('aria.month'));
+  $('d').setAttribute('aria-label', t('aria.day'));
+  buildMenu('m', MONL[LANG].map((txt, i) => ({ v: i + 1, t: txt })), curM,
             v => { curM = v; curD = Math.min(curD, DIM[v - 1]); render(); draw(); });
   const days = [];
-  for(let i = 1; i <= DIM[curM - 1]; i++) days.push({ v: i, t: i + '\u65e5' });
+  for(let i = 1; i <= DIM[curM - 1]; i++)
+    days.push({ v: i, t: LANG === 'zh' ? i + '\u65e5' : String(i) });
   buildMenu('d', days, curD, v => { curD = v; render(); draw(); });
 }
 
@@ -431,25 +505,24 @@ function drawYearlet(){
       host.appendChild(cell);
     }
   }
-  $('yearlet-cap').innerHTML =
-    '\u65e5\u66c6\u4e00\u5e74\u53ea\u8d70\u5230\u9019\u4e00\u683c\u4e00\u6b21\u3002' +
-    '\u90a3\u4e00\u5929\uff0c\u79ae\u7269\u5c31\u662f\u4f60\u7684\u3002';
+  $('yearlet-cap').textContent = t('gift.cap');
 }
 
 async function drawLayers(){
   const host = $('layers');
   if(!host || host.childElementCount) return;
   const parts = [
-    ['/assets/layers/plate/unicorn.png', '\u5e95\u76e4'],
-    ['/assets/layers/frame/classic.png', '\u5916\u6846'],
-    ['/assets/layers/month/08_corner.png', '\u6708\u4efd'],
-    ['/assets/layers/date/31_corner.png', '\u65e5\u671f'],
+    ['/assets/layers/plate/unicorn.png', 'lay.plate'],
+    ['/assets/layers/frame/classic.png', 'lay.frame'],
+    ['/assets/layers/month/08_corner.png', 'lay.month'],
+    ['/assets/layers/date/31_corner.png', 'lay.date'],
   ];
   for(let i = 0; i < parts.length; i++){
     const fig = document.createElement('figure');
     const c = tile(96, 96, 'l');
     const cap = document.createElement('figcaption');
-    cap.textContent = parts[i][1];
+    cap.dataset.i18n = parts[i][1];
+    cap.textContent = t(parts[i][1]);
     fig.append(c, cap);
     host.appendChild(fig);
     if(i < parts.length - 1){
@@ -485,7 +558,36 @@ function showcaseDay(){
   curM = +k.slice(0, 2); curD = +k.slice(3);
 }
 
-render();
+// The live number survives a language switch: the h1 template and the count
+// are separate, and paintHero joins them on every applyLang.
+let remaining = 7;
+function paintHero(){
+  document.querySelector('h1').innerHTML = t('hero.h1').replace('{n}', remaining);
+}
+
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.title = t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
+  $('langbtn').textContent = LANG === 'zh' ? 'EN' : '\u4e2d\u6587';
+  paintHero();
+  const yc = $('yearlet-cap');
+  if(yc) yc.textContent = t('gift.cap');
+  render();
+  draw();
+}
+$('langbtn').addEventListener('click', () => {
+  LANG = LANG === 'zh' ? 'en' : 'zh';
+  try{ localStorage.setItem('uday.lang', LANG); }catch(e){}
+  // domain=.uday.gift is only valid ON uday.gift — set it anywhere else and
+  // the browser drops the cookie silently (the sharedCookie lesson)
+  let c = 'uday_lang=' + LANG + ';path=/;max-age=31536000;samesite=lax';
+  if(/(^|\.)uday\.gift$/.test(location.hostname)) c += ';domain=.uday.gift';
+  document.cookie = c;
+  applyLang();
+});
+
+applyLang();
 drawLayers();          // independent of the index — no reason to wait for it
 drawYearlet();
 
@@ -493,13 +595,13 @@ fetch('/data/date-index.json').then(r=>r.json()).then(j=>{
   DAYS = j.days;
   const real = k => { const m=+k.slice(0,2), d=+k.slice(3); return m>=1&&m<=12&&d>=1&&d<=DIM[m-1]; };
   const lit = Object.keys(DAYS).filter(real).length;
-  document.querySelector('h1').innerHTML =
-    '一年 366 天<br>只剩 <span style="color:var(--gold)">'+(366-lit)+'</span> 天<br>從未被誕生';
+  remaining = 366 - lit;
+  paintHero();
   $('sealed').textContent = (j.unrevealed||0).toLocaleString();
   showcaseDay();
   render();
   draw();
-}).catch(()=>{ $('out').textContent = '索引讀取失敗'; });
+}).catch(()=>{ $('out').textContent = t('err.index'); });
 </script>
 </body>
 </html>
