@@ -113,27 +113,49 @@ def compose(recipe, month, date):
     return im
 
 
+DARK_ALPHA = 0.45               # a day nobody holds is drawn unlit, not absent
+DARK_RECIPE = {"p": "", "f": "", "mp": "c", "dp": "c"}   # bare glyphs, no plate, no frame
+
+
 def build(day, out):
+    """Draw the day's card. Returns the meta the post text is composed from.
+
+    A day with no surviving piece is a DARK day (a holder sold and the burn
+    took the last one — 09-04 on 2026-08-30 was the first), not an error:
+    the month and date glyphs exist for every date, so the card shows the
+    day as bare glyphs dimmed on the ground, and the text says nobody holds
+    it. Exiting here used to paint the workflow red and post nothing on the
+    one day the account had its best reason to speak."""
     piece, recipe, idx = piece_of(day)
-    if not piece or not recipe:
-        sys.exit("%s: no revealed piece to draw" % day)
     m, d = int(day[:2]), int(day[3:])
+    label = "%s %02d" % (MONTHS[m - 1], d)
+    dark = not piece or not recipe
 
     card = Image.new("RGBA", (SIZE, SIZE), GROUND)
-    art = compose(recipe, m, d).resize((ART, ART), Image.NEAREST)   # integer, hard pixels
+    art = compose(recipe if not dark else DARK_RECIPE, m, d)
+    if dark:
+        a = art.getchannel("A").point(lambda v: int(v * DARK_ALPHA))
+        art.putalpha(a)
+    art = art.resize((ART, ART), Image.NEAREST)       # integer, hard pixels
     card.alpha_composite(art, ((SIZE - ART) // 2, 96))
-
-    label = "%s %02d" % (MONTHS[m - 1], d)
     draw_text(card, "UDAY.GIFT", 7, 0.905)
-
     card.convert("RGB").save(out)
+    print("wrote %s" % out)
+
+    if dark:
+        sealed = int(idx.get("unrevealed") or 0)
+        print("  %s  DARK — no surviving piece; bare glyphs at %d%%  (%d still sealed)"
+              % (label, DARK_ALPHA * 100, sealed))
+        return {"day": day, "label": label, "id": None, "pieces": 0, "wallets": 0,
+                "dark": True, "sealed": sealed}
+
     holders = len({e["owner"] for e in idx["days"][day]})
     n = len(idx["days"][day])
-    print("wrote %s" % out)
     print("  %s  #%d  %s%s%s" % (label, piece["id"], recipe.get("p") or "no plate",
                                  " + " + recipe["f"] if recipe.get("f") else " + no frame",
                                  "  (%d pieces, %d wallets)" % (n, holders)))
-    return {"day": day, "label": label, "id": piece["id"], "pieces": n, "wallets": holders}
+    return {"day": day, "label": label, "id": piece["id"], "pieces": n, "wallets": holders,
+            "dark": False}
 
 
 if __name__ == "__main__":

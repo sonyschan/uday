@@ -44,12 +44,22 @@ def gift_of(day):
 def compose_text(meta, gift):
     n = gift or meta                       # frozen numbers when a pot exists
     plural = lambda k, w: "%d %s%s" % (n[k], w, "" if n[k] == 1 else "s")
-    lines = ["%s is lit onchain." % meta["label"], ""]
-    if gift:
+    if meta.get("dark"):
+        # No piece carries the date. There is no pot either (post-gift skips
+        # a day with no dated pieces), so the middle line is the pitch: the
+        # day is unowned and the sealed pieces are where it can still appear.
+        lines = ["%s is dark onchain." % meta["label"], "",
+                 "No piece carries this date. Nobody holds it. "
+                 "%s still sealed, and the first to reveal this day owns it."
+                 % ("{:,} pieces are".format(meta["sealed"]) if meta["sealed"] != 1
+                    else "1 piece is")]
+    elif gift:
+        lines = ["%s is lit onchain." % meta["label"], ""]
         lines.append("%s carry this date, held by %s. Today %s USDG is waiting for them."
                      % (plural("pieces", "piece"), plural("wallets", "wallet"),
                         "%g" % gift["pot"]))
     else:
+        lines = ["%s is lit onchain." % meta["label"], ""]
         lines.append("%s carry this date, held by %s."
                      % (plural("pieces", "piece"), plural("wallets", "wallet")))
     # --line pins the closer: every generation searches afresh, so a line the
