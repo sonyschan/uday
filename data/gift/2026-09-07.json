@@ -1,0 +1,42 @@
+{
+ "claims": {
+  "0x2b535697a5febdf96012f5a60af530bad52d462d": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x1018ce8aa442d7ce545ba42f689e22845a1b5e4f64d7be13eec2a93ce395e3e7",
+    "0x8369e73a453ef7f5779289e711bdb36322af09fa42625411873d7b4d646e1e19"
+   ]
+  },
+  "0x3ed79c15fedaa2d078dbb8bf8533a5bc2cf0cb9a": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0xbec0c7c27c3f0a39d9973061003d93fd51aed15eb63dde7e0ae25c92a02bc04d",
+    "0x8369e73a453ef7f5779289e711bdb36322af09fa42625411873d7b4d646e1e19"
+   ]
+  },
+  "0x87af0dc65e779257c298a49c25ee0dc2ae4bf80a": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x01c52149632d5a683726516cf65d337170b4dfe477720c894ca72bc739162051",
+    "0xed40127a624df72b7a41da5e960e2438b69c6627c9d76ad0cd893264dfa46f03"
+   ]
+  },
+  "0xac42b1c6f2931505334971443d6f2026e76c23e3": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x1fa0aaff338f40985c7fd152ab18492b3b5db49575527e0ada1ea38e87cb73f1",
+    "0xed40127a624df72b7a41da5e960e2438b69c6627c9d76ad0cd893264dfa46f03"
+   ]
+  }
+ },
+ "day": "09-07",
+ "dayId": 20260907,
+ "root": "0x61062b273f2f2cfe3726b19ddf8b023583d2a98a6edc1f6789fdda4a3d90763b",
+ "total": 4000000,
+ "totalPieces": 4,
+ "unit": 1000000
+}
