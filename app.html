@@ -2710,7 +2710,7 @@ function attachTip(cell, key, kind, first, n){
 }
 /* ── day gallery modal: a lit day opens ALL its pieces (art composed live),
    and only a tap on a specific piece leaves for its uToken item page. */
-let dayModal = null, dayModalTitle, dayModalSub, dayModalGrid, dayModalClose;
+let dayModal = null, dayModalTitle, dayModalSub, dayModalGrid, dayModalClose, dayModalKey = null;
 function ensureModal(){
   if(dayModal) return;
   dayModal = document.createElement('div');
@@ -2858,7 +2858,13 @@ function openDayModal(key, kind, list){
     dayModalGrid.appendChild(item);
   });
   dayModal.hidden = false;
+  dayModalKey = key;
   document.body.style.overflow = 'hidden';
+  // The vault address is a 43-byte fetch fired at boot and not awaited; a day
+  // opened before it lands would show no LOCK button. Redraw once it is known.
+  if(VAULT_CONTRACT === null) ensureVaultContract().then(v => {
+    if(v && !dayModal.hidden && dayModalKey === key) openDayModal(key, kind, list);
+  });
   va('event', { name: 'day_modal', data: { day: key, n: list.length } });
 }
 
