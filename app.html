@@ -651,6 +651,33 @@ section{ position:relative; }
   100%{ transform:translateY(170px) rotate(3deg); opacity:.85; }
 }
 .sink__pool{ position:absolute; left:0; right:0; bottom:0; width:100%; height:64px; }
+/* ─── the chest: where a locked day goes. The piece drops between the back
+   wall and the front panel, so the panel swallows it; then the lid closes.
+   Fixed height, so the tx link below never sits under the animation. */
+.chest{ position:relative; height:216px; margin:14px auto 0; width:240px; }
+.chest__svg{ position:absolute; left:0; top:0; width:240px; height:216px; overflow:visible; }
+.chest__piece{
+  position:absolute; left:72px; top:6px; width:96px; height:96px; image-rendering:pixelated;
+  z-index:1; animation:chest-drop 1.3s cubic-bezier(.5,.05,.7,1) .35s forwards;
+}
+@keyframes chest-drop{
+  0%{ transform:translateY(0) scale(1); opacity:1; }
+  70%{ transform:translateY(74px) scale(.82); opacity:1; }
+  100%{ transform:translateY(96px) scale(.72); opacity:.55; }
+}
+.chest__front{ position:absolute; left:0; top:0; width:240px; height:216px; z-index:2; overflow:visible; }
+.chest__lid--open{ animation:chest-fade-out .35s ease-in 1.75s forwards; transform-origin:120px 118px; }
+.chest__lid--closed{ opacity:0; animation:chest-fade-in .35s ease-out 1.75s forwards; }
+@keyframes chest-fade-out{ to{ opacity:0; transform:scaleY(.2); } }
+@keyframes chest-fade-in{ to{ opacity:1; } }
+.chest__glint{ opacity:0; animation:chest-glint 1.6s ease-out 2.2s 1; transform-origin:120px 136px; }
+@keyframes chest-glint{ 0%{ opacity:0; transform:scale(.4) } 30%{ opacity:1 } 100%{ opacity:0; transform:scale(1.6) } }
+@media (prefers-reduced-motion:reduce){
+  .chest__piece{ animation:none; transform:translateY(96px) scale(.72); opacity:.55; }
+  .chest__lid--open{ animation:none; opacity:0; }
+  .chest__lid--closed{ animation:none; opacity:1; }
+  .chest__glint{ animation:none; }
+}
 .sink__ripple{
   fill:none; stroke:rgba(232,185,63,.55); stroke-width:1.2; opacity:0;
   transform-origin:120px 30px;
@@ -4770,10 +4797,7 @@ async function runLock(key, piece, days, hasOp, goBtn){
     vaultMarkIn(piece.id, until);
     lmBody.textContent = '';
     lmSteps.textContent = '';
-    const c = document.createElement('canvas');
-    c.className = 'sink__piece';
-    paint(c, recipeSpec(key, piece));
-    lmBody.appendChild(c);
+    lmBody.appendChild(chestScene(key, piece));   // the piece drops into the chest, the lid closes
     const bless = document.createElement('p');
     bless.className = 'giftmodal__bless';
     bless.textContent = until ? t('lock.done', { day: dayTxt, date: fmtDate(until) }) : t('lock.done0', { day: dayTxt });
@@ -4794,6 +4818,51 @@ async function runLock(key, piece, days, hasOp, goBtn){
     lmBody.appendChild(p);
     goBtn.disabled = false;
   }
+}
+
+/// The chest: SVG, gold on indigo like the rest of the page. Two layers with
+/// the piece between them — the back wall behind it, the front panel and lid
+/// in front — so the drop reads as INTO, not onto.
+function chestScene(key, piece){
+  const wrap = document.createElement('div');
+  wrap.className = 'chest';
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = (cls, inner) => {
+    const el = document.createElementNS(NS, 'svg');
+    el.setAttribute('viewBox', '0 0 240 216');
+    el.setAttribute('class', cls);
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = inner;
+    return el;
+  };
+  const G = '#e8b93f', GD = '#8a6a1c', W = '#5a4420', WD = '#3d2c14', IN = '#241b3a';
+  // back: the inside of the box, and the open lid standing up behind it
+  const back = svg('chest__svg',
+    '<g class="chest__lid chest__lid--open">' +
+      '<path d="M44 118 L52 52 Q120 36 188 52 L196 118 Z" fill="' + WD + '" stroke="' + GD + '" stroke-width="2"/>' +
+      '<path d="M60 112 L66 60 Q120 48 174 60 L180 112 Z" fill="' + IN + '"/>' +
+      '<rect x="112" y="52" width="16" height="66" fill="' + GD + '" opacity=".6"/>' +
+    '</g>' +
+    '<rect x="40" y="118" width="160" height="56" fill="' + IN + '" stroke="' + GD + '" stroke-width="2"/>');
+  const c = document.createElement('canvas');
+  c.className = 'chest__piece';
+  paint(c, recipeSpec(key, piece));
+  // front: the panel that swallows the piece, the closed lid, and a glint
+  const front = svg('chest__front',
+    '<rect x="40" y="140" width="160" height="50" rx="3" fill="' + W + '" stroke="' + GD + '" stroke-width="2"/>' +
+    '<rect x="40" y="140" width="160" height="7" fill="' + GD + '"/>' +
+    '<rect x="58" y="140" width="9" height="50" fill="' + G + '"/><rect x="173" y="140" width="9" height="50" fill="' + G + '"/>' +
+    '<rect x="108" y="150" width="24" height="22" rx="3" fill="' + G + '"/>' +
+    '<circle cx="120" cy="158" r="3.2" fill="' + IN + '"/><rect x="118.5" y="158" width="3" height="8" fill="' + IN + '"/>' +
+    '<g class="chest__lid chest__lid--closed">' +
+      '<path d="M40 140 V126 Q40 96 120 96 Q200 96 200 126 V140 Z" fill="' + W + '" stroke="' + GD + '" stroke-width="2"/>' +
+      '<path d="M40 140 V126 Q40 96 120 96 Q200 96 200 126 V140" fill="none" stroke="' + G + '" stroke-width="2" opacity=".5"/>' +
+      '<rect x="58" y="98" width="9" height="42" fill="' + G + '"/><rect x="173" y="98" width="9" height="42" fill="' + G + '"/>' +
+      '<rect x="108" y="128" width="24" height="12" rx="2" fill="' + G + '"/>' +
+    '</g>' +
+    '<g class="chest__glint" fill="' + G + '"><path d="M120 120 l3 10 10 3 -10 3 -3 10 -3 -10 -10 -3 10 -3z"/></g>');
+  wrap.append(back, c, front);
+  return wrap;
 }
 
 /// The way back, from the plaque itself: one transaction, then the modal
