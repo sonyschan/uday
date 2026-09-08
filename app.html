@@ -1038,13 +1038,15 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   animation:starin .34s cubic-bezier(.34,1.56,.64,1) both;
 }
 @keyframes starin{ from{ opacity:0; transform:scale(.55) } to{ opacity:1; transform:none } }
-/* a locked day wears a small padlock in its corner — the piece is still yours,
-   it just cannot leave until the date you chose */
-.yearcell--vault::before{
-  content:''; position:absolute; right:4%; bottom:4%; width:38%; height:38%; z-index:1;
-  background:url('/assets/lock.svg') center/contain no-repeat;
-  filter:drop-shadow(0 0 2px rgba(0,0,0,.8));
+/* a secured day IS a shield: the square gives way to the shape, so which days
+   are locked reads from across the room. The piece is still yours, it just
+   cannot leave until the date you chose. (owner, 2026-09-08) */
+.yearcell--vault{
+  position:relative;
+  background:url('/assets/shield.svg') center/100% 100% no-repeat !important;   /* outranks heat (inline) */
+  border-color:transparent !important; border-radius:0;
 }
+.yearcell--vault.yearcell--star::after{ inset:14% 18% 12%; }   /* the star sits inside the shield's field */
 @media (prefers-reduced-motion:reduce){ .yearcell--star::after{ animation:none } }
 /* ─── X identity ────────────────────────────────────────────────────── */
 .xface{ display:inline-flex; align-items:center; gap:7px; text-decoration:none;
