@@ -31,14 +31,12 @@
    visitor without JS still gets the whole page. */
 (function(){
   var h = document.documentElement;
-  // The community path is tested FIRST. On the app host both would match, and
-  // the wrong one wins by source order — pre-personal hides the very sections
-  // a room needs, so a room would paint blank and then jump.
-  //
   // app.uday.gift is the app; my.uday.gift is its old name and still answers.
   // Literals, not the constants below — this runs before the script that
   // declares them, and a TDZ throw here takes the whole page down.
-  if(/^\/c(\/|$)/.test(location.pathname))              h.className += ' pre-comm';
+  // /c and /c/<slug> were community rooms (removed 2026-09-08). Links to them
+  // were shared in chat groups, so they land on the calendar, not a 404.
+  if(/^\/c(\/|$)/.test(location.pathname)) location.replace('/');
   else if(/^(app|my)\.uday\.gift$/.test(location.hostname) ||
           /[?&]view=personal(&|$)/.test(location.search)) h.className += ' pre-personal';
 })();
@@ -952,42 +950,7 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   .gallery .plaque{ flex:0 0 47%; scroll-snap-align:start; }
   .gallery .plaque:hover{ transform:none; }   /* no hover on touch; no lurch */
 }
-/* ─── community calendar ─────────────────────────────────────────────
-   The wall builder already takes any byDay map, so a community's calendar
-   is the same grid fed a different source: its members' declared days. */
-.comm__back{
-  display:inline-block; margin-top:clamp(18px,2vw,28px);
-  font-family:var(--display); font-size:var(--fs-micro);
-  letter-spacing:var(--ls-narrow); color:var(--muted); text-decoration:none;
-}
-.comm__back:hover{ color:var(--gold); }
-.comm__next{
-  margin:0 0 18px; font-size:var(--fs-sub); color:var(--gold);
-  font-family:var(--display); letter-spacing:var(--ls-narrow);
-}
-.rooms{ max-width:64ch; }
-.rooms__rule{
-  margin:0 0 12px; font-family:var(--display); font-size:var(--fs-sub);
-  letter-spacing:var(--ls-narrow); color:var(--gold);
-}
-.rooms__noadmin{ margin:0; font-size:var(--fs-sub); color:#c6bba3; }
-.rooms__acts{ display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
-.commjoin{
-  margin-top:26px; padding:18px 20px; border-radius:10px;
-  border:1px solid rgba(232,185,63,.4);
-  background:linear-gradient(135deg, rgba(232,185,63,.09), rgba(232,185,63,.02));
-}
-.commjoin__line{ margin:0 0 14px; font-size:var(--fs-sub); color:#e6dbc2; max-width:60ch; }
-.commjoin__days{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px;
-  max-height:224px; overflow-y:auto; padding-right:6px; }
-.commjoin__day{
-  padding:7px 11px; border-radius:4px; cursor:pointer;
-  border:1px solid var(--rule); background:rgba(243,231,205,.04);
-  font-family:var(--display); font-size:var(--fs-micro); color:var(--vellum);
-}
-.commjoin__day[aria-pressed="true"]{ border-color:var(--gold); color:var(--gold); background:rgba(232,185,63,.12); }
-.commjoin__spin{ display:block; width:22px; height:22px; margin-bottom:12px; }
-/* ★ — set on the personal calendar, shown on every joined room's calendar */
+/* ★ — a day written on the chain as yours, set on the personal calendar */
 .daymodal__star{
   display:flex; align-items:center; gap:12px; flex-wrap:wrap;
   margin:0 0 18px; padding:12px 14px; border-radius:8px;
@@ -1065,38 +1028,7 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
    image on the site that is not pixel art and must not be treated as such. */
 .xface__pfp{ width:26px; height:26px; border-radius:50%; flex:none;
   border:1px solid rgba(232,185,63,.45); background:var(--night); object-fit:cover; }
-/* The X row is a different subject from joining, and it sits between the
-   membership sentence and LEAVE — so it gets a rule above and real air below,
-   or "remove" and "leave" read as two halves of one control. */
-.commjoin__x{
-  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-  margin:16px 0 20px; padding-top:16px;
-  border-top:1px solid rgba(232,185,63,.14);
-}
-.commjoin__xon{ white-space:nowrap; flex:none; }
-/* Silkscreen has no CJK, so a mixed label already falls through per character —
-   and its Latin X is a symmetric glyph that reads as a CLOSE icon next to
-   Chinese. This one button takes the body face in zh so the brand letter is a
-   letter. (English keeps the display face; "X" among Latin caps is unambiguous.) */
-html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
-/* the explanation is two sentences now, so it needs a column rather than a gap */
-.commjoin__x .commjoin__xwhy{ flex:1 1 260px; line-height:1.6; }
-.commjoin__xwhy{ color:var(--muted); font-size:var(--fs-micro); }
-.commjoin__xerr{ color:#e8a0a0; font-size:var(--fs-micro); margin:10px 0 0; }
-.commjoin__wait{ color:var(--muted); animation:waitpulse 1.6s ease-in-out infinite; }
-.commjoin__leaving{ color:var(--muted); margin:0 0 4px; }
-.commjoin__as{
-  margin:0 0 10px; color:var(--muted);
-  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
-}
 @keyframes waitpulse{ 0%,100%{opacity:.5} 50%{opacity:1} }
-@media (prefers-reduced-motion:reduce){ .commjoin__wait{ animation:none; opacity:.75 } }
-.commjoin__xoff{ background:none; border:0; padding:0; cursor:pointer;
-  color:var(--muted); font-family:var(--body); font-size:var(--fs-micro);
-  text-decoration:underline; text-underline-offset:3px; }
-.commjoin__xoff:hover{ color:var(--vellum); }
-.commnext--go{ cursor:pointer; }
-.commnext--go:hover{ color:var(--gold); }
 .daymodal__grid--people{ display:block; }
 .peoplerow{ display:flex; align-items:center; justify-content:space-between;
   gap:14px; flex-wrap:wrap; padding:12px 0; border-bottom:1px solid rgba(232,185,63,.14); }
@@ -1106,96 +1038,22 @@ html[lang="zh"] .commjoin__xon{ font-family:var(--body); letter-spacing:.02em; }
   background:var(--gold); border-radius:6px; padding:7px 12px; white-space:nowrap; }
 .peoplerow__go:hover{ filter:brightness(1.08); }
 .peoplerow__you{ color:var(--muted); font-size:var(--fs-micro); }
-.commjoin__days--mine{ max-height:none; margin-top:4px; }
-.commjoin__day--set{ border-color:rgba(232,185,63,.5); color:var(--gold);
-  display:inline-flex; align-items:center; gap:8px; cursor:default; }
-.commjoin__clear{
-  border:none; background:none; cursor:pointer; padding:0 2px;
-  color:var(--muted); font-size:var(--fs-sub); line-height:1;
-}
-.commjoin__clear:hover{ color:var(--gold); }
-.commjoin__mine{ margin:0; font-size:var(--fs-sub); color:var(--gold); }
-.comm__gate{
-  margin-top:26px; padding-top:14px; border-top:1px solid var(--rule);
-  font-size:var(--fs-micro); color:var(--muted); word-break:break-all;
-}
-.clist{ display:grid; gap:10px; max-width:64ch; }
-.clist__row{
-  /* nowrap, or the meta drops to its own line instead of letting the name
-     shrink — which is why the ellipsis above never got a chance to fire */
-  display:flex; align-items:center; gap:14px; flex-wrap:nowrap;
-  /* the row is itself a flex item, and a flex item's default min-width:auto
-     refuses to shrink below its content — so nowrap pushed the whole document
-     wider than the phone instead of squeezing the name */
-  min-width:0; max-width:100%;
-  padding:14px 16px; border:1px solid var(--rule); border-radius:8px;
-  background:rgba(243,231,205,.03); text-decoration:none;
-  transition:border-color .16s;
-}
-.clist__row:hover{ border-color:rgba(232,185,63,.5); }
-/* Your rooms sit at the top. The label says why they are there; the gold edge
-   keeps each row legible as yours once the label has scrolled away. The left
-   border eats 2px, so the padding gives them back and the names stay aligned
-   with the group below. */
-.clist__band{ font-family:var(--display); font-size:var(--fs-micro);
-  letter-spacing:var(--ls-wide); text-transform:uppercase; color:var(--muted);
-  margin:10px 0 -2px; }
-.clist__band:first-child{ margin-top:0; }
-.clist__row--mine{ border-left:3px solid var(--gold); padding-left:14px;
-  background:rgba(232,185,63,.06); }
-.clist__name{ font-family:var(--display); font-size:var(--fs-sub); color:var(--vellum); }
-.clist__mark{ display:inline-flex; align-items:center; flex:none; color:var(--gold); }
-.clist__mark--chain{ color:var(--muted); }
 /* One list, one row height. A long name truncates rather than pushing the
    member count onto its own line — the full name is one tap away, and its
    title attribute carries it meanwhile. */
-.clist__name{ flex:1 1 auto; min-width:0; overflow:hidden;
-  text-overflow:ellipsis; white-space:nowrap; }
-.clist__meta{ margin-left:auto; flex:none; display:inline-flex; align-items:center; gap:10px;
-  font-family:var(--display); font-size:var(--fs-micro);
-  letter-spacing:var(--ls-narrow); color:var(--muted); }
-.cnew{ max-width:56ch; }
-.cnew__row{ display:grid; grid-template-columns:minmax(120px,.34fr) 1fr; gap:14px;
-  align-items:center; margin-bottom:14px; }
-.cnew__row > span:first-child{
-  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-mid);
-  text-transform:uppercase; color:var(--muted);
-}
-.cnew input{
-  width:100%; padding:10px 12px; font:inherit; font-size:var(--fs-sub);
-  color:var(--vellum); background:rgba(243,231,205,.04);
-  border:1px solid var(--rule); border-radius:4px;
-}
-.cnew__slug{ display:flex; align-items:center; gap:2px; color:var(--muted); font-size:var(--fs-sub); }
-.cnew__slug input{ flex:1; min-width:0; }
-.cnew__actions{ margin-top:20px; }
-.cnew__kind{ display:block; margin-top:5px; font-size:var(--fs-micro); color:var(--muted); }
-.cnew__wait{ display:flex; flex-direction:column; align-items:flex-start; gap:16px; }
-.cnew__waitline{ margin:0; font-size:var(--fs-sub); color:var(--vellum); max-width:52ch; }
-.cnew__spin{
+.spin{
   width:30px; height:30px; border-radius:50%;
   border:3px solid rgba(232,185,63,.22); border-top-color:var(--gold);
-  animation:cnew-spin 1s linear infinite;
+  animation:spin 1s linear infinite;
 }
-.cnew__spin--done{ animation:none; border-color:var(--gold); }
-@keyframes cnew-spin{ to{ transform:rotate(360deg); } }
-@media (prefers-reduced-motion:reduce){ .cnew__spin{ animation-duration:3s; } }
-.cnew__msg{ margin-top:14px; font-size:var(--fs-sub); color:var(--gold); word-break:break-all; }
+.spin--done{ animation:none; border-color:var(--gold); }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
 .sel__opt[aria-disabled="true"]{ opacity:.38; cursor:not-allowed; }
-@media (max-width:560px){ .cnew__row{ grid-template-columns:1fr; gap:6px; } }
 .yearcell--member{ cursor:pointer; }
-.commfaces{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
-.commface{
-  display:inline-flex; align-items:center; gap:6px; padding:5px 9px;
-  border:1px solid var(--rule); border-radius:4px; background:rgba(232,185,63,.05);
-  font-family:var(--display); font-size:var(--fs-micro); color:var(--vellum);
-  text-decoration:none;
-}
 .yearwall__minecta{
   display:flex; align-items:center; gap:16px; flex-wrap:wrap;
   margin:22px 0 0; font-size:var(--fs-sub); color:#c6bba3;
-}
-@media (max-width:720px){
 }
 .proofbar{ border-block:1px solid var(--rule); background:rgba(16,13,32,.55); }
 .proofbar__row{
@@ -1249,11 +1107,9 @@ html.reveal-on .rise.in{ opacity:1; transform:none; }
 /* ─── page transitions ──────────────────────────────────────────────── */
 /* Committed before the first paint by the head script. Only the sections that
    carry no `hidden` attribute need listing — the rest never paint anyway. The
-   personal page keeps #roadmap on purpose; a room does not. */
+   personal page keeps #roadmap on purpose. */
 html.pre-personal .hero, html.pre-personal .proofbar, html.pre-personal #story,
-html.pre-personal #rooms, html.pre-personal #forge, html.pre-personal #roadmap,
-html.pre-comm .hero, html.pre-comm .proofbar, html.pre-comm #story,
-html.pre-comm #rooms, html.pre-comm #forge, html.pre-comm #roadmap{ display:none; }
+html.pre-personal #forge, html.pre-personal #roadmap,
 
 /* A room and a holder wall are both built from the index, so they arrive one
    fetch late and the document is barely a screen tall until they do — which
@@ -1264,7 +1120,7 @@ html.pre-comm #rooms, html.pre-comm #forge, html.pre-comm #roadmap{ display:none
    4G and 5.8s on 3G: the CSS failsafe meant to cap it at 1.8s cannot keep time
    while the main thread is busy parsing the index. Never trade a visible page
    for a smoother reflow — the reflow is cheaper than the wait. */
-html.pre-personal main, html.pre-comm main{ min-height:100svh; }
+html.pre-personal main{ min-height:100svh; }
 /* ...and only until it has something in it. Kept forever it turns a genuinely
    short page — the signed-out personal page is a heading and one input — into
    a screen of nothing with the footer pushed off the bottom. */
@@ -1308,10 +1164,6 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
       <button type="button" class="tb-nav__a" id="nav-mine">
         <span class="tb-nav__long" data-i18n="nav.mine">MY CALENDAR</span>
         <span class="tb-nav__short" data-i18n="nav.mine.short">MINE</span>
-      </button>
-      <button type="button" class="tb-nav__a" id="nav-comm">
-        <span class="tb-nav__long" data-i18n="nav.comm">COMMUNITIES</span>
-        <span class="tb-nav__short" data-i18n="nav.comm.short">ROOMS</span>
       </button>
     </nav>
     <p class="signin-err" id="signin-err" role="alert" hidden></p>
@@ -1416,82 +1268,6 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
     </div>
   </section>
 
-  <!-- ── a community's calendar: /c/<slug>, everything else folds away ── -->
-  <section class="band" id="community" hidden>
-    <div class="shell">
-      <a class="comm__back" href="/c" data-i18n="comm.back">← COMMUNITIES</a>
-      <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
-        <p class="kicker" id="comm-kicker"></p>
-        <h2 id="comm-title"></h2>
-        <p id="comm-blurb"></p>
-      </div>
-      <div class="yearwall__stats rise" id="comm-stats"></div>
-      <div class="commfaces rise" id="comm-links" hidden></div>
-      <p class="comm__next rise" id="comm-next" hidden></p>
-      <div class="yearwall rise">
-        <div class="yearwall__scroll">
-          <div class="yearwall__grid" id="comm-grid"></div>
-        </div>
-      </div>
-      <div class="commjoin rise" id="comm-join" hidden></div>
-      <p class="comm__gate rise" id="comm-gate"></p>
-    </div>
-  </section>
-
-  <!-- ── /c — the communities index: the rooms that exist, then the way to
-       make one. A child page's parent has to be a real place. ─────────── -->
-  <section class="band" id="commlist" hidden>
-    <div class="shell">
-      <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
-        <p class="kicker" data-i18n="clist.kicker">Communities</p>
-        <h2 data-i18n="clist.title">The rooms so far</h2>
-      </div>
-      <div class="clist rise" id="clist"></div>
-    </div>
-  </section>
-
-  <!-- ── start a room. Nobody needs permission, including from us. ──── -->
-  <section class="band" id="commnew" hidden>
-    <div class="shell">
-      <div class="band__head rise" style="margin-top:clamp(20px,2.4vw,36px)">
-        <p class="kicker" data-i18n="cnew.kicker">Start a community</p>
-        <h2 data-i18n="cnew.title">An onchain calendar your members own</h2>
-        <p data-i18n="cnew.blurb">Your holders put the days that matter to them on one calendar, and every one of those days is a reason to come back.</p>
-      </div>
-      <div class="cnew rise">
-        <label class="cnew__row"><span data-i18n="cnew.f.slug">URL</span>
-          <span class="cnew__slug">uday.gift/c/<input id="cnew-slug" maxlength="32" placeholder="unipeg" spellcheck="false" autocomplete="off"></span></label>
-        <label class="cnew__row"><span data-i18n="cnew.f.name">Name</span>
-          <input id="cnew-name" maxlength="48" placeholder="Unipeg" autocomplete="off"></label>
-        <div class="cnew__row"><span data-i18n="cnew.f.chain">Chain</span>
-          <div class="sel">
-            <button type="button" class="sel__btn" id="cnew-chain" aria-haspopup="listbox" aria-expanded="false"></button>
-            <span class="sel__chev" aria-hidden="true"></span>
-            <div class="sel__menu" id="cnew-chain-menu" role="listbox" hidden></div>
-          </div>
-        </div>
-        <label class="cnew__row"><span data-i18n="cnew.f.token">Token</span>
-          <span><input id="cnew-token" placeholder="0x…" spellcheck="false" autocomplete="off">
-            <small class="cnew__kind" id="cnew-kind"></small></span></label>
-        <label class="cnew__row"><span data-i18n="cnew.f.min">Minimum held</span>
-          <span><input id="cnew-min" inputmode="decimal" value="1" autocomplete="off">
-            <small class="cnew__kind" id="cnew-unit"></small></span></label>
-        <label class="cnew__row"><span data-i18n="cnew.f.x">X</span>
-          <input id="cnew-x" placeholder="https://x.com/…" spellcheck="false" autocomplete="off"></label>
-        <label class="cnew__row"><span data-i18n="cnew.f.tg">Telegram</span>
-          <input id="cnew-tg" placeholder="https://t.me/…" spellcheck="false" autocomplete="off"></label>
-        <label class="cnew__row"><span data-i18n="cnew.f.other">Website</span>
-          <span><input id="cnew-other" placeholder="https://…" spellcheck="false" autocomplete="off">
-            <small class="cnew__kind" data-i18n="cnew.links.note">Optional, https only. You can change these later; nothing else about the room can change.</small></span></label>
-        <div class="cnew__actions">
-          <button type="button" class="btn btn--gold" id="cnew-go" data-i18n="cnew.go">CREATE</button>
-        </div>
-        <p class="cnew__msg" id="cnew-msg" hidden></p>
-      </div>
-    </div>
-  </section>
-
-
   <!-- ── the year (escalation: from your one day to all of them) ──── -->
   <section class="band" id="year" hidden>
     <div class="shell">
@@ -1522,27 +1298,6 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
              with no sign the other eleven existed, and a toggle nobody found
              because a lone row does not read as a calendar in the first
              place. Twelve rows running past the edge do. -->
-      </div>
-    </div>
-  </section>
-
-  <!-- ── communities: the story just said a date has an identity; this is
-       what happens when a group of them stand together ─────────────── -->
-  <section class="band" id="rooms">
-    <div class="shell">
-      <hr class="rule rule--gem">
-      <div class="band__head rise" style="margin-top:clamp(30px,3.4vw,54px)">
-        <p class="kicker" data-i18n="rooms.kicker">Communities</p>
-        <h2 data-i18n="rooms.title">A calendar of the people you know</h2>
-        <p data-i18n="rooms.blurb">Open a room gated by any token. Everyone who holds it can put their day on one shared calendar — so you always know whose day is next.</p>
-      </div>
-      <div class="rooms rise">
-        <p class="rooms__rule" data-i18n="rooms.rule">1 uDAY to stand on a room’s calendar. 10 to open one.</p>
-        <p class="rooms__noadmin" data-i18n="rooms.noadmin">No admin — not even us. A room’s rules are frozen the moment it is created, and nobody can remove anyone.</p>
-        <div class="rooms__acts">
-          <a class="btn btn--gold" href="/c" id="rooms-create" data-i18n="rooms.create">START A COMMUNITY</a>
-          <a class="btn btn--ghost" href="/c" id="rooms-browse" data-i18n="rooms.browse">SEE THE ROOMS</a>
-        </div>
       </div>
     </div>
   </section>
@@ -1673,9 +1428,6 @@ html.leaving main{ opacity:0; transition:opacity .17s ease-in; }
     </div>
   </section>
 
-
-
-
 </main>
 
 <footer>
@@ -1714,23 +1466,7 @@ const I18N = {
     'status.btn.offer':'BRING IT HOME','status.btn.mint':'MINT A DAY',
     'live.lit':'{lit}/366 DAYS LIT','live.alive':'{n} DAYS BORN','live.sealed':'{n} STILL SEALED','live.owners':'{n} COLLECTORS',
     'year.mine.q':'Which of these squares are yours?',
-    'comm.kicker':'This community','comm.blurb':'Send your good wishes when someone here has their day.',
-    'comm.stat.members':'{n} MEMBERS','comm.stat.days':'{n} DAYS CLAIMED',
-    'comm.next':'Next up in {n} days — {day} belongs to {who}.',
-    'comm.next.tomorrow':'Tomorrow — {day} belongs to {who}.',
-    'comm.next.today':'Today belongs to {who}.',
-    
-    'comm.gate':'Hold {min} {token}, plus one uDAY, and you are in.',
-    'comm.gate.onchain':'The contract checks the moment you join, and nobody can change the rules.',
-    'comm.gate.index':'Balances on {chain} are checked by a public list, and nobody can change the rules.',
-    'comm.link.site':'Website',
-    
-    'join.connect':'Connect a wallet to see whether you can stand on this calendar.',
-    'join.member':'You are in this room. Only you can take yourself out of it.',
-    'join.member.days':'On the calendar as {days}.',
-    'join.loading':'Checking which of your days can stand here…',
-    'join.rpcfail':'The chain did not answer — the room can’t read your standing right now.',
-    'join.retry':'RETRY',
+
     'x.link':'LINK AN X ACCOUNT',
     'x.unlink':'remove',
     'x.working':'WAITING FOR YOUR SIGNATURE…',
@@ -1757,59 +1493,16 @@ const I18N = {
     'people.sub.none':'Whose day this is. Nobody here has shown an X account yet.',
     'people.congrats':'WISH THEM WELL',
     'people.greet':'happy {day} — your day is lit onchain',
-    'join.member.pending':'Joining as {days} — it appears on the wall shortly.',
-    'join.member.both':'On the calendar as {days}. {coming} appears shortly.',
-    'join.leave':'LEAVE THIS ROOM','join.left':'You have left. Your days come off the calendar shortly.',
-    'join.short':'This room needs {min} of {token} on {chain}. This wallet holds none.',
-    'join.member.short':'You are in this room, but hold none of {token}. Your days stay off the wall until you do.',
-    'join.as':'as {addr}',
-    'join.left.pending':'You have left. {days} comes off this calendar shortly.',
-    'join.needuday':'Every member of every room holds at least one uDAY.',
-    'join.getuday':'GET A uDAY',
-    'join.noday':'You hold uDAY, but none of your pieces have revealed their date yet. A day has to be yours before it can stand here.',
-    'join.nostar':'You can join — but the calendar shows \u2605 days, and you have not set one yet. Set it on your own calendar; it will stand on every room you join.',
-    'join.member.nostar':'You are in this room, but the calendar has no \u2605 day of yours yet. Set one on your own calendar and it appears here.',
-    'join.ready':'Joining writes you into this community onchain, and your {days} stands on this calendar.',
-    'join.go':'JOIN',
-    'join.noslots':'Every day you can declare is already spoken for. Hold more uDAY for another, or free one on your own calendar.',
-    'join.mining':'On its way to the chain — this is usually seconds.',
+
+    'star.mining':'On its way to the chain — this is usually seconds.',
     'star.count':'\u2605 {n}/{m}',
-    'star.on':'Written on the chain as yours — it stands on every community calendar you have joined.',
-    'star.off':'Write this day onto the chain as yours. It stands on every community calendar you join. ({n}/{m} used)',
+    'star.on':'Written on the chain as yours.',
+    'star.off':'Write this day onto the chain as yours. ({n}/{m} used)',
     'star.full':'All your \u2605 are placed ({n}/{m}). Hold more uDAY for another, or take one back first.',
     'star.set':'WRITE IT ONCHAIN','star.remove':'TAKE IT BACK OFFCHAIN',
     'star.what':'What is this?',
-    'star.note':'A ★ is a day written on the chain as yours, and it stands on every community calendar you join. How many you get follows the uDAY you hold: 1 token for one, 10 for two, 100 for three.',
+    'star.note':'A ★ is a day written on the chain as yours. How many you get follows the uDAY you hold: 1 token for one, 10 for two, 100 for three.',
     'star.note.more':'Hold {n} uDAY for another.','star.note.max':'Three is the most anyone can hold.',
-    'join.clear.tip':'Let this day go — the slot comes back, and you can declare another.',
-    'join.sent':'Sent. You appear on the calendar shortly.',
-    'comm.missing':'No community here yet.',
-    'comm.back':'← COMMUNITIES','clist.kicker':'Communities','clist.title':'The rooms so far',
-    'clist.members':'{n} MEMBERS',
-    'clist.mine':'Yours','clist.rest':'More rooms',
-    'cnew.kicker':'Start a community','cnew.title':'An onchain calendar your members own',
-    'cnew.blurb':'Your holders put the days that matter to them on one calendar, and every one of those days is a reason to come back.',
-    'cnew.f.slug':'URL','cnew.f.name':'Name','cnew.f.chain':'Chain','cnew.f.token':'Token','cnew.f.min':'Minimum held','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'Website',
-    'cnew.links.note':'Optional, https only. You can change these later; nothing else about the room can change.',
-    'cnew.err.link':'Links must start with https://',
-    'cnew.wait':'Making uday.gift/c/{slug}. Waiting for the transaction to land — this is usually seconds.',
-    'cnew.done':'uday.gift/c/{slug} exists. Taking you there…',
-    'cnew.slow':'The transaction has not landed yet. It may still go through — the room will be at uday.gift/c/{slug} when it does.',
-    'cnew.open':'OPEN THE ROOM',
-    'cnew.go':'CREATE','cnew.soon':'soon',
-    'cnew.sent':'Creating uday.gift/c/{slug} — it appears shortly.',
-    'cnew.err.slug':'The URL can use a-z, 0-9 and dashes only.',
-    'cnew.err.name':'Give it a name.','cnew.err.token':'That is not a contract address.',
-    'cnew.err.min':'The minimum must be a number above zero — a gate of 0 is no gate.',
-    'cnew.err.nocontract':'Communities are not live on this network yet.',
-    'cnew.err.nowallet':'No wallet found in this browser.',
-    'cnew.err.chain':'Switch to Robinhood Chain to continue.',
-    'cnew.err.tx':'The transaction did not go through.',
-    'cnew.err.gate':'That address cannot be used as a gate on this chain — nobody would ever be able to join, and it could never be corrected.',
-    'cnew.checking':'checking…',
-    'cnew.kind.20':'ERC-20, {d} decimals','cnew.kind.721':'ERC-721 — the threshold is a number of items',
-    'cnew.kind.bad':'This address cannot be used as a gate here.',
-    'cnew.unit.tokens':'in whole tokens','cnew.unit.items':'in items',
     'year.kicker':'The year','year.title':'A year, lighting up',
     'year.blurb':'Every cell is a day. Lit means at least one uDAY of that date has been born onchain; the brighter, the more of them exist. A day whose last piece was just sold still glows faintly — an ember, for seven days. Tap a day to visit its earliest piece.',
     'year.glitch.cell':'A DAY THAT DOES NOT EXIST',
@@ -1830,12 +1523,7 @@ const I18N = {
     'mine.disconnect':'SIGN OUT','mine.wallet.back':'Back to my days',
     'mine.btn.view':'VIEW YOUR PIECE',
     'proof.supply':'10,000 max','proof.lp':'LP burned','proof.art':'Art onchain',
-    'rooms.kicker':'Communities','rooms.title':'A calendar of the people you know',
-    'rooms.blurb':'Open a room gated by any token. Everyone who holds it can put their day on one shared calendar — so you always know whose day is next.',
-    'rooms.rule':'1 uDAY to stand on a room’s calendar. 10 to open one.',
-    'rooms.noadmin':'No admin — not even us. A room’s rules are frozen the moment it is created, and nobody can remove anyone.',
-    'rooms.create':'START A COMMUNITY','rooms.browse':'SEE THE ROOMS',
-    'nav.mine':'MY CALENDAR','nav.mine.short':'MINE','nav.comm':'COMMUNITIES','nav.comm.short':'ROOMS',
+    'nav.mine':'MY CALENDAR','nav.mine.short':'MINE',
     'gift.title':'TODAY’S GIFT',
     'gift.not.yours':'Every uDAY is a calendar date — and when the real calendar reaches that date, that day’s holders share the day’s gift. Today, {total} USDG belongs to holders of {day}.',
     'gift.cta':'CLAIM THE GIFT',
@@ -1948,23 +1636,7 @@ const I18N = {
     'status.btn.offer':'把它带回家','status.btn.mint':'铸造一天',
     'live.lit':'全年点亮 {lit}/366 天','live.alive':'已诞生 {n} 枚','live.sealed':'{n} 枚待揭晓','live.owners':'收藏者 {n} 位',
     'year.mine.q':'这些格子里，哪几格是你的？',
-    'comm.kicker':'这个社区','comm.blurb':'为社区伙伴美好的日子献上祝福。',
-    'comm.stat.members':'{n} 位成员','comm.stat.days':'{n} 天已被认领',
-    'comm.next':'下一个在 {n} 天后——{day} 属于 {who}。',
-    'comm.next.tomorrow':'就在明天——{day} 属于 {who}。',
-    'comm.next.today':'今天属于 {who}。',
-    
-    'comm.gate':'持有 {min} 枚 {token}，再加 1 枚 uDAY，你就在里面了。',
-    'comm.gate.onchain':'加入的那一刻合约当场核对，规则谁也改不了。',
-    'comm.gate.index':'{chain} 上的余额由一份公开名单核对，规则谁也改不了。',
-    'comm.link.site':'网站',
-    
-    'join.connect':'连接钱包，看看你能不能站上这张日历。',
-    'join.member':'你已经在这个房间里。只有你自己能把自己移出去。',
-    'join.member.days':'日历上是 {days}。',
-    'join.loading':'正在看看你的哪些日子可以站上这张日历…',
-    'join.rpcfail':'链上没有应答——房间暂时读不到你的状态。',
-    'join.retry':'重试',
+
     'x.link':'连接 X 帐号',
     'x.unlink':'移除',
     'x.working':'等待你签名…',
@@ -1991,59 +1663,16 @@ const I18N = {
     'people.sub.none':'这是谁的日子。这里还没有人显示 X 帐号。',
     'people.congrats':'去祝贺',
     'people.greet':'{day} 快乐——你的日子在链上亮着',
-    'join.member.pending':'将以 {days} 站上日历——稍后就会出现。',
-    'join.member.both':'日历上是 {days}。{coming} 稍后就会出现。',
-    'join.leave':'离开社区','join.left':'你已离开。你的日子稍后会从日历上消失。',
-    'join.short':'这个房间需要在 {chain} 上持有 {min} 枚 {token}，而这个钱包一枚也没有。',
-    'join.member.short':'你在这个房间里，但没有持有 {token}。在持有之前，你的日子不会出现在日历上。',
-    'join.as':'以 {addr} 的身分',
-    'join.left.pending':'你已经离开。{days} 稍后会从这张日历上消失。',
-    'join.needuday':'每个房间的每个成员，都至少持有一枚 uDAY。',
-    'join.getuday':'去拿一枚 uDAY',
-    'join.noday':'你持有 uDAY，但还没有任何一枚揭晓日期。一天要先属于你，才能站在这里。',
-    'join.nostar':'你可以加入——但日历显示的是 \u2605 日子，而你还没有设。到你自己的日历上设一颗，它会站上你加入的每个房间。',
-    'join.member.nostar':'你已经在这个房间里，但日历上还没有你的 \u2605 日子。到你自己的日历设一颗，它就会出现在这里。',
-    'join.ready':'加入会在链上建立你与这个社区的关系，你的 {days} 就会站上这张日历。',
-    'join.go':'加入',
-    'join.noslots':'你能宣告的日子都已经用完了。持有更多 uDAY 换一个名额，或在自己的日历上腾出一个。',
-    'join.mining':'正在上链——通常只要几秒。',
+
+    'star.mining':'正在上链——通常只要几秒。',
     'star.count':'\u2605 {n}/{m}',
-    'star.on':'已经刻在链上，属于你——它站在你加入的每一个社区日历上。',
-    'star.off':'把这一天刻上链，成为你的。它会站上你加入的每个社区日历。（已用 {n}/{m}）',
+    'star.on':'已经刻在链上，属于你。',
+    'star.off':'把这一天刻上链，成为你的。（已用 {n}/{m}）',
     'star.full':'你的 \u2605 都用完了（{n}/{m}）。持有更多 uDAY 换名额，或先收回一颗。',
     'star.set':'刻上链','star.remove':'从链上收回',
     'star.what':'这是什么？',
-    'star.note':'★ 是刻在链上属于你的日子，它会站上你加入的每个社区日历。名额看你持有多少 uDAY：1 枚换 1 个，10 枚换 2 个，100 枚换 3 个。',
+    'star.note':'★ 是刻在链上属于你的日子。名额看你持有多少 uDAY：1 枚换 1 个，10 枚换 2 个，100 枚换 3 个。',
     'star.note.more':'再持有 {n} 枚 uDAY 就多一个名额。','star.note.max':'3 个是所有人的上限。',
-    'join.clear.tip':'放掉这一天——名额会回来，你就能改宣告别的日子。',
-    'join.sent':'已送出。稍后你就会出现在日历上。',
-    'comm.missing':'这里还没有社区。',
-    'comm.back':'← 社区日历','clist.kicker':'社区','clist.title':'目前的房间',
-    'clist.members':'{n} 位成员',
-    'clist.mine':'你加入的','clist.rest':'其他社区',
-    'cnew.kicker':'创建社区','cnew.title':'一个属于社区成员的链上日历',
-    'cnew.blurb':'让你的持有者把在意的日子放上同一张日历，每一个日子都是一次回来的理由。',
-    'cnew.f.slug':'网址','cnew.f.name':'名称','cnew.f.chain':'链','cnew.f.token':'代币','cnew.f.min':'持有门槛','cnew.f.x':'X','cnew.f.tg':'Telegram','cnew.f.other':'网站',
-    'cnew.links.note':'选填，只接受 https。这些之后可以改；房间的其他一切都不能改。',
-    'cnew.err.link':'连结必须以 https:// 开头。',
-    'cnew.wait':'正在建立 uday.gift/c/{slug}。等待交易上链——通常只要几秒。',
-    'cnew.done':'uday.gift/c/{slug} 已经存在。正在带你过去…',
-    'cnew.slow':'交易还没上链。它可能仍会成功——成功后房间就在 uday.gift/c/{slug}。',
-    'cnew.open':'打开房间',
-    'cnew.go':'创建','cnew.soon':'即将支持',
-    'cnew.sent':'正在创建 uday.gift/c/{slug}——稍后就会出现。',
-    'cnew.err.slug':'网址只能用 a-z、0-9 和连字号。',
-    'cnew.err.name':'给它一个名字。','cnew.err.token':'这不是一个合约地址。',
-    'cnew.err.min':'门槛必须是大于 0 的数字——0 等于没有门槛。',
-    'cnew.err.nocontract':'社区功能尚未在这条链上启用。',
-    'cnew.err.nowallet':'这个浏览器里找不到钱包。',
-    'cnew.err.chain':'请切换到 Robinhood Chain。',
-    'cnew.err.tx':'交易没有送出。',
-    'cnew.err.gate':'这个地址在这条链上不能当门槛——建出来的房间将永远没有人能加入，而且无法修正。',
-    'cnew.checking':'检查中…',
-    'cnew.kind.20':'ERC-20，{d} 位小数','cnew.kind.721':'ERC-721——门槛以「件」计',
-    'cnew.kind.bad':'这个地址在这里不能当门槛。',
-    'cnew.unit.tokens':'以整枚代币计','cnew.unit.items':'以件计',
     'year.kicker':'一整年','year.title':'一年，正在点亮',
     'year.blurb':'每一格是一天。亮起代表这一天已在链上诞生，越亮代表这一天的 uDAY 越多。刚被卖掉最后一枚的日子还会微微发光——那是余烬，会亮七天。点一格，去看那一天诞生的每一枚。',
     'year.glitch.cell':'不存在的日子',
@@ -2064,12 +1693,7 @@ const I18N = {
     'mine.disconnect':'登出','mine.wallet.back':'回到我的日历',
     'mine.btn.view':'查看你的这一枚',
     'proof.supply':'上限 10,000','proof.lp':'流动性已烧毁','proof.art':'艺术全在链上',
-    'rooms.kicker':'社区','rooms.title':'一张属于你认识的人的日历',
-    'rooms.blurb':'用任何代币开一个房间，持有它的人就能把自己的日子放上同一张日历——你永远知道下一个是谁的日子。',
-    'rooms.rule':'1 枚 uDAY 就能站上一个房间的日历。10 枚可以开一个。',
-    'rooms.noadmin':'没有管理员——包括我们。房间的规则在创建的那一刻就永久固定，没有人能把任何人移出去。',
-    'rooms.create':'创建社区','rooms.browse':'看看有哪些房间',
-    'nav.mine':'我的日历','nav.mine.short':'个人','nav.comm':'社区日历','nav.comm.short':'社区',
+    'nav.mine':'我的日历','nav.mine.short':'个人',
     'gift.title':'今日礼物',
     'gift.not.yours':'每枚 uDAY 都是一个日期——当现实的日历走到那一天，这一天的主人们就能分享当天的礼物。今天共 {total} USDG，属于 {day} 的持有者。',
     'gift.cta':'领取礼物',
@@ -2232,10 +1856,8 @@ function applyLang(next){
   if(typeof mineWalletUI === 'function') mineWalletUI();
   const fo = document.getElementById('btn-forge-open'), fp = document.getElementById('forge-panel');
   if(fo && fp && !fp.hidden) fo.textContent = t('forge.close');
-  if(typeof renderCommunity === 'function' && COMM) renderCommunity();
   if(typeof renderRoad === 'function') renderRoad();
 }
-
 
 /* ─────────────────────────────────────────────────────────────────────
    art layers
@@ -3187,10 +2809,10 @@ async function renderStarBar(bar, key){
       }catch(e){ return; }
       b.disabled = true;
       const spin = document.createElement('span');
-      spin.className = 'cnew__spin daymodal__starspin';
+      spin.className = 'spin daymodal__starspin';
       spin.setAttribute('aria-hidden', 'true');
       bar.appendChild(spin);
-      txt.textContent = t('join.mining');
+      txt.textContent = t('star.mining');
       const pad = x => pad32(x.replace('0x', '').toLowerCase());
       for(let i = 0; i < 30; i++){
         await new Promise(r => setTimeout(r, 2500));
@@ -3316,64 +2938,14 @@ function buildWall(grid, byDay, opts){
 /// built either way — this only marks the other eleven months, and the CSS
 /// acts on the mark below 720px, so a rotation or a resize needs no rebuild.
 
-/* ─────────────────────────────────────────────────────────────────────
-   communities — /c/<slug>. A community's calendar is the SAME wall the
-   year uses, fed its members' declared days instead of the whole
-   collection. Everything is read from the committed JSON; the browser
-   never touches an RPC.
-   ───────────────────────────────────────────────────────────────────── */
-const COMM_SLUG = (location.pathname.match(/^\/c\/([a-z0-9-]{1,32})\/?$/) || [])[1] || null;
-const COMM_NEW = /^\/c\/?$/.test(location.pathname);
-// Rooms live on the APP host now — uday.gift is a landing page and has
-// nothing to run them with. The old rule was the other way round (bounce /c
-// off my.uday.gift onto the apex) because the app and the marketing page
-// shared a hostname; they no longer do.
-//
-// What has to stay true either way: /c must never boot personal mode AND
-// community mode at once, or your collection renders underneath someone
-// else's room. IS_PERSONAL is what decides that, and it is told below that a
-// community path is not personal.
-//
-// Literals, not the constants further down: this runs before they are
-// declared and a reference here is a temporal-dead-zone crash that kills the
-// whole script.
-if((COMM_SLUG || COMM_NEW) && location.hostname === 'uday.gift'){
-  location.replace('https://app.uday.gift' + location.pathname + location.search);
-}
-let COMM = null;
-
-const SEL_COMMUNITIES = '0xbd6a7a82';   // communities(bytes32)
-const SEL_LINKS        = '0xb2fccc7f';   // links(bytes32)
-
-/// The index first, the chain as a fallback.
-///
-/// A room exists the moment its transaction lands, but the published index
-/// only catches up on its next cycle — so without this, someone who just made
-/// a room is told it does not exist for up to an hour. Reading the contract
-/// costs one call and only happens when the index has nothing, so the normal
-/// path still never touches an RPC.
-async function loadCommunity(){
-  if(!COMM_SLUG) return null;
-  try{
-    const r = await fetch('/data/communities.json', { cache: 'no-cache' });
-    if(r.ok){
-      const j = await r.json();
-      const hit = (j.communities || []).find(c => c.slug === COMM_SLUG);
-      if(hit) return hit;
-    }
-  }catch(e){}
-  return await loadCommunityFromChain(COMM_SLUG);
-}
-
-/// The deployed address, fetched once. Both the chain fallback and the join
-/// panel need it, and the join panel is reached WITHOUT the fallback whenever
-/// the index already knows the room — which is why loading it inside the
-/// fallback alone left the panel permanently hidden.
+/// The UdayCommunity address, fetched once. The ★ lives in that contract
+/// (setSpecialDay / daysOf / slotsOf) and outlived the room pages it was
+/// built for.
 async function ensureCommContract(){
   if(COMM_CONTRACT) return COMM_CONTRACT;
-  // One failed fetch of this 43-byte file used to hide the entire join panel
-  // with no message — "no claim options in sight" was this line failing once
-  // on a phone network.
+  // One failed fetch of this 43-byte file used to hide a whole panel with no
+  // message — "no claim options in sight" was this line failing once on a
+  // phone network.
   for(let i = 0; i < 3 && !COMM_CONTRACT; i++){
     try{
       const r = await fetch(COMM_ADDR_FILE, { cache: 'no-cache' });
@@ -3384,101 +2956,12 @@ async function ensureCommContract(){
   return COMM_CONTRACT;
 }
 
-async function loadCommunityFromChain(slug){
-  if(!await ensureCommContract()) return null;
-  const home = CHAINS[0];
-  const id = await slugId(slug);
-  if(!id) return null;
-  const call = async (sel) => {
-    try{
-      const r = await fetch(home.rpc, { method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
-          params: [{ to: COMM_CONTRACT, data: sel + id }, 'latest'] }) });
-      const j = await r.json();
-      return (j && j.result && j.result !== '0x') ? j.result.slice(2) : null;
-    }catch(e){ return null; }
-  };
-  const meta = await call(SEL_COMMUNITIES);
-  if(!meta) return null;
-  const w = i => meta.slice(i * 64, (i + 1) * 64);
-  const token = '0x' + w(1).slice(24);
-  if(/^0x0+$/.test(token)) return null;                  // no such room
-  const str = off => {
-    const p = parseInt(off, 16) * 2;
-    const n = parseInt(meta.slice(p, p + 64), 16);
-    return decodeURIComponent(
-      (meta.slice(p + 64, p + 64 + n * 2).match(/../g) || [])
-        .map(h => '%' + h).join(''));
-  };
-  const chainId = parseInt(w(0), 16);
-  const chain = CHAINS.find(c => c.id === chainId);
-  const probed = (chain && chain.rpc)
-    ? await probeToken(chain, token).catch(() => null) || { kind: 'erc20', decimals: 18 }
-    : { kind: 'erc20', decimals: 18 };
-  const raw = await call(SEL_LINKS);
-  const links = {};
-  if(raw){
-    const lw = i => raw.slice(i * 64, (i + 1) * 64);
-    ['x', 'telegram', 'other'].forEach((k, i) => {
-      const p = parseInt(lw(i), 16) * 2;
-      const n = parseInt(raw.slice(p, p + 64), 16);
-      if(!n) return;
-      const v = decodeURIComponent((raw.slice(p + 64, p + 64 + n * 2).match(/../g) || [])
-                  .map(h => '%' + h).join(''));
-      if(/^https:\/\//i.test(v)) links[k] = v;
-    });
-  }
-  return { id: '0x' + id, slug: str(w(5)), name: str(w(6)),
-           chainId: chainId, token: token,
-           gatedOnchain: chainId === home.id,
-           minBalance: BigInt('0x' + w(2)).toString(),
-           creator: '0x' + w(3).slice(24), createdAt: parseInt(w(4), 16),
-           // The chain stores neither the token's kind nor its decimals, and
-           // assuming 18 rendered a 1-item ERC-721 gate as "0" — a room that
-           // looked like anyone could walk into it. Ask the token itself; the
-           // index refines this later, but a fresh room must not lie meanwhile.
-           tokenKind: probed.kind, tokenDecimals: probed.decimals,
-           links: links, members: [], fresh: true };
-}
-
-/// keccak of the slug — the community id. Uses the wallet's own provider when
-/// one is present, since the page carries no hash function.
-async function slugId(slug){
-  const hex = Array.from(new TextEncoder().encode(slug))
-    .map(b => b.toString(16).padStart(2, '0')).join('');
-  if(mineEth && mineEth.request){
-    try{
-      const r = await mineEth.request({ method: 'web3_sha3', params: ['0x' + hex] });
-      if(/^0x[0-9a-f]{64}$/i.test(r)) return r.slice(2);
-    }catch(e){}
-  }
-  try{
-    const r = await fetch(CHAINS[0].rpc, { method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'web3_sha3',
-        params: ['0x' + hex] }) });
-    const j = await r.json();
-    return (j && j.result) ? j.result.slice(2) : null;
-  }catch(e){ return null; }
-}
-
-/// members[] -> { "MM-DD": [{owner}] } so buildWall can draw it unchanged
-function commByDay(c){
-  const by = {};
-  (c.members || []).forEach(m => (m.days || []).forEach(k => {
-    (by[k] = by[k] || []).push({ owner: m.addr, id: 0 });
-  }));
-  return by;
-}
-
 /* ── X identity ───────────────────────────────────────────────────────
-   A wallet is not a person. "0xE72D…35FD's day is in 12 days" gives nobody
-   anyone to congratulate, which is most of what a room is for.
+   A wallet is not a person. "0xE72D…35FD" gives nobody anyone to
+   congratulate on the day modal's people list.
 
-   Linking is opt-in and reversible. Standing on a community calendar already
-   ties a wallet to a date in public; tying it to a name and a face is a
-   larger step, so it needs a door out as much as a door in.
+   Linking was opt-in and lived on the community pages (removed 2026-09-08);
+   links already made still render here, read from the committed file.
 
    The handshake cannot happen here: X sends no CORS headers on either the
    token endpoint or /2/users/me (measured — 400 and 403, neither carrying
@@ -3489,7 +2972,7 @@ async function loadXLinks(){
   try{
     const r = await fetch('/data/x-links.json', { cache: 'no-cache' });
     if(r.ok) X_LINKS = (await r.json()) || {};
-  }catch(e){ /* rooms keep working; they just show addresses */ }
+  }catch(e){ /* the page keeps working; it just shows addresses */ }
   // Coming back from the handshake, the commit that records it has not been
   // deployed yet — a minute or so. Without this the visitor lands on a page
   // that shows no sign anything happened and tries again. Cosmetic and local:
@@ -3578,9 +3061,6 @@ function xFace(addr){
   return a;
 }
 
-/// A community cell answers "WHOSE day is this", not "what pieces exist" —
-/// the artwork gallery belongs to the collection wall, and a room's cells
-/// carry no piece ids at all. This is the door the room exists for.
 function openPeopleModal(key, list){
   ensureModal();
   hideTip();
@@ -3627,129 +3107,9 @@ function openPeopleModal(key, list){
   va('event', { name: 'people_modal', data: { day: key, n: seen.size, named: named } });
 }
 
-/// Link / unlink, inside the member panel. Deliberately here and nowhere else:
-/// showing a face is a thing you do for a room you already stand in.
-function xRow(box, run){
-  const me = mineIdentity();
-  if(!me) return;
-  const row = document.createElement('div');
-  row.className = 'commjoin__x';
-  // whatever went wrong, it went wrong after pressing the button that lives
-  // here — so this is where it gets said
-  if(X_ERR){
-    const e = document.createElement('p');
-    e.className = 'commjoin__xerr';
-    e.textContent = (X_ERR === 'taken' && !X_ERR_ADDR)
-      ? t('x.err.takenanon')
-      : t('x.err.' + X_ERR, X_ERR_ADDR ? { addr: shortAddr(X_ERR_ADDR) } : null);
-    box.appendChild(e);
-    // cleared only by the run that is still the current one: a render that
-    // gets lapped would otherwise consume the message and the winner would
-    // show nothing. Rare, and it happened once in four tries.
-    if(run === joinRun){ X_ERR = null; X_ERR_ADDR = null; }
-  }
-  const cur = xOf(me);
-  if(cur){
-    row.appendChild(xFace(me));
-    const off = document.createElement('button');
-    off.type = 'button';
-    off.className = 'commjoin__xoff';
-    off.textContent = t('x.unlink');
-    off.addEventListener('click', async () => {
-      off.disabled = true;
-      off.textContent = t('x.working');
-      try{
-        const r = await fetch('/api/x/unlink', { method: 'POST' });
-        if(!r.ok) throw new Error(await r.text());
-        delete X_LINKS[me];
-        renderJoin();
-      }catch(e){
-        off.disabled = false;
-        off.textContent = t('x.unlink');
-        row.appendChild(xNote(e.message || t('x.failed')));
-      }
-    });
-    row.appendChild(off);
-  }else if(SESSION_ADDR && me && SESSION_ADDR !== me){
-    // Signed in as one wallet, looking at another. Linking here would bind the
-    // X account to the SIGNED-IN wallet, which is not the one on screen — that
-    // is exactly how two links landed on the wrong address.
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn btn--ghost commjoin__xon';
-    b.textContent = t('x.signinhere');
-    b.addEventListener('click', async () => {
-      b.disabled = true; b.textContent = t('mine.signingin');
-      if(await signIn()) location.reload();
-      else { b.disabled = false; b.textContent = t('x.signinhere'); }
-    });
-    row.appendChild(b);
-    const why = document.createElement('span');
-    why.className = 'commjoin__xwhy';
-    why.textContent = t('x.othersession', { addr: shortAddr(SESSION_ADDR) });
-    row.appendChild(why);
-  }else{
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn btn--ghost commjoin__xon';
-    b.textContent = t('x.link');
-    b.addEventListener('click', () => {
-      b.disabled = true;
-      // one hop: the session already says which wallet, so all that is left is
-      // X's own consent screen
-      leaveTo('/api/x/start?back=' + encodeURIComponent(location.pathname));
-    });
-    row.appendChild(b);
-    const why = document.createElement('span');
-    why.className = 'commjoin__xwhy';
-    why.textContent = t('x.why');
-    row.appendChild(why);
-  }
-  box.appendChild(row);
-}
-function xNote(msg){
-  const s = document.createElement('span');
-  s.className = 'commjoin__xwhy';
-  s.textContent = msg;
-  return s;
-}
-
-/// The next member birthday from today, wrapping into next year. This is
-/// the reason to come back: a community page that cannot say "whose day is
-/// next" is just a grid.
-function commNextDay(by){
-  const u = new Date(Date.now() + 8 * 3600 * 1000);
-  const today = Date.UTC(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
-  let best = null;
-  for(const k in by){
-    const m = +k.slice(0, 2), d = +k.slice(3);
-    for(let y = u.getUTCFullYear(); y <= u.getUTCFullYear() + 4; y++){
-      const ts = Date.UTC(y, m - 1, d);
-      if(new Date(ts).getUTCMonth() !== m - 1) continue;      // Feb 29, common year
-      if(ts < today) continue;
-      const days = Math.round((ts - today) / 86400000);
-      if(!best || days < best.days) best = { key: k, days: days, m: m, d: d, who: by[k] };
-      break;
-    }
-  }
-  return best;
-}
-
 const chainName = id => ({ 4663: 'Robinhood Chain', 1: 'Ethereum', 8453: 'Base',
                            42161: 'Arbitrum', 10: 'Optimism' })[id] || ('chain ' + id);
 
-/* ── small marks ──────────────────────────────────────────────────────
-   Two facts about a room that were only ever spelled out in prose: which
-   chain holds the gating token, and whether that token is counted in ITEMS
-   or in COINS. The second decides what a threshold of "1" even means, and
-   the rooms list showed no trace of it at all.
-
-   Inline SVG in currentColor, not pixel art: these render at 13px, and this
-   project's rule is that pixel art must be DRAWN at the size it is shown — a
-   downscaled glyph turns to noise. Each carries a <title> so the name is
-   still there for a pointer and a screen reader. The ROOM page keeps its
-   chain spelled out in prose: that sentence says who enforces the gate, and
-   that is not a thing to hide behind an icon. */
 const svgMark = (body, title, px) =>
   '<svg viewBox="0 0 16 16" width="' + px + '" height="' + px + '" role="img">' +
   '<title>' + title + '</title>' + body + '</svg>';
@@ -3762,29 +3122,6 @@ const svgMark = (body, title, px) =>
 const ETH_BLUE = '#7f92f0';        // the Ethereum blue, lifted for a dark ground
 const RH_GREEN = '#3ad46b';
 
-function chainMark(id){
-  const name = chainName(id);
-  if(id === 1)
-    return svgMark('<path d="M8 .8 13.6 8 8 11.2 2.4 8Z" fill="' + ETH_BLUE + '" opacity=".55"/>' +
-                   '<path d="M8 12.3 13.6 9.1 8 15.2 2.4 9.1Z" fill="' + ETH_BLUE + '"/>', name, 20);
-  if(id === 4663)
-    return svgMark('<path d="M12.9 1.9c-5.2.4-8 3.1-8.6 6.8-.2 1.3 0 2.4.4 3.2l-1.5 2.3.95.62 1.4-2.2c.95.42 2.1.53 3.25.21 3.45-.84 5.25-4.06 4.15-10.93Z" ' +
-                   'fill="none" stroke="' + RH_GREEN + '" stroke-width="1.5" stroke-linejoin="round"/>' +
-                   '<path d="M11.7 4.2C8.3 5.7 6.1 8.5 5.35 11.7" fill="none" stroke="' + RH_GREEN + '" stroke-width="1.35" stroke-linecap="round"/>', name, 20);
-  return svgMark('<path d="M8 1.2 14.4 4.8v6.4L8 14.8 1.6 11.2V4.8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>', name, 20);
-}
-
-/// ERC-721 is a framed picture — one of one. ERC-20 is stacked coins.
-function kindMark(kind){
-  if(kind === 'erc721')
-    return svgMark('<rect x="1.5" y="2.2" width="13" height="11.6" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
-                   '<path d="M2.9 11.9 6.4 8.1l2.4 2.5 2.1-1.8 2.2 2.9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
-                   '<circle cx="5.5" cy="5.6" r="1.25" fill="currentColor"/>', 'NFT', 20);
-  return svgMark('<ellipse cx="8" cy="3.9" rx="5.9" ry="2.3" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
-                 '<path d="M2.1 3.9v3.5c0 1.27 2.64 2.3 5.9 2.3s5.9-1.03 5.9-2.3V3.9" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
-                 '<path d="M2.1 7.8v3.5c0 1.27 2.64 2.3 5.9 2.3s5.9-1.03 5.9-2.3V7.8" fill="none" stroke="currentColor" stroke-width="1.5"/>', 'Token', 20);
-}
-
 /// The "tap me" affordance on the ★ tag. Drawn rather than typed, because a
 /// letter small enough to sit inside a 17px ring would break the text floor.
 function infoMark(){
@@ -3793,141 +3130,13 @@ function infoMark(){
                  '<rect x="7.2" y="4.3" width="1.6" height="1.7" fill="currentColor"/>', '', 17);
 }
 
-/// The half of the gate consensus cannot enforce.
-///
-/// On a foreign-chain room the contract CANNOT see the gating balance — a
-/// foreign address has no code here — so it records the join and the published
-/// index enforces the rule instead. That is by design and the page says so.
-/// What it did NOT do was check the rule before offering the button, so a
-/// wallet holding none of the token could join, be told its days were on the
-/// way, and wait forever for an index that filters it out every cycle.
-///
-/// null means the chain could not be reached — which must never be read as
-/// "fails the gate", only as "not known".
-async function gateBalance(c, addr){
-  if(!c || c.gatedOnchain) return null;         // consensus already handled it
-  const chain = CHAINS.find(x => x.id === c.chainId);
-  if(!chain || !chain.rpc) return null;
-  try{
-    const r = await fetch(chain.rpc, { method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
-        params: [{ to: c.token, data: '0x70a08231' + pad32(addr.replace('0x','').toLowerCase()) }, 'latest'] }) });
-    const j = await r.json();
-    if(!j || !j.result || j.result === '0x') return null;
-    return BigInt(j.result);
-  }catch(e){ return null; }
-}
-
-/// A gate rendered as "0" says anyone may walk in, so this never prints 0 for
-/// a threshold that is not zero — it drops to fractions, and to raw units
-/// rather than round a real rule away.
-function gateAmount(c){
-  let raw;
-  try{ raw = BigInt(c.minBalance || '0'); }catch(e){ return String(c.minBalance); }
-  const dec = c.tokenKind === 'erc721' ? 0 : (c.tokenDecimals || 0);
-  if(dec === 0) return raw.toLocaleString();
-  const unit = 10n ** BigInt(dec);
-  if(raw % unit === 0n) return (raw / unit).toLocaleString();
-  const v = Number(raw) / Number(unit);
-  return v >= 1e-6 ? v.toLocaleString(undefined, { maximumFractionDigits: 8 })
-                   : raw.toLocaleString() + ' (raw)';
-}
-
-function renderCommunity(){
-  if(!COMM) return;
-  const by = commByDay(COMM);
-  document.getElementById('comm-kicker').textContent = t('comm.kicker');
-  document.getElementById('comm-title').textContent = COMM.name || COMM.slug;
-  document.getElementById('comm-blurb').textContent = t('comm.blurb');
-
-  const { lit } = buildWall(document.getElementById('comm-grid'), by, { today: true, people: true });
-  const host = document.getElementById('comm-stats');
-  host.textContent = '';
-  const mk = txt => { const el = document.createElement('span'); el.className = 'tag'; el.textContent = txt; host.appendChild(el); };
-  mk(t('comm.stat.members', { n: (COMM.members || []).length }));
-  mk(t('comm.stat.days', { n: lit }));
-
-  const nx = document.getElementById('comm-next');
-  const n = commNextDay(by);
-  if(n){
-    // a name where one is known — this line is the reason to come back, and
-    // "0xE72D…35FD" is not somebody you can wish a happy day
-    const nameOf = e => { const x = xOf(e.owner); return x ? '@' + x.handle : shortAddr(e.owner); };
-    const who = n.who.map(nameOf).slice(0, 3).join(', ') +
-                (n.who.length > 3 ? ' +' + (n.who.length - 3) : '');
-    nx.textContent = n.days === 0 ? t('comm.next.today', { who: who })
-                   : n.days === 1 ? t('comm.next.tomorrow', { who: who, day: dayLabel(n.m, n.d) })
-                   : t('comm.next', { n: n.days, who: who, day: dayLabel(n.m, n.d) });
-    // the highest-signal spot on the page, so it is also the shortest path to
-    // the person: the same door the calendar cell opens
-    const key = pad2(n.m) + '-' + pad2(n.d);
-    nx.classList.add('commnext--go');
-    nx.onclick = () => openPeopleModal(key, by[key] || []);
-    nx.hidden = false;
-  }else{
-    nx.classList.remove('commnext--go');
-    nx.onclick = null;
-    nx.hidden = true;
-  }
-
-  // The rules are frozen at creation, so showing them IS the trust statement —
-  // and the room must say WHO checks them. On this chain the contract enforces
-  // the gate and nobody can get past it. On another chain it cannot see that
-  // balance at all, so the published index enforces it instead: the same check,
-  // rerunnable by anyone against open code, but ours to run. Saying "onchain"
-  // for both would be the one dishonest sentence on this page.
-  const gate = document.getElementById('comm-gate');
-  const amount = gateAmount(COMM);
-  // A gating token names itself, so a room can say uPEG instead of forty
-  // characters of hex. Checked HERE as well as in the index — the same rule the
-  // links follow, because one filter is one edit away from being no filter.
-  const raw = COMM.tokenSymbol;
-  let tok = (typeof raw === 'string' && /^[\x20-\x7e]{1,12}$/.test(raw.trim()))
-    ? raw.trim() : '';
-  // ...and anyone can deploy a token that calls itself uDAY. That one name
-  // belongs to one address; every impostor goes back to being an address.
-  if(tok.toLowerCase() === 'uday' &&
-     String(COMM.token).toLowerCase() !== UDAY_ADDR.toLowerCase()) tok = '';
-  gate.title = COMM.token;              // the address is always one hover away
-  gate.textContent = t('comm.gate', { min: amount, token: tok || shortAddr(COMM.token) }) +
-    ' ' + t(COMM.gatedOnchain ? 'comm.gate.onchain' : 'comm.gate.index',
-            { chain: chainName(COMM.chainId) });
-  // Links are the ONE thing about a room its creator can still change, so the
-  // page attributes them rather than presenting them as part of the rules.
-  // The index only ever publishes https:// strings — these are written by
-  // strangers and opened by other strangers.
-  const lw = document.getElementById('comm-links');
-  lw.textContent = '';
-  const L = COMM.links || {};
-  // Checked HERE as well as in the index, not instead of it. These strings are
-  // written by strangers, and a single filter is one edit away from being no
-  // filter — a javascript: url rendered on this page is XSS. (It did render,
-  // once, before this line existed.)
-  const safe = u => typeof u === 'string' && /^https:\/\//i.test(u) && u.length <= 200;
-  [['x', 'X'], ['telegram', 'Telegram'], ['other', t('comm.link.site')]].forEach(([k, label]) => {
-    if(!safe(L[k])) return;
-    const a = document.createElement('a');
-    a.className = 'commface';
-    a.href = L[k]; a.target = '_blank'; a.rel = 'noopener noreferrer';
-    a.textContent = label;
-    lw.appendChild(a);
-  });
-  lw.hidden = !lw.children.length;
-
-  document.getElementById('community').hidden = false;
-  renderJoin();
-}
-
-const SEL_ISMEMBER = '0x10ad56b3', SEL_DAYSOF = '0xd98ceee6', SEL_SLOTSOF = '0x8ac48a59';
-const SEL_JOIN = '0xad677d0b', SEL_JOINWITH = '0x7f9275f2', SEL_LEAVE = '0x5265303c';
+const SEL_DAYSOF = '0xd98ceee6', SEL_SLOTSOF = '0x8ac48a59';
 const SEL_CLEARDAY = '0xbaf0227d';   // clearSpecialDay(uint16), computed with cast sig
 const SEL_SETDAY = '0x613fe19c';   // setSpecialDay(uint16), computed with cast sig
 
-/* ── stars: the days this identity DECLARED, read off the chain. A star is
-   global — it stands on every community calendar its owner has joined — and
-   it is managed HERE, on the personal calendar, never on a room page. The
-   room pages only display the consequence. ─────────────────────────────── */
+/* ── stars: the days this identity DECLARED, read off the chain. Written to
+   the UdayCommunity contract (setSpecialDay), which outlived the room pages
+   it was built for: a ★ is now simply a day the chain says is yours. ──── */
 let MY_STARS = null, MY_SLOTS = 0;
 async function loadStars(force){
   const id = mineIdentity();
@@ -4034,62 +3243,8 @@ async function commCall(sel, args){
   return null;
 }
 
-/// The days this wallet could declare: only dates it actually holds a piece
-/// of. That constraint IS the product — to stand on a community's calendar on
-/// your birthday you have to own that birthday.
-function commOwnedDays(id){
-  if(!DAYS || !id) return [];
-  return Object.keys(DAYS).filter(isRealDate)
-    .filter(k => DAYS[k].some(e => e.owner === id))
-    .sort();
-}
-
-/// Breathes the cells that are COMING: the chain already knows these days
-/// are yours, the index just has not published them. The wall builder lays
-/// every month as one label plus 31 slots, so (m,d) maps straight to a child
-/// index — no aria-label matching needed.
-function markPendingDays(keys){ markDays('yearcell--pending', keys); }
-
-/// The mirror of pending, and it was missing: the chain says you have left,
-/// the published wall has not caught up, so your days sit there looking like
-/// membership. They fade instead, and the panel says why — the change is real
-/// either way, the page is only waiting to be able to show it.
-function markLeavingDays(keys){ markDays('yearcell--leaving', keys); }
-
-function markDays(cls, keys){
-  const grid = document.getElementById('comm-grid');
-  if(!grid) return;
-  grid.querySelectorAll('.' + cls).forEach(c => c.classList.remove(cls));
-  (keys || []).forEach(k => {
-    const m = +k.slice(0, 2), d = +k.slice(3);
-    // the wall is a label plus 31 slots per month, so (m,d) maps to a child index
-    const cell = grid.children[(m - 1) * 32 + d];
-    if(cell && cell.classList.contains('yearcell')) cell.classList.add(cls);
-  });
-}
-
-/// The join panel is the only thing on a room that waits for the collection
-/// index, so it says so rather than being an empty space. Replaced wholesale
-/// by renderJoin; if the index never arrives, this stays, which is the truth.
-function joinWaiting(){
-  const box = document.getElementById('comm-join');
-  if(!box || box.childElementCount) return;
-  const p = document.createElement('p');
-  p.className = 'commjoin__line commjoin__wait';
-  p.textContent = t('join.loading');
-  box.appendChild(p);
-  box.hidden = false;
-}
-
-/// Two callers race here: loadIndex when the index lands, and mineWalletUI the
-/// moment a wallet reports in. Both of this function's awaits sit BEFORE the
-/// box is cleared, so two runs would each clear and then each append — and
-/// since the later clear removed the earlier run's opening line but not its
-/// still-pending appends, the panel came out with ONE heading and TWO sets of
-/// buttons. A generation stamp means only the newest run may touch the DOM.
-let joinRun = 0;
 // A browser with no injected wallet used to get a button that LOOKED like a
-// door: the join panel and the gift modal both linked it to the personal page,
+// door: the gift modal linked it to the personal page,
 // where the connect control is hidden for exactly the same reason — !mineEth.
 // A holder walked that circle twice and reported "no claim options in sight"
 // (they read the site inside X's in-app browser, which carries no wallet).
@@ -4131,205 +3286,6 @@ function noWalletActions(box){
   box.appendChild(mm);
 }
 
-async function renderJoin(){
-  const run = ++joinRun;
-  const box = document.getElementById('comm-join');
-  if(!COMM){ box.hidden = true; return; }
-  const ready = await ensureCommContract();
-  if(run !== joinRun) return;              // a newer run took over
-  if(!ready){
-    // even with retries the file can stay unreachable; an empty page and a
-    // spoken failure are different experiences, and only one can be acted on
-    box.textContent = '';
-    const p = document.createElement('p');
-    p.className = 'commjoin__line';
-    p.textContent = t('join.rpcfail');
-    box.appendChild(p);
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'btn btn--ghost';
-    b.textContent = t('join.retry');
-    b.addEventListener('click', () => renderJoin());
-    box.appendChild(b);
-    box.hidden = false;
-    return;
-  }
-  box.textContent = '';
-  // Which days this wallet holds is known only from the collection index, and
-  // this runs before it lands — mineWalletUI() calls it the moment a wallet
-  // reports in. Without this guard it told a holder of 229 days that they had
-  // none, which is not a slower truth, it is a wrong one.
-  if(!DAYS){ joinWaiting(); return; }
-  const me = mineIdentity();
-  // Every sentence below is about ONE wallet, and with two in a browser there
-  // was no way to tell which. The wall shows the room's members; the panel
-  // shows whoever the wallet has selected — both correct, and together they
-  // read as a contradiction. So the panel says whose account it is speaking
-  // for. (The header lost its address chip when it became two doors; this is
-  // the place that actually needed it.)
-  if(me){
-    const who = document.createElement('p');
-    who.className = 'commjoin__as';
-    who.textContent = t('join.as', { addr: shortAddr(me) });
-    box.appendChild(who);
-  }
-  const line = document.createElement('p');
-  line.className = 'commjoin__line';
-  box.appendChild(line);
-  const act = (label, cls, fn) => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'btn ' + (cls || 'btn--gold');
-    b.textContent = label; b.addEventListener('click', fn);
-    box.appendChild(b); return b;
-  };
-  const link = (label, href) => {
-    const a = document.createElement('a');
-    a.className = 'btn btn--ghost'; a.href = href;
-    a.target = '_blank'; a.rel = 'noopener'; a.textContent = label;
-    box.appendChild(a); return a;
-  };
-  box.hidden = false;
-
-  markPendingDays([]);
-  if(!me){
-    if(mineEth){
-      line.textContent = t('join.connect');
-      act(t('gift.modal.connect'), 'btn--gold', () => mineConnect.click());
-    }else{
-      line.textContent = t('nowallet.why');
-      noWalletActions(box);
-    }
-    return;
-  }
-
-  const pad = a => pad32(a.replace('0x', '').toLowerCase());
-  const cid = COMM.id.replace('0x', '');
-  const [mem, slots, mine, gateBal] = await Promise.all([
-    commCall(SEL_ISMEMBER, cid + pad(me)),
-    commCall(SEL_SLOTSOF, pad(me)),
-    commCall(SEL_DAYSOF, pad(me)),
-    gateBalance(COMM, me),
-  ]);
-  if(run !== joinRun) return;              // four reads is plenty of time to be lapped
-  // null from commCall is the RPC failing, not an answer. Reading it as an
-  // answer told a member holding hundreds of uDAY "you need 1 uDAY — buy
-  // some". Unknown gets its own state and a retry, like gateBal always had.
-  if(mem === null || slots === null || mine === null){
-    line.textContent = t('join.rpcfail');
-    act(t('join.retry'), 'btn--ghost', () => renderJoin());
-    return;
-  }
-  // known-and-short, never merely unknown
-  const shortOfGate = gateBal !== null && gateBal < BigInt(COMM.minBalance || '0');
-  const owned = commOwnedDays(me);
-  const declared = parseDeclared(mine);
-  const held = declared.filter(k => owned.includes(k));
-
-  // ── decoupled: this panel only joins and leaves. Which days stand on the
-  // calendar is decided by ★ on the PERSONAL calendar — a star is global, so
-  // managing it inside one room always changed every other room too, which is
-  // exactly the confusion the picker and the × chips used to cause. The room
-  // states the consequence; my.uday.gift makes the choice.
-  const mineDoor = () => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'btn btn--ghost';
-    b.textContent = t('nav.mine');
-    b.addEventListener('click', () => navGo('mine'));
-    box.appendChild(b); return b;
-  };
-
-  if(mem && /1$/.test(mem)){
-    if(shortOfGate){
-      // the chain records the membership, the index refuses to publish it —
-      // saying "your days are on the way" here is a promise that never lands
-      line.textContent = t('join.member.short',
-        { min: gateAmount(COMM), token: shortAddr(COMM.token), chain: chainName(COMM.chainId) });
-      markPendingDays([]);
-      xRow(box, run);
-      act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
-      return;
-    }
-    const published = held.filter(k =>
-      (COMM.members || []).some(m => m.addr === me && (m.days || []).includes(k)));
-    if(held.length){
-      line.textContent = t('join.member');
-      const pending = held.filter(k => !published.includes(k));
-      markPendingDays(pending);
-      // Three different truths, and an earlier version told the third one
-      // wrong: it printed the PUBLISHED days under the PENDING sentence, so
-      // days already standing on the wall were described as still on their way.
-      const fmt = ks => ks.map(k => '\u2605' + dayLabel(+k.slice(0,2), +k.slice(3))).join(', ');
-      const p = document.createElement('p');
-      p.className = 'commjoin__mine';
-      if(!pending.length){
-        p.textContent = t('join.member.days', { days: fmt(published) });
-      }else if(!published.length){
-        p.textContent = t('join.member.pending', { days: fmt(pending) });
-      }else{
-        p.textContent = t('join.member.both',
-                          { days: fmt(published), coming: fmt(pending) });
-      }
-      box.insertBefore(p, box.firstChild.nextSibling);
-    }else{
-      // joined, but no ★ yet: the calendar cannot show them, and the fix
-      // lives on the other page — walk them there
-      line.textContent = t('join.member.nostar');
-      mineDoor();
-    }
-    xRow(box, run);
-    act(t('join.leave'), 'btn--ghost', () => commSend(SEL_LEAVE + cid, false));
-    return;
-  }
-
-  // Left, but still on the published wall. Everyone else sees the old file
-  // until the next index build; the person who left is the one who knows, so
-  // the page tells them rather than looking like the leave did not take.
-  const stillListed = (COMM.members || [])
-    .filter(m => m.addr === me).flatMap(m => m.days || []);
-  if(stillListed.length){
-    markLeavingDays(stillListed);
-    const p = document.createElement('p');
-    p.className = 'commjoin__leaving';
-    p.textContent = t('join.left.pending', {
-      days: stillListed.map(k => dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
-    // above the invitation, not below it: what already happened reads first,
-    // or "joining puts your days here" lands before "you have left"
-    box.insertBefore(p, box.firstChild);
-  }else{
-    markLeavingDays([]);
-  }
-
-  // the uDAY floor is the half consensus enforces, so it is checked first
-  if(!slots || BigInt(slots) === 0n){
-    line.textContent = t('join.needuday');
-    link(t('join.getuday'), UTOKEN_BUY);
-    return;
-  }
-
-  if(shortOfGate){
-    // Offering JOIN here spends gas on a membership the index will filter out
-    // every cycle. The contract cannot refuse it; this is the only place that
-    // can, and it says which chain the rule is read on.
-    line.textContent = t('join.short',
-      { min: gateAmount(COMM), token: shortAddr(COMM.token), chain: chainName(COMM.chainId) });
-    return;
-  }
-
-  if(held.length){
-    // the consequence, stated before the transaction: joining puts THESE
-    // stars on THIS wall
-    line.textContent = t('join.ready', {
-      days: held.map(k => '\u2605' + dayLabel(+k.slice(0,2), +k.slice(3))).join(', ') });
-    act(t('join.go'), 'btn--gold', () => commSend(SEL_JOIN + cid, true));
-    return;
-  }
-
-  // eligible, but no ★ day yet — join is never blocked (the contract allows
-  // it), and the guidance says what the calendar needs
-  line.textContent = t('join.nostar');
-  act(t('join.go'), 'btn--gold', () => commSend(SEL_JOIN + cid, true));
-  mineDoor();
-}
-
 /// Signs, then WAITS on the chain: a spinner while the transaction mines,
 /// polling isMember until it flips to `wantMember`, then a full re-render —
 /// which lands on the member panel with the declared day and the honest
@@ -4347,427 +3303,14 @@ function parseDeclared(hex){
   return out;
 }
 
-/// A membership change the chain has confirmed but the index has not published
-/// yet. Without this, joining a room and walking back to /c shows it unmarked
-/// and sorted among the strangers for the next quarter of an hour — the same
-/// shape as a day that stayed on a calendar after its owner left. Only the
-/// person who made the change carries the record, which is exactly the only
-/// person the gap affects; everyone else is already correct from the file.
-///
-/// Flips expire, and that is what keeps this honest: after three hours the
-/// index is the truth again, so a join made on another device — or undone
-/// there — can never be contradicted by a note this browser wrote once.
-const FLIP_KEY = 'uday.commflips', FLIP_LIFE = 3 * 3600 * 1000;
-function commFlips(addr){
-  const out = {};
-  if(!addr) return out;
-  let all;
-  try{ all = JSON.parse(localStorage.getItem(FLIP_KEY) || '{}'); }catch(e){ return out; }
-  const mine = all[addr.toLowerCase()] || {};
-  const now = Date.now();
-  for(const slug in mine){
-    const f = mine[slug];
-    if(f && typeof f.at === 'number' && now - f.at < FLIP_LIFE) out[slug] = !!f.in;
-  }
-  return out;
-}
-function commFlip(addr, slug, isIn){
-  if(!addr || !slug) return;
-  try{
-    const all = JSON.parse(localStorage.getItem(FLIP_KEY) || '{}');
-    const key = addr.toLowerCase();
-    const mine = all[key] || (all[key] = {});
-    mine[slug] = { in: !!isIn, at: Date.now() };
-    // never let this grow without bound: a wallet's expired flips are dead
-    const now = Date.now();
-    for(const a in all) for(const s in all[a])
-      if(now - (all[a][s].at || 0) >= FLIP_LIFE) delete all[a][s];
-    localStorage.setItem(FLIP_KEY, JSON.stringify(all));
-  }catch(e){ }
-}
-
-async function commSend(data, wantMember){
-  if(!await ensureChain()) return;
-  const box = document.getElementById('comm-join');
-  const line = box.querySelector('.commjoin__line');
-  try{
-    await mineEth.request({ method: 'eth_sendTransaction',
-      params: [{ from: mineWallet, to: COMM_CONTRACT, data: data }] });
-  }catch(e){ return; }                        // declined in the wallet; stay put
-  box.querySelectorAll('button, .btn').forEach(b => b.disabled = true);
-  const spin = document.createElement('span');
-  spin.className = 'cnew__spin commjoin__spin';
-  spin.setAttribute('aria-hidden', 'true');
-  line.parentNode.insertBefore(spin, line);
-  line.textContent = t('join.mining');
-  const me = mineIdentity();
-  const cid = COMM.id.replace('0x', '');
-  const pad = x => pad32(x.replace('0x', '').toLowerCase());
-  // wantMember may be a boolean (membership flip) or a predicate — clearing
-  // a day watches daysOf instead of isMember
-  const done = typeof wantMember === 'function' ? wantMember
-    : async () => {
-        const m = await commCall(SEL_ISMEMBER, cid + pad(me));
-        return !!(m && /1$/.test(m)) === wantMember;
-      };
-  for(let i = 0; i < 30; i++){
-    await new Promise(r => setTimeout(r, 2500));
-    if(await done()){
-      // a boolean wantMember IS a membership flip; a predicate is a day change
-      if(typeof wantMember === 'boolean') commFlip(me, COMM_SLUG, wantMember);
-      renderJoin(); return;
-    }
-  }
-  // ~75s without a flip: the transaction may just be slow — stop spinning and
-  // say what is known instead of spinning forever
-  spin.remove();
-  line.textContent = t('join.sent');
-}
-
-
-/// On a community URL the marketing page folds away entirely, the same way
-/// my.uday.gift does — you followed a link to see one room, not the pitch.
-function commLayout(){
-  if(!COMM_SLUG && !COMM_NEW) return;
-  document.querySelector('.hero').hidden = true;
-  const bar = document.querySelector('.proofbar'); if(bar) bar.hidden = true;
-  // the whole collection's wall belongs on the main page; this room is
-  // about these people, and two 366-cell grids on one screen read as noise
-  ['story','forge','roadmap','year','rooms','commlist'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.hidden = true;
-  });
-  document.querySelector('.brand').href = 'https://uday.gift/';
-}
-
-/* ── /c — creating a community. The chain picker is a DOM listbox, never a
-   native <select>: wallet in-app browsers cannot open those, and wallet
-   browsers are exactly where this button gets pressed. ───────────────── */
+/* The home chain, read directly for the ★ (daysOf / slotsOf). Browsers
+   otherwise never touch an RPC; the committed index answers everything else. */
 const CHAINS = [
   { id: 4663, label: 'Robinhood Chain', on: true, rpc: 'https://rpc.mainnet.chain.robinhood.com/rpc' },
-  { id: 1, label: 'Ethereum', on: true, rpc: 'https://ethereum-rpc.publicnode.com' },
-  { id: 8453, label: 'Base', on: false },
-  { id: 42161, label: 'Arbitrum', on: false },
-  { id: 10, label: 'Optimism', on: false },
 ];
-let cnewChain = CHAINS[0];
 
-/// What kind of token is this, and can it gate at all?
-///
-/// A room's rules are frozen forever, so a token whose balanceOf cannot be
-/// called produces a community nobody can EVER join and a slug burned with
-/// it. The contract refuses that for its own chain; for a foreign one only
-/// this check stands between the creator and a permanent mistake.
-///
-/// ERC-20 and ERC-721 share balanceOf's selector and return type — that is
-/// why one gate serves both — so the type only changes what a threshold
-/// MEANS: wei against a plain count.
-///
-/// This is the one place the page talks to an RPC. Everywhere else it reads
-/// the committed index, because a page load must not depend on a node; a
-/// single probe behind a button press is a different thing.
-async function probeToken(chain, addr){
-  const call = async (data) => {
-    const r = await fetch(chain.rpc, { method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
-        params: [{ to: addr, data: data }, 'latest'] }) });
-    const j = await r.json();
-    return (j && j.result && j.result !== '0x') ? j.result : null;
-  };
-  // All three at once. Run in sequence against a public Ethereum node this
-  // took nine seconds, which reads as a page that has stopped working.
-  const [bal, is721, dec] = await Promise.all([
-    call('0x70a08231' + pad32('dead')),                    // balanceOf — can it gate?
-    call('0x01ffc9a7' + '80ac58cd' + '0'.repeat(56)),      // ERC-165: is it a 721?
-    call('0x313ce567'),                                     // decimals: what does 1 mean?
-  ]);
-  if(!bal) return { kind: 'bad' };
-  if(is721 && /1$/.test(is721)) return { kind: 'erc721', decimals: 0 };
-  return { kind: 'erc20', decimals: dec ? parseInt(dec.slice(-2), 16) : 18 };
-}
 const COMM_ADDR_FILE = '/data/community-contract.txt';
 let COMM_CONTRACT = null;
-// computed with `cast sig`, not recalled — a hand-copied selector has cost
-// this project a debugging session before
-const SEL_CREATE = '9b3d91f1';   // createCommunityWithLinks(...,(string,string,string))
-// Changing the signature changes this. It was missed once already when
-// chainId was added, and the only reason it did not ship is that the
-// calldata gets diffed against `cast calldata` before every release.
-
-function cnewMenu(){
-  const btn = document.getElementById('cnew-chain');
-  const menu = document.getElementById('cnew-chain-menu');
-  if(!btn) return;
-  btn.textContent = CHAINS[0].label;
-  menu.textContent = '';
-  CHAINS.forEach(c => {
-    const o = document.createElement('button');
-    o.type = 'button'; o.className = 'sel__opt';
-    o.setAttribute('role', 'option');
-    o.setAttribute('aria-selected', String(c.on));
-    if(!c.on){
-      o.setAttribute('aria-disabled', 'true');
-      o.textContent = c.label + ' \u00b7 ' + t('cnew.soon');
-    }else o.textContent = c.label;
-    o.addEventListener('click', () => {
-      if(!c.on) return;
-      cnewChain = c; btn.textContent = c.label;
-      menu.querySelectorAll('.sel__opt').forEach(x =>
-        x.setAttribute('aria-selected', String(x === o)));
-      closeMenus(); cnewProbe();
-    });
-    menu.appendChild(o);
-  });
-}
-
-function cnewCalldata(slug, name, chainId, token, minRaw, links){
-  const head = '0x' + SEL_CREATE;   // stored bare, like the other selectors
-  const bytesOf = t => new TextEncoder().encode(t || '');
-  const hexPad = b => {
-    let h = ''; b.forEach(x => h += x.toString(16).padStart(2, '0'));
-    return h.padEnd(Math.ceil(h.length / 64) * 64, '0');
-  };
-  const tail = b => pad32(b.length.toString(16)) + hexPad(b);
-  const sT = tail(bytesOf(slug)), nT = tail(bytesOf(name));
-
-  // Links are a STRUCT of three dynamic strings: the outer list points at a
-  // tuple whose own offsets are relative to the TUPLE's start, not the call's.
-  // Get that wrong and a node accepts the calldata and decodes it into
-  // garbage, which is why every release diffs this against cast.
-  const inner = [], innerHeads = [];
-  let ip = 3 * 32;
-  [links.x, links.telegram, links.other].forEach(v => {
-    innerHeads.push(pad32(ip.toString(16)));
-    const t = tail(bytesOf(v)); inner.push(t); ip += t.length / 2;
-  });
-  const tuple = innerHeads.join('') + inner.join('');
-
-  const h1 = 6 * 32, h2 = h1 + sT.length / 2, h3 = h2 + nT.length / 2;
-  const enc = [pad32(h1.toString(16)), pad32(h2.toString(16)),
-               pad32(chainId.toString(16)),
-               pad32(token.replace('0x', '').toLowerCase()),
-               pad32(minRaw.toString(16)), pad32(h3.toString(16))];
-  return head + enc.join('') + sT + nT + tuple;
-}
-
-const linkOf = id => {
-  const v = (document.getElementById(id).value || '').trim();
-  return /^https:\/\//i.test(v) && v.length <= 200 ? v : '';
-};
-
-let cnewProbed = null, cnewProbeWant = null;
-async function cnewProbe(){
-  const el = document.getElementById('cnew-token');
-  const out = document.getElementById('cnew-kind');
-  const addr = (el.value || '').trim().toLowerCase();
-  if(!out) return;
-  if(!/^0x[0-9a-f]{40}$/.test(addr)){ out.textContent = ''; cnewProbed = null; return; }
-  out.textContent = t('cnew.checking');
-  // Keyed by what was being checked: an earlier, slower answer must not land
-  // on top of a later one and label the wrong address.
-  const want = cnewChain.id + ':' + addr;
-  cnewProbeWant = want;
-  const pr = await probeToken(cnewChain, addr);
-  if(cnewProbeWant !== want) return;
-  pr.addr = addr; cnewProbed = pr;
-  out.textContent = pr.kind === 'bad' ? t('cnew.kind.bad')
-                  : pr.kind === 'erc721' ? t('cnew.kind.721')
-                  : t('cnew.kind.20', { d: pr.decimals });
-  const unit = document.getElementById('cnew-unit');
-  if(unit) unit.textContent = pr.kind === 'erc721' ? t('cnew.unit.items') : t('cnew.unit.tokens');
-}
-
-/// The form has done its job; leaving it on screen invites a second identical
-/// transaction. It is replaced by a waiting state that polls the CONTRACT —
-/// not the index — because the room exists the moment the transaction lands,
-/// and the page can already render it from the chain.
-function cnewWaiting(slug, hash){
-  const box = document.querySelector('.cnew');
-  box.textContent = '';
-  const wrap = document.createElement('div');
-  wrap.className = 'cnew__wait';
-  const spin = document.createElement('span');
-  spin.className = 'cnew__spin';
-  spin.setAttribute('aria-hidden', 'true');
-  const line = document.createElement('p');
-  line.className = 'cnew__waitline';
-  line.textContent = t('cnew.wait', { slug: slug });
-  const tx = document.createElement('a');
-  tx.className = 'btn btn--ghost';
-  tx.href = GIFT_TX_URL(hash); tx.target = '_blank'; tx.rel = 'noopener';
-  tx.textContent = t('gift.tx');
-  wrap.append(spin, line, tx);
-  box.appendChild(wrap);
-
-  let tries = 0;
-  const poll = async () => {
-    tries++;
-    const found = await loadCommunityFromChain(slug);
-    if(found){
-      line.textContent = t('cnew.done', { slug: slug });
-      spin.classList.add('cnew__spin--done');
-      setTimeout(() => { location.href = '/c/' + slug; }, 900);
-      return;
-    }
-    // ~90s of patience, then stop spinning and hand over the link: the
-    // transaction may simply be slow, and a spinner that never ends is worse
-    // than a sentence that admits it does not know
-    if(tries > 30){
-      spin.classList.add('cnew__spin--done');
-      line.textContent = t('cnew.slow', { slug: slug });
-      const go = document.createElement('a');
-      go.className = 'btn btn--gold';
-      go.href = '/c/' + slug;
-      go.textContent = t('cnew.open');
-      wrap.insertBefore(go, tx);
-      return;
-    }
-    setTimeout(poll, 3000);
-  };
-  setTimeout(poll, 1500);
-}
-
-/// /c lists the rooms that exist. It is the parent every /c/<slug> points
-/// back to, so it has to be a real place, not just a form.
-/// Fetched once. The list repaints when the wallet resolves — `eth_accounts`
-/// cannot be asked synchronously, so the first paint happens before anyone
-/// knows who is looking — and refetching the file to answer that would be
-/// asking the network a question only the browser can answer.
-/// `var`, deliberately: mineWalletUI reads this and is declared far above, so
-/// a `let` here would be in its temporal dead zone if the wallet ever answers
-/// before this line runs — and that throw kills the entire script, not just
-/// the list. This file has already lost a page that way once.
-var CLIST_ROOMS = null;
-
-async function renderCommList(){
-  const sec = document.getElementById('commlist');
-  try{
-    if(!CLIST_ROOMS){
-      const r = await fetch('/data/communities.json', { cache: 'no-cache' });
-      if(!r.ok) return;
-      const j = await r.json();
-      CLIST_ROOMS = j.communities || [];
-    }
-    const rooms = CLIST_ROOMS;
-    if(!rooms.length) return;
-    const host = document.getElementById('clist');
-    host.textContent = '';
-
-    // Your rooms first, and each group still ordered by size. Membership comes
-    // from the published file, corrected by any change this browser just made
-    // and the file has not caught up with.
-    const me = (mineIdentity() || '').toLowerCase();
-    const flips = commFlips(me);
-    const joined = c => {
-      if(!me) return false;
-      if(c.slug in flips) return flips[c.slug];
-      return (c.members || []).some(m => String(m.addr).toLowerCase() === me);
-    };
-    const size = c => (c.members || []).length;
-    const ordered = rooms.slice()
-      .sort((a, b) => (joined(b) - joined(a)) || (size(b) - size(a)));
-    // Labelling one group only leaves the rest unnamed, so both appear or
-    // neither does — and neither is the whole story until a wallet is here.
-    const split = ordered.some(joined) && ordered.some(c => !joined(c));
-
-    let band = null;
-    ordered.forEach(c => {
-        const mine = joined(c);
-        if(split && band !== mine){
-          band = mine;
-          const h = document.createElement('p');
-          h.className = 'clist__band';
-          h.textContent = t(mine ? 'clist.mine' : 'clist.rest');
-          host.appendChild(h);
-        }
-        const a = document.createElement('a');
-        a.className = 'clist__row' + (mine ? ' clist__row--mine' : '');
-        a.href = '/c/' + c.slug;
-        const name = document.createElement('span');
-        name.className = 'clist__name';
-        name.textContent = c.name || c.slug;
-        name.title = c.name || c.slug;
-        // the kind mark sits with the room's NAME, because it says what the
-        // room is gated on. innerHTML is safe: both strings are built above
-        // from literals and a chain id, never from the room's own fields.
-        const kind = document.createElement('span');
-        kind.className = 'clist__mark';
-        kind.innerHTML = kindMark(c.tokenKind);
-        kind.title = c.tokenKind === 'erc721' ? 'NFT' : 'Token';
-        const meta = document.createElement('span');
-        meta.className = 'clist__meta';
-        const n = document.createElement('span');
-        n.textContent = t('clist.members', { n: (c.members || []).length });
-        const ch = document.createElement('span');
-        ch.className = 'clist__mark clist__mark--chain';
-        ch.innerHTML = chainMark(c.chainId);
-        ch.title = chainName(c.chainId);
-        meta.append(n, ch);
-        a.append(kind, name, meta);
-        host.appendChild(a);
-      });
-    sec.hidden = false;
-  }catch(e){}
-}
-
-async function cnewInit(){
-  if(!document.getElementById('commnew')) return;
-  cnewMenu();
-  await ensureCommContract();
-  const msg = document.getElementById('cnew-msg');
-  const go = document.getElementById('cnew-go');
-  // `change` on a text input only fires on blur, so a pasted address sat there
-  // looking ignored until the user clicked elsewhere. `input` fires on paste
-  // and on every keystroke, so it is debounced.
-  const tok = document.getElementById('cnew-token');
-  let probeTimer = null;
-  const queueProbe = () => {
-    clearTimeout(probeTimer);
-    probeTimer = setTimeout(cnewProbe, 350);
-  };
-  tok.addEventListener('input', queueProbe);
-  tok.addEventListener('paste', () => setTimeout(queueProbe, 0));
-  tok.addEventListener('blur', cnewProbe);
-  go.addEventListener('click', async () => {
-    const slug = document.getElementById('cnew-slug').value.trim().toLowerCase();
-    const name = document.getElementById('cnew-name').value.trim();
-    const token = document.getElementById('cnew-token').value.trim();
-    const min = document.getElementById('cnew-min').value.trim();
-    const show = k => { msg.textContent = t(k); msg.hidden = false; };
-    if(!/^[a-z0-9-]{1,32}$/.test(slug)) return show('cnew.err.slug');
-    if(!name) return show('cnew.err.name');
-    if(!/^0x[0-9a-fA-F]{40}$/.test(token)) return show('cnew.err.token');
-    // > 0, not >= 0. A zero threshold makes balanceOf(x) >= 0 always true, so
-    // the token gate is a no-op while the page still presents it as a gate —
-    // and the contract cannot refuse it, being frozen. This is the only guard.
-    if(!(Number(min) > 0)) return show('cnew.err.min');
-    // refused, not silently dropped: a dead string in a room that can never be
-    // edited is permanent clutter
-    if(['cnew-x','cnew-tg','cnew-other'].some(id => {
-      const v = (document.getElementById(id).value || '').trim();
-      return v && !/^https:\/\//i.test(v); })) return show('cnew.err.link');
-    if(!COMM_CONTRACT) return show('cnew.err.nocontract');
-    if(!mineEth) return show('cnew.err.nowallet');
-    let acc;
-    try{ acc = await mineEth.request({ method: 'eth_requestAccounts' }); }
-    catch(e){ return; }
-    if(!await ensureChain()) return show('cnew.err.chain');
-    // the probe decides the unit: an NFT gate of "1" is 1, not 1e18
-    const probe = cnewProbed && cnewProbed.addr === token.toLowerCase()
-                ? cnewProbed : await probeToken(cnewChain, token);
-    if(probe.kind === 'bad') return show('cnew.err.gate');
-    const dp = probe.decimals || 0;
-    const raw = dp === 0 ? BigInt(Math.floor(Number(min)))
-              : BigInt(Math.round(Number(min) * 1e6)) * (10n ** BigInt(Math.max(0, dp - 6)));
-    try{
-      const hash = await mineEth.request({ method: 'eth_sendTransaction', params: [{
-        from: acc[0], to: COMM_CONTRACT,
-        data: cnewCalldata(slug, name, cnewChain.id, token, raw, {
-          x: linkOf('cnew-x'), telegram: linkOf('cnew-tg'), other: linkOf('cnew-other') }) }] });
-      cnewWaiting(slug, hash);
-    }catch(e){ show('cnew.err.tx'); }
-  });
-}
 
 function renderYear(){
   if(!DAYS) return;
@@ -4808,11 +3351,7 @@ const ADDR_RE = /^0x[0-9a-fA-F]{40}$/;
 const APP_HOST = 'app.uday.gift';
 const PERSONAL_HOST = APP_HOST;                    // old name, one meaning
 const IS_APP_HOST = /^(app|my)\.uday\.gift$/.test(location.hostname);
-// A community path is never personal, even on the app host: /c/<slug> and the
-// holder calendar are two different pages that now share one hostname, and
-// booting both put a wallet's own collection under someone else's room once.
-const IS_PERSONAL = (IS_APP_HOST || new URLSearchParams(location.search).get('view') === 'personal')
-                    && !COMM_SLUG && !COMM_NEW;
+const IS_PERSONAL = IS_APP_HOST || new URLSearchParams(location.search).get('view') === 'personal';
 
 /* Cross-subdomain handoff rides a short-lived cookie on .uday.gift, not URL
    params — cookies are the one storage siblings share, so the redirect can
@@ -4964,10 +3503,6 @@ function mineWalletUI(){
   // surfaces that mention it whenever the connected wallet changes
   if(DAYS){ renderDayStatus(); if(mineAddr) renderMine(); }
   if(typeof renderGift === 'function') renderGift();
-  if(typeof renderJoin === 'function' && COMM) renderJoin();
-  // the rooms list is drawn before eth_accounts answers, so it cannot know
-  // whose rooms are whose until this runs
-  if(typeof renderCommList === 'function' && CLIST_ROOMS) renderCommList();
   if(IS_PERSONAL && typeof loadStars === 'function') loadStars(true).then(paintStars);
 }
 /// Signing in: wallet consent, then ONE signature that the server can check.
@@ -5073,13 +3608,6 @@ function goPersonal(addr){
 }
 
 async function navGo(dest){
-  // COMMUNITIES is a public index — it needs no identity and must never wait
-  // for one. Asking first meant tapping it popped a wallet prompt, and
-  // dismissing that prompt left you on the page you started from, silently.
-  if(dest === 'comm'){
-    leaveTo(/(^|\.)uday\.gift$/.test(location.hostname) ? 'https://' + APP_HOST + '/c' : '/c');
-    return;
-  }
   const id = mineIdentity();
   if(!id){
     if(!mineEth) { goPersonal(null); return; }
@@ -5093,12 +3621,9 @@ async function navGo(dest){
 document.getElementById('nav-mine').addEventListener('click', () => navGo('mine'));
 const ymGo = document.getElementById('year-mine-go');
 if(ymGo) ymGo.addEventListener('click', () => navGo('mine'));
-document.getElementById('nav-comm').addEventListener('click', () => navGo('comm'));
 (function markCurrentNav(){
-  if(COMM_SLUG || COMM_NEW) document.getElementById('nav-comm').setAttribute('aria-current', 'page');
-  else if(IS_PERSONAL) document.getElementById('nav-mine').setAttribute('aria-current', 'page');
+  if(IS_PERSONAL) document.getElementById('nav-mine').setAttribute('aria-current', 'page');
 })();
-
 
 // First paint of the wallet chrome, before the restore has answered. Chrome
 // only — no identity is invented, so nothing downstream can act on it.
@@ -5112,8 +3637,7 @@ if(mineEth){
 // The third door with the same trap. The hero's blurb promises "sign in with
 // your wallet", but with no injected provider the connect button is hidden
 // (correctly — it could do nothing), so the promise dangled with no control
-// under it. Say why, in the same words as the other two doors. Only on the
-// personal page: rooms carry their own copy inside the join panel.
+// under it. Say why, in the same words as the other door.
 if(!mineEth && IS_PERSONAL){
   const head = document.querySelector('#mine .band__head');
   if(head){
@@ -5134,16 +3658,10 @@ mineConnect.addEventListener('click', async () => {
   mineConnect.disabled = false;
   mineConnect.textContent = was;
   if(!ok) return;                                  // declined; nothing changes
-  // On the main site, signing in means going to YOUR page — but a community
-  // page is not "the main site", and it was swept in here by being merely
-  // NOT personal. You pressed sign in because a room asked you to, so being
-  // carried off to my.uday.gift abandons the join you were three taps into
-  // and looks like the button did the wrong thing. Stay put: signIn has
-  // already refreshed the join panel and the rooms list through mineWalletUI.
-  const onComm = !!COMM_SLUG || COMM_NEW;
-  if(!IS_PERSONAL && !onComm){ goPersonal(mineWallet); return; }
+  // On the main site, signing in means going to YOUR page.
+  if(!IS_PERSONAL){ goPersonal(mineWallet); return; }
   // The chain is only worth asking for where a transaction is about to be
-  // offered; a room's own join button asks when it needs it.
+  // offered.
   if(IS_PERSONAL) ensureChain();   // viewing needs no chain, claiming re-checks
 });
 
@@ -6051,15 +4569,11 @@ if(IS_PERSONAL){
   // The whole-collection wall goes too. Under a full-year grid of YOUR days,
   // a button offering "the full year" reads as the same thing again — nobody
   // opens their own page to look at the site's calendar.
-  ['story','forge','roadmap','rooms','commlist','year'].forEach(id => {
+  ['story','forge','roadmap','year'].forEach(id => {
     const s = document.getElementById(id); if(s) s.hidden = true;
   });
 }
 
-/// A room is 1.3KB of communities.json. The collection index is 178KB and a
-/// 366-cell wall — and on a room every one of those cells was being built into
-/// a section commLayout() had already hidden. So the room boots from its own
-/// file, immediately, and never waits on the index for anything it can draw.
 /// Every band draws its own top rule, as the first child of its shell — the
 /// separator belongs to the section BELOW it, not between two sections. So
 /// whichever band happens to be first on a page hangs a line under the header
@@ -6079,39 +4593,11 @@ function tidyRules(){
   document.documentElement.classList.add('filled');
 }
 
-async function bootCommunity(){
-  commLayout();
-  await loadXLinks();
-  if(COMM_NEW){
-    document.getElementById('commnew').hidden = false;
-    cnewInit();
-    await renderCommList();
-    tidyRules();
-    return;
-  }
-  COMM = await loadCommunity();
-  if(COMM) renderCommunity();
-  else{
-    document.getElementById('comm-title').textContent = t('comm.missing');
-    document.getElementById('community').hidden = false;
-  }
-  tidyRules();
-}
-
 /// The collection index. Everything here is gated on what the page will
 /// actually SHOW — rendering into a hidden section costs exactly as much as
 /// rendering into a visible one and buys nothing.
 async function loadIndex(){
-  if(COMM_NEW || COMM_SLUG){
-    // The room draws itself from its own file. Nothing here competes with it
-    // for a phone's bandwidth until it is on screen.
-    await bootCommunity();
-    // The rooms index needs the collection index for NOTHING. A room needs it
-    // for exactly one thing — which days this wallet holds — so it is fetched
-    // after the room is up, and only when there is somebody to answer for.
-    if(COMM_NEW) return;
-    joinWaiting();
-  }
+  loadXLinks();                   // names on the day modal's people list; decoration, not awaited
   try{
     const r = await fetch('/data/date-index.json', { cache: 'no-cache' });
     if(!r.ok) return;
@@ -6121,11 +4607,6 @@ async function loadIndex(){
                    owners: j.owners || 0, sealed: j.sealed || null, burned: j.burned || 0,
                    embers: j.extinguished || {}, mcapUsd: j.mcapUsd || 0 };
     tombPrune();                    // drop tombstones the fresh index absorbed
-
-    if(COMM_SLUG){
-      if(COMM && typeof renderJoin === 'function') renderJoin();
-      return;
-    }
 
     if(!IS_PERSONAL){ renderRoad(); renderStory(); }   // both fold away there
     renderLiveTags();
