@@ -1596,6 +1596,7 @@ const I18N = {
     'lock.p2':'While it is there, uToken shows the vault as its holder, and its 1.0 uDAY leaves your wallet balance, so it does not count toward ★ slots.',
     'lock.d30':'30 DAYS','lock.d90':'90 DAYS','lock.d365':'1 YEAR','lock.d0':'NO DATE',
     'lock.d0.note':'No date means the vault holds it and you can take it back any time — it is still out of reach of every sale.',
+    'lock.choose':'Choose how long. Nothing is sent until you press BEGIN.',
     'lock.go':'BEGIN — {n} SIGNATURES','lock.go1':'BEGIN — 1 SIGNATURE',
     'lock.step1':'Allow the vault to move your pieces (once)',
     'lock.step2':'Lock #{id}',
@@ -1781,6 +1782,7 @@ const I18N = {
     'lock.p2':'在金库期间，uToken 会显示金库为持有者，它焊着的 1.0 uDAY 也会离开你的钱包余额，因此不计入 ★ 名额。',
     'lock.d30':'30 天','lock.d90':'90 天','lock.d365':'1 年','lock.d0':'不设日期',
     'lock.d0.note':'不设日期表示金库替你保管，随时可以取回——但同样不在任何卖出的射程内。',
+    'lock.choose':'先选锁多久。按下「开始」之前不会发出任何交易。',
     'lock.go':'开始——共 {n} 笔签署','lock.go1':'开始——共 1 笔签署',
     'lock.step1':'允许金库移动你的作品（仅一次）',
     'lock.step2':'锁住 #{id}',
@@ -4689,7 +4691,11 @@ async function openLockModal(key, piece){
   row.className = 'lockmodal__choices';
   const note = document.createElement('p');
   note.className = 'lockmodal__note';
-  let days = 30;
+  // No default: a lock is a promise with a date on it, so the date is chosen
+  // by hand and BEGIN stays dead until it is. (The owner saw a wallet prompt
+  // he had not asked for on 2026-09-08; whatever clicked BEGIN, it can no
+  // longer do so before a duration has been pressed.)
+  let days = null;
   const choices = [['d30', 30], ['d90', 90], ['d365', 365], ['d0', 0]];
   const btns = choices.map(([k, n]) => {
     const b = document.createElement('button');
@@ -4701,11 +4707,12 @@ async function openLockModal(key, piece){
       btns.forEach(o => o.setAttribute('aria-pressed', String(o === b)));
       note.textContent = n === 0 ? t('lock.d0.note')
                        : t('lock.locked.until', { date: fmtDate(Math.floor(Date.now() / 1000) + n * 86400) });
+      go.disabled = !ready;
     });
     row.appendChild(b);
     return b;
   });
-  note.textContent = t('lock.locked.until', { date: fmtDate(Math.floor(Date.now() / 1000) + 30 * 86400) });
+  note.textContent = t('lock.choose');
   lmBody.append(row, note);
   lmSteps.textContent = '';
   lmState.textContent = '';
@@ -4713,6 +4720,7 @@ async function openLockModal(key, piece){
   go.type = 'button'; go.className = 'btn btn--gold';
   go.textContent = t('lock.go', { n: 2 });
   go.disabled = true;
+  let ready = false;
   lmState.appendChild(go);
   lockModal.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -4723,8 +4731,9 @@ async function openLockModal(key, piece){
   const op = await chainRead(UDAY_ADDR, '0x' + SEL_IS_OPERATOR + pad32(mineWallet.slice(2).toLowerCase()) + pad32(vault.slice(2).toLowerCase()));
   const hasOp = !!(op && /1$/.test(op));
   go.textContent = hasOp ? t('lock.go1') : t('lock.go', { n: 2 });
-  go.disabled = false;
-  go.addEventListener('click', () => runLock(key, piece, days, hasOp, go));
+  ready = true;
+  go.disabled = days === null;
+  go.addEventListener('click', () => { if(days !== null) runLock(key, piece, days, hasOp, go); });
   va('event', { name: 'lock_modal', data: { day: key, id: piece.id } });
 }
 
