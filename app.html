@@ -596,6 +596,28 @@ section{ position:relative; }
   color:var(--muted); background:none; border:1px dashed rgba(217,124,141,.35); border-radius:4px;
 }
 .daymodal__sell:hover{ color:#d97c8d; border-color:rgba(217,124,141,.7); }
+/* LOCK is the sell button's calmer twin: gold and solid where sell is rose and dashed */
+.daymodal__lock{
+  margin:0 10px 10px; padding:7px 4px; cursor:pointer;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  color:var(--muted); background:none; border:1px solid rgba(232,185,63,.35); border-radius:4px;
+}
+.daymodal__lock:hover{ color:var(--gold); border-color:rgba(232,185,63,.8); }
+.daymodal__lock:disabled{ cursor:default; opacity:.6; }
+.daymodal__vault{
+  margin:0 10px 8px; padding:6px 4px; text-align:center;
+  font-family:var(--display); font-size:var(--fs-micro); letter-spacing:var(--ls-narrow);
+  color:var(--gold); border:1px solid rgba(232,185,63,.35); border-radius:4px;
+  background:url('/assets/lock.svg') 8px center/14px no-repeat;
+}
+.lockmodal__choices{ display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 4px; }
+.lockmodal__choice{
+  padding:8px 12px; cursor:pointer; font-family:var(--display); font-size:var(--fs-micro);
+  letter-spacing:var(--ls-narrow); color:var(--muted); background:none;
+  border:1px solid rgba(232,185,63,.3); border-radius:4px;
+}
+.lockmodal__choice[aria-pressed="true"]{ color:var(--gold); border-color:var(--gold); background:rgba(232,185,63,.08); }
+.lockmodal__note{ color:var(--muted); font-size:var(--fs-micro); margin:6px 0 0; }
 .sellmodal .daymodal__panel{ max-width:460px; position:relative; padding-top:26px; }
 .sellmodal .daymodal__close{ position:absolute; top:10px; right:12px; }
 .sellmodal__warn{ color:#d97c8d !important; }
@@ -1016,6 +1038,13 @@ html[lang="zh"] .story__body .drop::first-letter{ font-size:1.9em; padding-top:2
   animation:starin .34s cubic-bezier(.34,1.56,.64,1) both;
 }
 @keyframes starin{ from{ opacity:0; transform:scale(.55) } to{ opacity:1; transform:none } }
+/* a locked day wears a small padlock in its corner — the piece is still yours,
+   it just cannot leave until the date you chose */
+.yearcell--vault::before{
+  content:''; position:absolute; right:4%; bottom:4%; width:38%; height:38%; z-index:1;
+  background:url('/assets/lock.svg') center/contain no-repeat;
+  filter:drop-shadow(0 0 2px rgba(0,0,0,.8));
+}
 @media (prefers-reduced-motion:reduce){ .yearcell--star::after{ animation:none } }
 /* ─── X identity ────────────────────────────────────────────────────── */
 .xface{ display:inline-flex; align-items:center; gap:7px; text-decoration:none;
@@ -1559,6 +1588,21 @@ const I18N = {
     'sell.step3':'Sell and return the ETH',
     'sell.done':'{day} has returned to the pool, waiting for its next keeper. The ETH is in your wallet.',
     'sell.fail':'That step did not complete — nothing is lost. Try again.',
+    'lock.link':'LOCK THIS DAY',
+    'lock.title':'LOCK THIS DAY · {day}',
+    'lock.p1':'#{id} moves into the uDAY vault, a contract with no owner and no admin. Until the date you choose, nobody can sell it, and no sale from your wallet can burn it. It stays yours: on this calendar, for the daily gift, and to come back for.',
+    'lock.p2':'While it is there, uToken shows the vault as its holder, and its 1.0 uDAY leaves your wallet balance, so it does not count toward ★ slots.',
+    'lock.d30':'30 DAYS','lock.d90':'90 DAYS','lock.d365':'1 YEAR','lock.d0':'NO DATE',
+    'lock.d0.note':'No date means the vault holds it and you can take it back any time — it is still out of reach of every sale.',
+    'lock.go':'BEGIN — {n} SIGNATURES','lock.go1':'BEGIN — 1 SIGNATURE',
+    'lock.step1':'Allow the vault to move your pieces (once)',
+    'lock.step2':'Lock #{id}',
+    'lock.done':'{day} is locked until {date}. Nothing can sell it before then, not even you.',
+    'lock.done0':'{day} is in the vault. Take it back whenever you like.',
+    'lock.fail':'That step did not complete — nothing is lost. Try again.',
+    'lock.badge':'LOCKED · {date}','lock.badge0':'IN THE VAULT',
+    'lock.unlock':'TAKE IT BACK','lock.unlocking':'ON ITS WAY…',
+    'lock.locked.until':'Locked until {date}',
     'sold.badge':'BACK IN THE POOL',
     'sold.sync':'Sold just now — the calendar catches up in a few minutes.',
     'road.kicker':'The road','road.title':'Milestones unlock the story',
@@ -1729,6 +1773,21 @@ const I18N = {
     'sell.step3':'卖出并取回 ETH',
     'sell.done':'{day} 回到了池子里，等待下一位主人。ETH 已在你的钱包。',
     'sell.fail':'这一步没有完成——没有任何资产丢失。可以重试。',
+    'lock.link':'锁住这一天',
+    'lock.title':'锁住这一天 · {day}',
+    'lock.p1':'#{id} 会移进 uDAY 金库——一个没有拥有者、没有管理员的合约。在你选定的日期之前，没有人能卖掉它，你钱包里的任何卖出也烧不到它。它仍然是你的：在这张日历上、在每日礼物里，等你回来取。',
+    'lock.p2':'在金库期间，uToken 会显示金库为持有者，它焊着的 1.0 uDAY 也会离开你的钱包余额，因此不计入 ★ 名额。',
+    'lock.d30':'30 天','lock.d90':'90 天','lock.d365':'1 年','lock.d0':'不设日期',
+    'lock.d0.note':'不设日期表示金库替你保管，随时可以取回——但同样不在任何卖出的射程内。',
+    'lock.go':'开始——共 {n} 笔签署','lock.go1':'开始——共 1 笔签署',
+    'lock.step1':'允许金库移动你的作品（仅一次）',
+    'lock.step2':'锁住 #{id}',
+    'lock.done':'{day} 已锁至 {date}。在此之前没有人能卖掉它，包括你自己。',
+    'lock.done0':'{day} 已在金库。想取回随时都可以。',
+    'lock.fail':'这一步没有完成——没有任何资产丢失。可以重试。',
+    'lock.badge':'已锁 · {date}','lock.badge0':'在金库中',
+    'lock.unlock':'取回','lock.unlocking':'正在取回…',
+    'lock.locked.until':'锁定至 {date}',
     'sold.badge':'已回到池中',
     'sold.sync':'刚刚卖出——日历过几分钟就会跟上。',
     'road.kicker':'路线图','road.title':'里程碑，解锁下一章',
@@ -2756,14 +2815,43 @@ function openDayModal(key, kind, list){
       dl.appendChild(b);
     });
     item.append(a, dl);
-    // your own piece can go home to the pool — precision burn via DayExit
-    if(yours && mineWallet){
+    const held = vaultStateOf(e);
+    if(held){
+      // in the vault: still yours, cannot be sold — say until when, and offer
+      // the way back once the date has passed
+      const badge = document.createElement('div');
+      badge.className = 'daymodal__vault';
+      badge.textContent = held.until ? t('lock.badge', { date: fmtDate(held.until) }) : t('lock.badge0');
+      badge.title = held.until ? t('lock.locked.until', { date: fmtDate(held.until) }) : '';
+      item.appendChild(badge);
+      if(yours && mineWallet && VAULT_CONTRACT){
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'daymodal__lock';
+        back.textContent = t('lock.unlock');
+        const open = !held.until || Date.now() / 1000 >= held.until;
+        back.disabled = !open;
+        if(!open) back.title = t('lock.locked.until', { date: fmtDate(held.until) });
+        back.addEventListener('click', () => runUnlock(key, e, back));
+        item.appendChild(back);
+      }
+    }else if(yours && mineWallet){
+      // your own piece can go home to the pool — precision burn via DayExit —
+      // or into the vault, where no sale can reach it
       const sell = document.createElement('button');
       sell.type = 'button';
       sell.className = 'daymodal__sell';
       sell.textContent = t('sell.link');
       sell.addEventListener('click', () => { closeDayModal(); openSellModal(key, e); });
       item.appendChild(sell);
+      if(VAULT_CONTRACT){
+        const lock = document.createElement('button');
+        lock.type = 'button';
+        lock.className = 'daymodal__lock';
+        lock.textContent = t('lock.link');
+        lock.addEventListener('click', () => { closeDayModal(); openLockModal(key, e); });
+        item.appendChild(lock);
+      }
     }
     dayModalGrid.appendChild(item);
   });
@@ -3443,6 +3531,7 @@ function renderMine(){
   hint.textContent = t('mine.sealed.hint');
   hint.hidden = !sealed;
   document.getElementById('mine-result').hidden = false;
+  paintVault();                 // padlocks ride on the wall, not on an RPC
 }
 
 const mineEth = window.ethereum;
@@ -4462,6 +4551,256 @@ async function runSell(key, piece, goBtn){
     goBtn.disabled = false;
   }
 }
+/* ─── the vault: lock a day ──────────────────────────────────────────────
+   A sale is a plain ERC-20 transfer and the token burns the seller's NEWEST
+   piece, so nothing in a wallet can be protected in place. UdayVault holds a
+   piece for its owner until a date the owner chose (tools/contracts/
+   UdayVault.sol — no admin, never sells, never does an ERC-20 transfer). The
+   index resolves vault-held pieces back to their owners and marks them `v`,
+   so a locked day is still painted as yours everywhere. */
+const VAULT_ADDR_FILE = '/data/vault-contract.txt';
+let VAULT_CONTRACT = null;
+// every selector from `cast sig`, never from memory
+const SEL_VAULT_DEPOSIT  = '7d552ea6';   // deposit(uint256,uint64)
+const SEL_VAULT_WITHDRAW = '2e1a7d4d';   // withdraw(uint256)
+const SEL_SET_OPERATOR   = '1a5cbde0';   // setAssetOperator(address,bool)   on uDAY
+const SEL_IS_OPERATOR    = '076846bc';   // isAssetOperator(address,address) on uDAY
+
+async function ensureVaultContract(){
+  if(VAULT_CONTRACT !== null) return VAULT_CONTRACT || null;
+  for(let i = 0; i < 3 && VAULT_CONTRACT === null; i++){
+    try{
+      const r = await fetch(VAULT_ADDR_FILE, { cache: 'no-cache' });
+      if(r.status === 404){ VAULT_CONTRACT = ''; break; }        // not deployed yet: no vault UI
+      if(r.ok){ const a = (await r.text()).trim(); VAULT_CONTRACT = /^0x[0-9a-fA-F]{40}$/.test(a) ? a : ''; }
+    }catch(e){ if(i < 2) await new Promise(res => setTimeout(res, 400 * (i + 1))); }
+  }
+  return VAULT_CONTRACT || null;
+}
+
+/// Any eth_call on the home chain, with the same retries commCall learned
+/// the hard way. `null` is the RPC failing, never an answer.
+async function chainRead(to, data){
+  for(let i = 0; i < 3; i++){
+    try{
+      const r = await fetch(CHAINS[0].rpc, { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call',
+          params: [{ to, data }, 'latest'] }) });
+      const j = await r.json();
+      if(j && j.result && j.result !== '0x') return j.result;
+      if(j && (j.result === '0x' || (j.error && j.error.code === 3))) return null;
+    }catch(e){}
+    if(i < 2) await new Promise(res => setTimeout(res, 400 * (i + 1)));
+  }
+  return null;
+}
+
+/* Local marks bridge the gap between a transaction and the index that
+   publishes it (same shape as soldTombs): a lock made a minute ago must show
+   as locked now, and a withdrawal must not keep wearing the padlock. Both
+   sides prune themselves the moment the index agrees. */
+let vaultLocal = { in: {}, out: [] };
+try{ vaultLocal = Object.assign({ in: {}, out: [] }, JSON.parse(localStorage.getItem('uday.vault') || '{}')); }catch(e){}
+function vaultSave(){ try{ localStorage.setItem('uday.vault', JSON.stringify(vaultLocal)); }catch(e){} }
+function vaultMarkIn(id, until){ vaultLocal.in[id] = until; vaultLocal.out = vaultLocal.out.filter(x => x !== id); vaultSave(); }
+function vaultMarkOut(id){ delete vaultLocal.in[id]; if(!vaultLocal.out.includes(id)) vaultLocal.out.push(id); vaultSave(); }
+function vaultPrune(){
+  if(!DAYS) return;
+  const v = {};
+  for(const k in DAYS) DAYS[k].forEach(e => { if(e.v !== undefined) v[e.id] = e.v; });
+  let changed = false;
+  for(const id in vaultLocal.in){ if(v[id] !== undefined){ delete vaultLocal.in[id]; changed = true; } }
+  const out = vaultLocal.out.filter(id => v[id] !== undefined);   // index still says held: keep the note
+  if(out.length !== vaultLocal.out.length){ vaultLocal.out = out; changed = true; }
+  if(changed) vaultSave();
+}
+/// {until} when the piece is in the vault, else null. `until` 0 = no date.
+function vaultStateOf(e){
+  if(vaultLocal.in[e.id] !== undefined) return { until: vaultLocal.in[e.id] };
+  if(e.v !== undefined && !vaultLocal.out.includes(e.id)) return { until: e.v };
+  return null;
+}
+const fmtDate = ts => new Date(ts * 1000).toLocaleDateString(
+  document.documentElement.lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+/// Padlocks on the mine wall: every day where one of YOUR pieces is vaulted.
+function paintVault(){
+  if(!IS_PERSONAL || !DAYS) return;
+  const grid = document.getElementById('mine-grid');
+  const me = mineIdentity();
+  if(!grid || !me) return;
+  grid.querySelectorAll('.yearcell--vault').forEach(c => c.classList.remove('yearcell--vault'));
+  for(const k in DAYS){
+    if(!DAYS[k].some(e => e.owner === me && vaultStateOf(e))) continue;
+    const label = dayLabel(+k.slice(0, 2), +k.slice(3));
+    const cell = [...grid.querySelectorAll('.yearcell--lit')]
+      .find(c => (c.getAttribute('aria-label') || '').startsWith(label));
+    if(cell) cell.classList.add('yearcell--vault');
+  }
+}
+
+let lockModal = null, lmTitle, lmBody, lmSteps, lmState;
+function ensureLockModal(){
+  if(lockModal) return;
+  lockModal = document.createElement('div');
+  lockModal.className = 'daymodal sellmodal lockmodal';
+  lockModal.hidden = true;
+  const panel = document.createElement('div');
+  panel.className = 'daymodal__panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  const x = document.createElement('button');
+  x.type = 'button'; x.className = 'daymodal__close'; x.textContent = '×';
+  x.addEventListener('click', closeLockModal);
+  lmTitle = document.createElement('span');
+  lmTitle.className = 'daymodal__title giftmodal__title';
+  lmBody = document.createElement('div');  lmBody.className = 'giftmodal__body';
+  lmSteps = document.createElement('ol');  lmSteps.className = 'sellmodal__steps';
+  lmState = document.createElement('div'); lmState.className = 'giftmodal__state';
+  panel.append(x, lmTitle, lmBody, lmSteps, lmState);
+  lockModal.appendChild(panel);
+  document.body.appendChild(lockModal);
+}
+function closeLockModal(){
+  if(!lockModal || lockModal.hidden) return;
+  lockModal.hidden = true;
+  document.body.style.overflow = '';
+}
+
+async function openLockModal(key, piece){
+  ensureLockModal();
+  const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  lmTitle.textContent = t('lock.title', { day: dayTxt });
+  lmBody.textContent = '';
+  [t('lock.p1', { id: piece.id }), t('lock.p2')].forEach(txt => {
+    const p = document.createElement('p'); p.textContent = txt; lmBody.appendChild(p);
+  });
+  // how long: a row of choices, one pressed — a DOM listbox, never <select>
+  const row = document.createElement('div');
+  row.className = 'lockmodal__choices';
+  const note = document.createElement('p');
+  note.className = 'lockmodal__note';
+  let days = 30;
+  const choices = [['d30', 30], ['d90', 90], ['d365', 365], ['d0', 0]];
+  const btns = choices.map(([k, n]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'lockmodal__choice';
+    b.textContent = t('lock.' + k);
+    b.setAttribute('aria-pressed', String(n === days));
+    b.addEventListener('click', () => {
+      days = n;
+      btns.forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+      note.textContent = n === 0 ? t('lock.d0.note')
+                       : t('lock.locked.until', { date: fmtDate(Math.floor(Date.now() / 1000) + n * 86400) });
+    });
+    row.appendChild(b);
+    return b;
+  });
+  note.textContent = t('lock.locked.until', { date: fmtDate(Math.floor(Date.now() / 1000) + 30 * 86400) });
+  lmBody.append(row, note);
+  lmSteps.textContent = '';
+  lmState.textContent = '';
+  const go = document.createElement('button');
+  go.type = 'button'; go.className = 'btn btn--gold';
+  go.textContent = t('lock.go', { n: 2 });
+  go.disabled = true;
+  lmState.appendChild(go);
+  lockModal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  // one signature or two: the operator grant is once per wallet, so ask the
+  // chain before promising a count
+  const vault = await ensureVaultContract();
+  if(!vault) return;
+  const op = await chainRead(UDAY_ADDR, '0x' + SEL_IS_OPERATOR + pad32(mineWallet.slice(2).toLowerCase()) + pad32(vault.slice(2).toLowerCase()));
+  const hasOp = !!(op && /1$/.test(op));
+  go.textContent = hasOp ? t('lock.go1') : t('lock.go', { n: 2 });
+  go.disabled = false;
+  go.addEventListener('click', () => runLock(key, piece, days, hasOp, go));
+  va('event', { name: 'lock_modal', data: { day: key, id: piece.id } });
+}
+
+async function runLock(key, piece, days, hasOp, goBtn){
+  goBtn.disabled = true;
+  const dayTxt = dayLabel(+key.slice(0, 2), +key.slice(3));
+  const vault = await ensureVaultContract();
+  const until = days ? Math.floor(Date.now() / 1000) + days * 86400 : 0;
+  const labels = (hasOp ? [] : [t('lock.step1')]).concat([t('lock.step2', { id: piece.id })]);
+  lmSteps.textContent = '';
+  const lis = labels.map(txt => {
+    const li = document.createElement('li');
+    li.textContent = txt; li.dataset.state = 'wait';
+    lmSteps.appendChild(li);
+    return li;
+  });
+  try{
+    if(!await ensureChain()) throw new Error('chain declined');
+    let step = 0;
+    if(!hasOp){
+      sellStep(lis[0], 'run');
+      const h1 = await mineEth.request({ method: 'eth_sendTransaction',
+        params: [{ from: mineWallet, to: UDAY_ADDR,
+          data: '0x' + SEL_SET_OPERATOR + pad32(vault.slice(2).toLowerCase()) + pad32('1') }] });
+      await waitReceipt(h1);
+      sellStep(lis[0], 'done'); step = 1;
+    }
+    sellStep(lis[step], 'run');
+    const h2 = await mineEth.request({ method: 'eth_sendTransaction',
+      params: [{ from: mineWallet, to: vault,
+        data: '0x' + SEL_VAULT_DEPOSIT + pad32(piece.id.toString(16)) + pad32(until.toString(16)) }] });
+    await waitReceipt(h2);
+    sellStep(lis[step], 'done');
+    vaultMarkIn(piece.id, until);
+    lmBody.textContent = '';
+    lmSteps.textContent = '';
+    const c = document.createElement('canvas');
+    c.className = 'sink__piece';
+    paint(c, recipeSpec(key, piece));
+    lmBody.appendChild(c);
+    const bless = document.createElement('p');
+    bless.className = 'giftmodal__bless';
+    bless.textContent = until ? t('lock.done', { day: dayTxt, date: fmtDate(until) }) : t('lock.done0', { day: dayTxt });
+    lmBody.appendChild(bless);
+    lmState.textContent = '';
+    const a = document.createElement('a');
+    a.className = 'btn btn--ghost';
+    a.target = '_blank'; a.rel = 'noopener';
+    a.href = GIFT_TX_URL(h2);
+    a.textContent = t('gift.tx');
+    lmState.appendChild(a);
+    paintVault();
+    va('event', { name: 'lock_done', data: { day: key, id: piece.id, days } });
+  }catch(err){
+    const p = document.createElement('p');
+    p.className = 'sellmodal__warn';
+    p.textContent = t('lock.fail');
+    lmBody.appendChild(p);
+    goBtn.disabled = false;
+  }
+}
+
+/// The way back, from the plaque itself: one transaction, then the modal
+/// re-opens on the same day with the padlock gone.
+async function runUnlock(key, piece, btn){
+  btn.disabled = true;
+  const was = btn.textContent;
+  btn.textContent = t('lock.unlocking');
+  try{
+    const vault = await ensureVaultContract();
+    if(!vault || !await ensureChain()) throw new Error('no chain');
+    const h = await mineEth.request({ method: 'eth_sendTransaction',
+      params: [{ from: mineWallet, to: vault, data: '0x' + SEL_VAULT_WITHDRAW + pad32(piece.id.toString(16)) }] });
+    await waitReceipt(h);
+    vaultMarkOut(piece.id);
+    paintVault();
+    va('event', { name: 'unlock_done', data: { day: key, id: piece.id } });
+    openDayModal(key, 'lit', DAYS[key] || []);
+  }catch(err){
+    btn.disabled = false;
+    btn.textContent = was;
+  }
+}
+
 /* ─── roadmap: completed milestones wear their date as on-chain glyph
    montage; the active market-cap gate shows a live progress bar fed by the
    15-minute index. Reaching a target flips it to UNLOCKED automatically. */
@@ -4607,6 +4946,8 @@ async function loadIndex(){
                    owners: j.owners || 0, sealed: j.sealed || null, burned: j.burned || 0,
                    embers: j.extinguished || {}, mcapUsd: j.mcapUsd || 0 };
     tombPrune();                    // drop tombstones the fresh index absorbed
+    vaultPrune();                   // and vault notes the index has caught up with
+    ensureVaultContract();          // decides whether the LOCK buttons exist at all
 
     if(!IS_PERSONAL){ renderRoad(); renderStory(); }   // both fold away there
     renderLiveTags();
@@ -4620,6 +4961,7 @@ async function loadIndex(){
       if(mineAddr) renderMine();
       renderGift();
       loadStars().then(paintStars);
+      paintVault();
     }
     // once the gift file is known, the hero CTA can become 领取礼物
     loadGiftData().then(() => renderDayStatus());

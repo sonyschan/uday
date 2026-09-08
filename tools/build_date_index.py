@@ -237,6 +237,40 @@ def fetch_mcap():
         return 0
 
 
+# ── UdayVault: a locked piece is still its owner's ──────────────────────────
+VAULT_PATH = os.path.join(ROOT, "data", "vault-contract.txt")
+SEL_SLOTS = "0x387dd9e9"       # slots(uint256) -> (address owner, uint64 until), cast sig
+
+
+def resolve_vault(ids, owner):
+    """Pieces held by UdayVault belong to the wallet that locked them. The
+    token says the vault owns them (it does); the index says the person does,
+    because every question the site answers — whose day, who gets the gift,
+    what is yours — is about the person. Returns {assetId: unlockTime} and
+    rewrites `owner` in place. No vault file, no vault: the index is unchanged."""
+    if not os.path.exists(VAULT_PATH):
+        return {}
+    vault = open(VAULT_PATH).read().strip().lower()
+    held = [a for a in ids if (owner.get(a) or "").lower() == vault]
+    if not held:
+        return {}
+    out = {}
+    for i in range(0, len(held), 200):
+        chunk = held[i:i + 200]
+        res = eth_call_batch([(vault, SEL_SLOTS + u256(a)) for a in chunk])
+        for a, r in zip(chunk, res):
+            if not r or len(r) < 2 + 128:
+                continue                 # a failed read leaves the vault as owner: honest, not wrong
+            who = "0x" + r[2 + 24:2 + 64]
+            until = int(r[2 + 64:2 + 128], 16)
+            if int(who, 16) == 0:
+                continue                 # not attributed (sent by plain transfer): stays the vault's
+            owner[a] = who
+            out[a] = until
+    print(f"vault: {len(out)} of {len(held)} held pieces resolved to their owners")
+    return out
+
+
 # ── uToken API: live asset list (ids + owners); burns fall out for free ──────
 def fetch_assets():
     items, page = [], 1
@@ -373,6 +407,7 @@ def build():
     ids = [a for a, _ in assets]
     owner = dict(assets)
     print(f"{len(ids)} live assets")
+    vault_until = resolve_vault(ids, owner)
 
     cache = load_cache()
     # Art is immutable once the reveal settles; only pending reveals can still
@@ -428,9 +463,11 @@ def build():
         v = cache.get(a)
         if not v or v.get("u"):
             continue
-        index.setdefault(v["d"], []).append(
-            {"id": a, "owner": owner[a], "mp": v["mp"], "dp": v["dp"],
-             "p": v["p"], "f": v["f"]})
+        entry = {"id": a, "owner": owner[a], "mp": v["mp"], "dp": v["dp"],
+                 "p": v["p"], "f": v["f"]}
+        if a in vault_until:
+            entry["v"] = vault_until[a]      # held in UdayVault; unlock time (0 = no date)
+        index.setdefault(v["d"], []).append(entry)
 
     # sanity anchors — verified against uToken's own client render; refuse to
     # publish an index that contradicts them
