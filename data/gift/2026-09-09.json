@@ -1,0 +1,72 @@
+{
+ "claims": {
+  "0x4e4aa2df5fc0d4d8b9c8e898190b707fcdba3964": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x792236a7a97a50e123e4e65d55c8c72369e6d53906a1e6f2eac7a88cb7d8be0d",
+    "0xf4865a52ee4f65118e6d8dcf901d93220f5780efb6a9d201aeb0b7ebddd807cb",
+    "0x0e3a84ab2b13e5e9de7268e6a8f54ca113cf6da148eefa3e94829ddb5c660282"
+   ]
+  },
+  "0x8b20c990c95d0c97af12dface0d2f0399a3cb870": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0xe2bc811983f7c87637f87d64e939ef36fa28e9252aecc9b277ea5f66c389b673",
+    "0xf4865a52ee4f65118e6d8dcf901d93220f5780efb6a9d201aeb0b7ebddd807cb",
+    "0x0e3a84ab2b13e5e9de7268e6a8f54ca113cf6da148eefa3e94829ddb5c660282"
+   ]
+  },
+  "0x90f57cd5d15a9e26f18e81c2ff2aed3017fe1977": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x6957f89e5fa26c5fd01bf7d7152d0763f5724666aa844ac6089aed5c669242f1",
+    "0x443192e9fafae4a4e6fd8e5cdca8c9e9e0702690b161817b17c0688fec43f2f5",
+    "0x0e3a84ab2b13e5e9de7268e6a8f54ca113cf6da148eefa3e94829ddb5c660282"
+   ]
+  },
+  "0xa10df901777b9729013451f02eac9756deb3d760": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x49c4ee4eeb09482b440e970848e1e250d408a1b5357435c5214ed69152ff0ef2",
+    "0x443192e9fafae4a4e6fd8e5cdca8c9e9e0702690b161817b17c0688fec43f2f5",
+    "0x0e3a84ab2b13e5e9de7268e6a8f54ca113cf6da148eefa3e94829ddb5c660282"
+   ]
+  },
+  "0xcdcbed7024fc52f070dbb9b4cd6d48baff4bdbd8": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x1feb3d89fd77000a0a1a3aed0cb644106a989874340736ce18838b39765870ad",
+    "0x78551c58e0fd160616c5a0d6d08c90b2b597bd6db6f471c1403e97d5907c5706",
+    "0x68f5078fcbcbec456e8cd4b34cbf41d16f7e5028003ac68ce7c3cf40d17d1776"
+   ]
+  },
+  "0xe72d42810212c856636cd9d019e98cfe985535fd": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0xe67973ead50fa5f974cc902ca2e47acf433a8b54b9a7e82b3c2ba392024ff312",
+    "0x78551c58e0fd160616c5a0d6d08c90b2b597bd6db6f471c1403e97d5907c5706",
+    "0x68f5078fcbcbec456e8cd4b34cbf41d16f7e5028003ac68ce7c3cf40d17d1776"
+   ]
+  },
+  "0xfe61f0857f25fd2f421023d06bc0a4f7f11a3140": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0xcec1ddf5a49b1b17174827f120d4079a0f3d2618bbbd2ca3c9dece3d0eb7e284",
+    "0x68f5078fcbcbec456e8cd4b34cbf41d16f7e5028003ac68ce7c3cf40d17d1776"
+   ]
+  }
+ },
+ "day": "09-09",
+ "dayId": 20260909,
+ "root": "0xae50ef073bc677f3d7296e390eb452b38a491c2346eea49dc83dffe2c72e0e14",
+ "total": 7000000,
+ "totalPieces": 7,
+ "unit": 1000000
+}
