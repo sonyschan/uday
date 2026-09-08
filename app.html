@@ -5487,7 +5487,12 @@ async function renderGift(){
   const amt = String(Math.floor(entry.amount / 1e6));
   if(!mineWallet){ line.textContent = t('gift.connect', { n: amt }); return; }
   if(await giftClaimedCheck(dayId, id)){
+    // Already claimed, seen on a reload: the receipt is gone but the share
+    // is not. The owner claimed, reloaded, and found no share button
+    // (2026-09-08) - the day is still theirs to post about until midnight.
     line.textContent = t('gift.claimed', { n: amt });
+    const sh = document.getElementById('gift-share');
+    sh.href = giftShareUrl(amt, key, id); sh.textContent = t('gift.share'); sh.hidden = false;
     return;
   }
   line.textContent = t('gift.ready', { day: dayTxt, n: amt });
