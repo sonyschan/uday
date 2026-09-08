@@ -5389,9 +5389,26 @@ async function sendGiftClaim(dayId, id, entry){
     params: [{ from: mineWallet, to: GIFT_ADDR, data }] });
 }
 const GIFT_TX_URL = h => 'https://robinhoodchain.blockscout.com/tx/' + h;
-const giftShareUrl = amt => 'https://x.com/intent/post?text=' +
-  encodeURIComponent(t('gift.share.text', { n: amt })) +
-  '&url=' + encodeURIComponent('https://uday.gift');
+/// The URL in the post decides the card X shows, and X runs no JavaScript:
+/// sharing uday.gift shows the site's card, sharing /s/<id> shows the
+/// holder's own piece (api/share.js + api/card.js). The piece is the
+/// best-dressed one THIS wallet holds of the claimed day, plate and frame
+/// being optional layers, so a bare two-glyph piece is not the one that
+/// goes out when a dressed one is in the same wallet. No piece known to
+/// the index (a reveal the hourly build has not caught up with) falls back
+/// to the site card rather than to nothing.
+function giftSharePiece(key, id){
+  const mine = ((DAYS && DAYS[key]) || []).filter(e => e.owner === id);
+  if(!mine.length) return null;
+  const dressed = e => (e.p ? 1 : 0) + (e.f ? 1 : 0);
+  return mine.slice().sort((a, b) => dressed(b) - dressed(a) || a.id - b.id)[0].id;
+}
+const giftShareUrl = (amt, key, id) => {
+  const piece = key && id ? giftSharePiece(key, id) : null;
+  return 'https://x.com/intent/post?text=' +
+    encodeURIComponent(t('gift.share.text', { n: amt })) +
+    '&url=' + encodeURIComponent(piece ? 'https://uday.gift/s/' + piece : 'https://uday.gift');
+};
 
 let giftBusy = false;
 async function renderGift(){
@@ -5436,7 +5453,7 @@ async function renderGift(){
           line.textContent = t('gift.bless', { day: lateTxt });
           btn.hidden = true;
           const sh = document.getElementById('gift-share');
-          sh.href = giftShareUrl(amt); sh.textContent = t('gift.share'); sh.hidden = false;
+          sh.href = giftShareUrl(amt, late.day.key, id); sh.textContent = t('gift.share'); sh.hidden = false;
           const txa = document.getElementById('gift-tx');
           txa.href = GIFT_TX_URL(hash); txa.textContent = t('gift.tx'); txa.hidden = false;
           va('event', { name: 'gift_claim', data: { day: late.day.key, late: 1 } });
@@ -5470,7 +5487,12 @@ async function renderGift(){
   const amt = String(Math.floor(entry.amount / 1e6));
   if(!mineWallet){ line.textContent = t('gift.connect', { n: amt }); return; }
   if(await giftClaimedCheck(dayId, id)){
+    // Already claimed, seen on a reload: the receipt is gone but the share
+    // is not. The owner claimed, reloaded, and found no share button
+    // (2026-09-08) - the day is still theirs to post about until midnight.
     line.textContent = t('gift.claimed', { n: amt });
+    const sh = document.getElementById('gift-share');
+    sh.href = giftShareUrl(amt, key, id); sh.textContent = t('gift.share'); sh.hidden = false;
     return;
   }
   line.textContent = t('gift.ready', { day: dayTxt, n: amt });
@@ -5488,7 +5510,7 @@ async function renderGift(){
       line.textContent = t('gift.bless', { day: dayTxt });
       btn.hidden = true;
       const sh = document.getElementById('gift-share');
-      sh.href = giftShareUrl(amt);
+      sh.href = giftShareUrl(amt, key, id);
       sh.textContent = t('gift.share');
       sh.hidden = false;
       const txa = document.getElementById('gift-tx');
@@ -5622,7 +5644,7 @@ async function openGiftModal(){
           const share = document.createElement('a');
           share.className = 'btn btn--gold';
           share.target = '_blank'; share.rel = 'noopener';
-          share.href = giftShareUrl(amt);
+          share.href = giftShareUrl(amt, late.day.key, id);
           share.textContent = t('gift.share');
           gmState.appendChild(share);
           const a2 = document.createElement('a');
@@ -5673,7 +5695,7 @@ async function openGiftModal(){
       const share = document.createElement('a');
       share.className = 'btn btn--gold';
       share.target = '_blank'; share.rel = 'noopener';
-      share.href = giftShareUrl(amt);
+      share.href = giftShareUrl(amt, key, id);
       share.textContent = t('gift.share');
       gmState.appendChild(share);
     }else{
@@ -5691,7 +5713,7 @@ async function openGiftModal(){
           const share = document.createElement('a');
           share.className = 'btn btn--gold';
           share.target = '_blank'; share.rel = 'noopener';
-          share.href = giftShareUrl(amt);
+          share.href = giftShareUrl(amt, key, id);
           share.textContent = t('gift.share');
           gmState.appendChild(share);
           const a = document.createElement('a');
