@@ -70,16 +70,7 @@
     "other": "https://theindex.finance",
     "x": "https://x.com/TheIndexFi"
    },
-   "members": [
-    {
-     "addr": "0xe72d42810212c856636cd9d019e98cfe985535fd",
-     "days": [
-      "04-03",
-      "09-08",
-      "12-31"
-     ]
-    }
-   ],
+   "members": [],
    "minBalance": "10000000000000000000000",
    "name": "Index",
    "slug": "index",
