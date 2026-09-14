@@ -2410,7 +2410,11 @@ async function buildPoster(byDay, headline, sub){
 
   // Silkscreen is a webfont; canvas draws whatever is loaded at call time, so
   // a poster built before the font arrives silently ships in a fallback face.
-  try{ await document.fonts.ready; }catch(e){}
+  try{
+    await Promise.all(['700 100px "Silkscreen"', '100px "Silkscreen"',
+      '700 100px "Noto Sans SC"'].map(f => document.fonts.load(f)));
+    await document.fonts.ready;
+  }catch(e){}
 
   const DIM = [31,29,31,30,31,30,31,31,30,31,30,31];
   const owned = [];
@@ -2445,9 +2449,10 @@ async function buildPoster(byDay, headline, sub){
     }
   }
 
+  const FACE = '"Silkscreen", "Noto Sans SC", monospace';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#9d93b8';
-  ctx.font = '26px "Silkscreen", monospace';
+  ctx.font = '26px ' + FACE;
   ctx.textAlign = 'right';
   for(let m = 1; m <= 12; m++){
     ctx.fillText(lang === 'zh' ? m + '月' : MONTHS_EN[m-1], gx - 20, cellY(m) + T / 2);
@@ -2472,23 +2477,36 @@ async function buildPoster(byDay, headline, sub){
     if(cur.trim()) lines.push(cur.trim());
     return lines;
   };
-  let y = P + 84;
-  for(const ln of wrap(headline, '46px "Silkscreen", monospace', panel - 16)){
-    ctx.font = '46px "Silkscreen", monospace';
-    ctx.fillStyle = '#e8b93f';
-    ctx.fillText(ln, P, y);
-    y += 58;
+  // The headline is set one WORD per line and as large as the panel allows:
+  // a 584px column beside a 3096px grid reads as a margin unless the type
+  // owns it. One size for every line (the widest word decides), so the
+  // block stays a block and not a ransom note. Capped, because "MY" alone
+  // would otherwise fill the column.
+  const maxW = panel - 16;
+  const words = headline.split(/\s+/).filter(Boolean);
+  ctx.font = '700 100px ' + FACE;
+  const widest = Math.max(...words.map(w => ctx.measureText(w).width));
+  const hs = Math.min(150, Math.floor(100 * maxW / widest));
+  let y = P + hs * 0.62;
+  ctx.font = '700 ' + hs + 'px ' + FACE;
+  ctx.fillStyle = '#e8b93f';
+  for(const w of words){
+    ctx.fillText(w, P, y);
+    y += hs * 1.06;
   }
-  y += 12;
-  for(const ln of wrap(sub, '26px "Silkscreen", monospace', panel - 16)){
-    ctx.font = '26px "Silkscreen", monospace';
-    ctx.fillStyle = '#9d93b8';
+  // a short gold rule: the headline ends here, the facts begin
+  y += hs * 0.08;
+  ctx.fillRect(P, y, 120, 8);
+  y += 8 + 48;
+  for(const ln of wrap(sub, '34px ' + FACE, maxW)){
+    ctx.font = '34px ' + FACE;
+    ctx.fillStyle = '#f3e7cd';
     ctx.fillText(ln, P, y);
-    y += 36;
+    y += 46;
   }
-  ctx.font = '26px "Silkscreen", monospace';
-  ctx.fillStyle = '#6f6790';
-  ctx.fillText('uday.gift', P, y + 26);
+  ctx.font = '30px ' + FACE;
+  ctx.fillStyle = '#b8944a';
+  ctx.fillText('uday.gift', P, y + 24);
 
   return { canvas: cv, days: owned.length };
 }
