@@ -173,5 +173,12 @@
   "at": "2026-09-18T16:20:39Z",
   "source": "https://en.wikipedia.org/wiki/September_19",
   "text": "SEP 19 is lit onchain.\n\n2 pieces carry this date, held by 2 wallets. Today 2 USDG is waiting for them.\n\nIn 1356 English forces won the Battle of Poitiers and captured the French king. Some days just end with the other side's ruler in chains."
+ },
+ {
+  "day": "09-20",
+  "id": "2101345762189717810",
+  "at": "2026-09-19T16:20:45Z",
+  "source": "https://github.com/ethereum/EIPs/issues/721",
+  "text": "SEP 20 is lit onchain.\n\n4 pieces carry this date, held by 3 wallets. Today 4 USDG is waiting for them.\n\nDieter Shirley published the first draft of the ERC-721 standard in 2017. That single proposal gave every unique token its own permanent identity."
  }
 ]
