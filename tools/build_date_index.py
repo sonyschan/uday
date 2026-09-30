@@ -27,7 +27,7 @@ Usage:  python3 tools/build_date_index.py build
 
 Decoded art is cached in data/art-cache.json (committed): an asset's art is
 immutable once its reveal settles (owner-confirmed), so each id is decoded
-once; the youngest ids are re-decoded every run to absorb pending reveals.
+once; sealed ids are re-checked once a day (a 1/24 slice per hourly run).
 Stdlib + PIL. Selectors hardcoded (no keccak in stdlib):
   layerReveal()                 0xb509d6c4
   generateSvgForAsset(uint256)  0xeb3fbd83
@@ -410,15 +410,17 @@ def build():
     vault_until = resolve_vault(ids, owner)
 
     cache = load_cache()
-    # Art is immutable once the reveal settles; only pending reveals can still
-    # move, so the youngest ids are re-decoded every run.
-    young = set(a for a in ids if a > max(ids) - 1500) if ids else set()
+    # Art is immutable once the reveal settles. New ids are decoded on first
+    # sight; a SEALED id is re-checked once a day via a 1/24 hourly slice.
+    # This used to re-decode the newest 1,500 ids on every run as well, to
+    # catch pending reveals — 405 of 465 calls a run on 2026-09-30, and not
+    # one of those 405 carried a date. Reveals barely happen (owner): a day's
+    # latency is the price, ~87% of the Alchemy bill is the saving.
     unrevealed = sorted(a for a in ids
-                        if isinstance(cache.get(a), dict) and cache[a].get("u")
-                        and a not in young)
+                        if isinstance(cache.get(a), dict) and cache[a].get("u"))
     slot = int(time.time() // 3600) % 24
-    recheck = set(unrevealed[slot::24])      # ~1/24 of them per hourly run
-    todo = [a for a in ids if a not in cache or a in young or a in recheck]
+    recheck = set(unrevealed[slot::24])      # each sealed id once a day
+    todo = [a for a in ids if a not in cache or a in recheck]
     import concurrent.futures as cf
 
     def fetch_one(a):
