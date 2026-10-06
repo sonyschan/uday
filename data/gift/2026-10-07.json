@@ -1,0 +1,15 @@
+{
+ "claims": {
+  "0xa0baf5477bdb7d901461b51a6888bb8caa88eba7": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": []
+  }
+ },
+ "day": "10-07",
+ "dayId": 20261007,
+ "root": "0x3f0238d3a7ac0fb56c02c515a853a7df01639d3c8dc42e52ec74e44e4aac4952",
+ "total": 1000000,
+ "totalPieces": 1,
+ "unit": 1000000
+}
