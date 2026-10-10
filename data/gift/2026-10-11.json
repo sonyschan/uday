@@ -1,0 +1,24 @@
+{
+ "claims": {
+  "0x42ac5533b475773c9d135fd2e976c7f877a20db4": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x01c52149632d5a683726516cf65d337170b4dfe477720c894ca72bc739162051"
+   ]
+  },
+  "0xac42b1c6f2931505334971443d6f2026e76c23e3": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0xcc0ba210ee1d1cff8c6b01442901bb4fa8640f5ac3385c169c6f45648399456b"
+   ]
+  }
+ },
+ "day": "10-11",
+ "dayId": 20261011,
+ "root": "0x93f8a52fe0504d1735359a29b2af59a448f9fac19e923d80a8b932426986a7f9",
+ "total": 2000000,
+ "totalPieces": 2,
+ "unit": 1000000
+}
