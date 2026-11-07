@@ -1,0 +1,33 @@
+{
+ "claims": {
+  "0x400815b954c964c3bc356e5541301d957d417ec9": {
+   "amount": 2000000,
+   "count": 2,
+   "proof": [
+    "0xbdc7e4189fc9ca9858c53e52fdd08f8c726fdaf008146e2e5bfe04b35f3de577",
+    "0x01c52149632d5a683726516cf65d337170b4dfe477720c894ca72bc739162051"
+   ]
+  },
+  "0x4a574a0570fe7ffeec2d9cc7ac78cceaba5d68d6": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0x3f6e6078a96626888afd7de9711e2ab34cfa8a2f6c035c3e9193f5e2c4147306",
+    "0x01c52149632d5a683726516cf65d337170b4dfe477720c894ca72bc739162051"
+   ]
+  },
+  "0xac42b1c6f2931505334971443d6f2026e76c23e3": {
+   "amount": 1000000,
+   "count": 1,
+   "proof": [
+    "0xc0b42edda7c31e961a9897bd49f0b608842eec5cd479f28e1b2e259ca0af3aea"
+   ]
+  }
+ },
+ "day": "11-08",
+ "dayId": 20261108,
+ "root": "0xda5c2fc9353d37591ba69efb96c862882b9be1595a337271064151eebec16af4",
+ "total": 4000000,
+ "totalPieces": 4,
+ "unit": 1000000
+}
